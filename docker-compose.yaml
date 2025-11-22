@@ -3,10 +3,10 @@
     image: postgres:latest
     container_name: postgres
     env_file:
-      - backend/.env
+      - .env
     ports:
       - '5432:5432'
     volumes:
-      - postgresDb:/var/lib/postgres
+      - postgresDb:/var/lib/postgresql
 volumes:
   postgresDb:

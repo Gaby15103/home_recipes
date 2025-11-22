@@ -5,6 +5,9 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 mod handlers;
+mod model;
+mod schema;
+
 use handlers::hello_world;
 
 pub struct AppState {
@@ -15,6 +18,7 @@ pub struct AppState {
 async fn main() {
     dotenv().ok();
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    println!("Using database: {}", db_url);
     let pool = match PgPoolOptions::new()
         .max_connections(10)
         .connect(&db_url)
