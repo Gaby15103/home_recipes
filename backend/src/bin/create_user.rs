@@ -1,6 +1,7 @@
 ﻿use backend::*;
 use serde_json::json;
 use std::io::{Read, Write, stdin, stdout};
+use crate::auth::hash::hash_password;
 
 fn main() {
     let connection = &mut establish_connection();
@@ -11,28 +12,31 @@ fn main() {
     stdin().read_line(&mut email).unwrap();
     let email = email.trim_end();
 
+    let mut first_name = String::new();
+    print!("Enter your first name: ");
+    stdout().flush().unwrap();
+    stdin().read_line(&mut first_name).unwrap();
+    let first_name = first_name.trim_end();
+
+    let mut last_name = String::new();
+    print!("Enter your last name: ");
+    stdout().flush().unwrap();
+    stdin().read_line(&mut last_name).unwrap();
+    let last_name = last_name.trim_end();
+
     let mut username = String::new();
     print!("Enter your username: ");
     stdout().flush().unwrap();
     stdin().read_line(&mut username).unwrap();
     let username = username.trim_end();
 
-    let mut password_hash = String::new();
-    print!("Enter your password hash: ");
+    let mut password = String::new();
+    print!("Enter your password: ");
     stdout().flush().unwrap();
-    stdin().read_line(&mut password_hash).unwrap();
-    let password_hash = password_hash.trim_end();
+    stdin().read_line(&mut password).unwrap();
+    let password = password.trim_end();
+    let password_hash = &hash_password(password);
 
-    let mut display_name = String::new();
-    print!("Enter your display name (optional): ");
-    stdout().flush().unwrap();
-    stdin().read_line(&mut display_name).unwrap();
-    let display_name = display_name.trim_end();
-    let display_name = if display_name.is_empty() {
-        None
-    } else {
-        Some(display_name)
-    };
 
     let mut avatar_url = String::new();
     print!("Enter your avatar URL (optional): ");
@@ -56,7 +60,8 @@ fn main() {
         email,
         username,
         password_hash,
-        display_name,
+        first_name,
+        last_name,
         avatar_url,
         preferences,
     );

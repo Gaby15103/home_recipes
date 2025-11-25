@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::pg::Pg;
 use crate::schema::{users, roles, user_roles};
+use crate::schema::users::first_name;
 
 // -----------------------------
 // Preferences DTO
@@ -24,9 +25,9 @@ pub struct User {
     pub id: Uuid,
     pub email: String,
     pub username: String,
-    pub password_hash: String,
+    pub first_name: String,
+    pub last_name: String,
 
-    pub display_name: Option<String>,
     pub avatar_url: Option<String>,
 
     pub preferences: serde_json::Value,
@@ -46,7 +47,8 @@ pub struct NewUser<'a> {
     pub email: &'a str,
     pub username: &'a str,
     pub password_hash: &'a str,
-    pub display_name: Option<&'a str>,
+    pub first_name: &'a str,
+    pub last_name: &'a str,
     pub avatar_url: Option<&'a str>,
     pub preferences: &'a serde_json::Value,
 }

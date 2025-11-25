@@ -22,9 +22,11 @@ diesel::table! {
         email -> Varchar,
         #[max_length = 100]
         username -> Varchar,
+        #[max_length = 100]
+        first_name -> Varchar,
+        #[max_length = 100]
+        last_name -> Varchar,
         password_hash -> Text,
-        #[max_length = 150]
-        display_name -> Nullable<Varchar>,
         avatar_url -> Nullable<Text>,
         preferences -> Jsonb,
         is_active -> Nullable<Bool>,
