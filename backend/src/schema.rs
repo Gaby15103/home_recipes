@@ -1,88 +1,41 @@
-﻿use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use uuid::Uuid;
+// @generated automatically by Diesel CLI.
 
-/// JSON structure for creating a new user
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UserCreateSchema {
-    pub email: String,
-    pub username: String,
-
-    // Local auth
-    pub password: String,
-
-    // Optional profile info
-    pub display_name: String,
-    pub avatar_url: String,
-
-    pub preferences: Value,
+diesel::table! {
+    roles (id) {
+        id -> Int4,
+        name -> Text,
+        description -> Nullable<Text>,
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UserUpdateSchema {
-    pub email: Option<String>,
-    pub username: Option<String>,
-    pub password: Option<String>,
-
-    pub display_name: Option<String>,
-    pub avatar_url: Option<String>,
-    pub preferences: Option<Value>,
+diesel::table! {
+    user_roles (user_id, role_id) {
+        user_id -> Uuid,
+        role_id -> Int4,
+    }
 }
 
-
-/// JSON structure sent back to the client
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UserResponseSchema {
-    pub id: Uuid,
-    pub email: String,
-    pub username: String,
-
-    pub display_name: Option<String>,
-    pub avatar_url: Option<String>,
-    pub preferences: Value,
-
-    pub is_active: bool,
-    pub email_verified: bool,
-
-    pub last_login_at: Option<chrono::DateTime<chrono::Utc>>,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+diesel::table! {
+    users (id) {
+        id -> Uuid,
+        #[max_length = 255]
+        email -> Varchar,
+        #[max_length = 100]
+        username -> Varchar,
+        password_hash -> Text,
+        #[max_length = 150]
+        display_name -> Nullable<Varchar>,
+        avatar_url -> Nullable<Text>,
+        preferences -> Jsonb,
+        is_active -> Nullable<Bool>,
+        email_verified -> Nullable<Bool>,
+        last_login_at -> Nullable<Timestamptz>,
+        created_at -> Nullable<Timestamptz>,
+        updated_at -> Nullable<Timestamptz>,
+    }
 }
 
+diesel::joinable!(user_roles -> roles (role_id));
+diesel::joinable!(user_roles -> users (user_id));
 
-
-/// Create a new role
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RoleCreateSchema {
-    pub name: String,
-    pub description: Option<String>,
-}
-
-/// Update an existing role
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RoleUpdateSchema {
-    pub name: Option<String>,
-    pub description: Option<String>,
-}
-
-/// Response sent to client
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RoleResponseSchema {
-    pub id: i32,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-/// Assign a role to a user
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UserRoleCreateSchema {
-    pub user_id: Uuid,
-    pub role_id: i32,
-}
-
-/// Response sent to client
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UserRoleResponseSchema {
-    pub user_id: Uuid,
-    pub role_id: i32,
-}
+diesel::allow_tables_to_appear_in_same_query!(roles, user_roles, users,);
