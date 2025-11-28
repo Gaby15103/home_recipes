@@ -68,6 +68,9 @@ fn routes(app: &mut web::ServiceConfig) {
             .service(web::resource("users")
                 .route(web::post().to(users::register)))
             .service(web::resource("users/login")
-            .   route(web::post().to(users::login))),
+            .   route(web::post().to(users::login)))
+            .service(web::resource("user")
+                .route(web::get().to(users::get_current))
+                .route(web::put().to(users::update)))
     );
 }

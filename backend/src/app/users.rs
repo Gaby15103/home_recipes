@@ -160,7 +160,9 @@ pub async fn register(
 
     Ok(HttpResponse::Ok().json(res))
 }
-pub async fn login((form, state): (Json<In<LoginUser>>, Data<AppState>)) -> Result<HttpResponse, Error> {
+pub async fn login(
+    (form, state): (Json<In<LoginUser>>, Data<AppState>),
+) -> Result<HttpResponse, Error> {
     let login_user = form.into_inner().user;
 
     // Validate input
@@ -169,6 +171,30 @@ pub async fn login((form, state): (Json<In<LoginUser>>, Data<AppState>)) -> Resu
     let res = state
         .db
         .send(login_user)
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(res))
+}
+pub async fn get_current(state: Data<AppState>, req: HttpRequest) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+    Ok(HttpResponse::Ok().json(UserResponse::create_with_auth(auth)))
+}
+
+pub async fn update(
+    state: Data<AppState>,
+    (form, req): (Json<In<UpdateUser>>, HttpRequest),
+) -> Result<HttpResponse, Error> {
+    let update_user = form.into_inner().user;
+
+    update_user.validate()?;
+
+    let auth = authenticate(&state, &req).await?;
+
+    let db = state.db.clone();
+
+    let res = db
+        .send(UpdateUserOuter { auth, update_user })
         .await
         .map_err(|_| Error::InternalServerError)??;
 

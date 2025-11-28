@@ -6,7 +6,7 @@ use crate::app::AppState;
 use crate::models::User;
 use crate::prelude::*;
 
-const TOKEN_PREFIX: &str = "Token ";
+const TOKEN_PREFIX: &str = "Bearer ";
 
 #[derive(Debug)]
 pub struct Auth {
@@ -19,7 +19,7 @@ pub struct GenerateAuth {
     pub token: String,
 }
 
-pub async fn authenticate(state: &Data<AppState>, req: &HttpRequest) -> Result<Auth> {
+pub async fn authenticate(state: &Data<AppState>, req: &HttpRequest) -> Result<Auth, Error> {
     let token = preprocess_authz_token(req.headers().get(AUTHORIZATION))?;
 
     let db = state.db.clone();

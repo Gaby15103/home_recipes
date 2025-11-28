@@ -46,9 +46,9 @@ pub struct User {
 pub struct NewUser {
     pub email: String,
     pub username: String,
-    pub password_hash: String,
     pub first_name: String,
     pub last_name: String,
+    pub password_hash: String,
     pub avatar_url: Option<String>,
     pub preferences: serde_json::Value,
 }
@@ -56,11 +56,11 @@ pub struct NewUser {
 #[derive(Debug, AsChangeset)]
 #[diesel(table_name = users)]
 pub struct UserChange {
-    pub username: Option<String>,
     pub email: Option<String>,
-    pub password_hash: String,
+    pub username: Option<String>,
     pub first_name: String,
     pub last_name: String,
+    pub password_hash: String,
     pub avatar_url: Option<String>,
     pub preferences: serde_json::Value,
 }

@@ -19,7 +19,7 @@ pub trait CanGenerateJwt {
 impl CanGenerateJwt for User {
     fn generate_jwt(&self) -> Result<String> {
         let exp = (Utc::now() + Duration::days(1)).timestamp();
-        let claims = Claims { id: Uuid::new_v4(), exp };
+        let claims = Claims { id: self.id, exp };
         
         let header = Header::default();
         let secret = get_secret();
