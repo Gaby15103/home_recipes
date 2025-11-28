@@ -1,0 +1,108 @@
+﻿###########################
+#      Global ignores     #
+###########################
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Env files (OPTIONAL)
+# Uncomment if you store secrets here
+ .env
+
+
+###########################
+#       Frontend          #
+#        Vue + Vite       #
+###########################
+
+# Node modules
+node_modules/
+
+# Vite build output
+dist/
+*.local
+
+# Vite cache
+.vite/
+vite.svg
+
+# Dependencies cache
+.pnpm-store/
+.npm/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+.yarn/build-state.yml
+
+# Editor temp files for Vue
+**/*.vue.js
+**/*.vue.ts
+**/*.vue.css
+
+
+###########################
+#         Rust            #
+#        Backend          #
+###########################
+
+/target/
+/Cargo.lock  # uncomment if building a library, keep if this is an app
+
+# Rust toolchain artifacts
+rustfmt.bk
+**/*.rs.bk
+
+# IDE / Tooling
+.idea/
+.vscode/
+*.iml
+
+# Rust logs or dumps
+/trace*
+/core*
+
+###########################
+#       Misc tools        #
+###########################
+
+# Docker (if using)
+docker-data/
+docker-compose.override.yml
+
+# Python (if using any scripts)
+__pycache__/
+*.pyc
+
+###########################
+#         Testing         #
+###########################
+
+/coverage/
+/reports/
+
+
+###########################
+#     Optional extras     #
+###########################
+
+# If using playwright
+/playwright-report/
+/playwright/.cache/
+
+# If using eslint
+.eslintcache
+
+# If using stylelint
+.stylelintcache
+
+# If using TypeScript incremental builds
+*.tsbuildinfo
