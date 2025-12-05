@@ -1,0 +1,25 @@
+﻿<script setup lang="ts">
+import { RouterLink } from "vue-router"
+import { Button } from "@/components/ui/button"
+</script>
+
+<template>
+  <div class="min-h-screen flex flex-col items-center justify-center text-center">
+    <h1 class="text-4xl font-bold mb-4">
+      🍳 Home Recipes
+    </h1>
+
+    <p class="text-muted-foreground mb-6 max-w-md">
+      Browse delicious homemade recipes and manage your own cookbook.
+    </p>
+
+    <div class="flex gap-4">
+      <RouterLink to="/login">
+        <Button>Login</Button>
+      </RouterLink>
+      <RouterLink to="/register">
+        <Button variant="outline">Register</Button>
+      </RouterLink>
+    </div>
+  </div>
+</template>

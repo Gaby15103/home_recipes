@@ -36,20 +36,12 @@ pub async fn start() -> std::io::Result<()> {
         let state = AppState {
             db: database_address.clone(),
         };
-        let cors = {
-            let mut c = Cors::default()
-                .allowed_header(AUTHORIZATION)
-                .allowed_header(CONTENT_TYPE)
-                .max_age(3600);
-
-            if let Some(ref origin) = frontend_origin {
-                c = c.allowed_origin(origin);
-            } else {
-                c = c.allow_any_origin();
-            }
-
-            c
-        };
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:5173") // your frontend URL
+            .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![AUTHORIZATION, CONTENT_TYPE])
+            .supports_credentials()
+            .max_age(3600);
         App::new()
             .app_data(Data::new(state))
             .wrap(Logger::default())
