@@ -31,7 +31,7 @@ function logout() {
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <Button class="flex items-center gap-2">
-              <img :src="defaultAvatar" alt="avatar" class="w-8 h-8 rounded-full" />
+              <img :src="'/src/assets/'+user.avatar_url" alt="avatar" class="w-8 h-8 rounded-full" />
               <span class="hidden sm:inline">{{ user.username }}</span>
             </Button>
           </DropdownMenuTrigger>
