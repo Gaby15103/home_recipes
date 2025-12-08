@@ -3,8 +3,14 @@ import ModeToggle from "@/components/ModeToggle.vue";
 import { Button } from "@/components/ui/button";
 import { computed } from "vue";
 import { useUserStore } from "@/stores/user";
-import {DropdownMenu} from "@/components/ui/dropdown-menu";
-import defaultAvatar from '@/assets/default.png';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const userStore = useUserStore();
 
