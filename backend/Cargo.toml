@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-diesel = { version = "2.1", features = ["postgres", "uuid", "chrono", "serde_json","r2d2"] }
+diesel = { version = "2.1", features = ["postgres", "uuid", "chrono", "serde_json","r2d2","numeric"] }
 dotenvy = "0.15"
 
 uuid = { version = "1", features = ["serde", "v4"] }
@@ -42,4 +42,5 @@ actix-http = "3.11.2"
 axum = "0.8.7"
 env_logger = "0.11.8"
 once_cell = "1.21.3"
+bigdecimal = "0.4.9"
 

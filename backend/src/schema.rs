@@ -1,10 +1,88 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    ingredient_groups (id) {
+        id -> Uuid,
+        recipe_id -> Uuid,
+        title -> Text,
+        position -> Int4,
+    }
+}
+
+diesel::table! {
+    ingredients (id) {
+        id -> Uuid,
+        name -> Text,
+    }
+}
+
+diesel::table! {
+    recipe_ingredients (id) {
+        id -> Uuid,
+        ingredient_group_id -> Uuid,
+        ingredient_id -> Uuid,
+        quantity -> Numeric,
+        unit -> Text,
+        note -> Nullable<Text>,
+        position -> Int4,
+    }
+}
+
+diesel::table! {
+    recipe_tags (recipe_id, tag_id) {
+        recipe_id -> Uuid,
+        tag_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    recipes (id) {
+        id -> Uuid,
+        title -> Text,
+        description -> Nullable<Text>,
+        servings -> Int4,
+        prep_time_minutes -> Nullable<Int4>,
+        cook_time_minutes -> Nullable<Int4>,
+        author -> Text,
+        author_id -> Nullable<Uuid>,
+        is_private -> Bool,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     roles (id) {
         id -> Int4,
         name -> Text,
         description -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    step_groups (id) {
+        id -> Uuid,
+        recipe_id -> Uuid,
+        title -> Text,
+        position -> Int4,
+    }
+}
+
+diesel::table! {
+    steps (id) {
+        id -> Uuid,
+        recipe_id -> Uuid,
+        step_group_id -> Nullable<Uuid>,
+        position -> Int4,
+        instruction -> Text,
+        duration_minutes -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
+    tags (id) {
+        id -> Uuid,
+        name -> Text,
     }
 }
 
@@ -37,7 +115,28 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(ingredient_groups -> recipes (recipe_id));
+diesel::joinable!(recipe_ingredients -> ingredient_groups (ingredient_group_id));
+diesel::joinable!(recipe_ingredients -> ingredients (ingredient_id));
+diesel::joinable!(recipe_tags -> recipes (recipe_id));
+diesel::joinable!(recipe_tags -> tags (tag_id));
+diesel::joinable!(recipes -> users (author_id));
+diesel::joinable!(step_groups -> recipes (recipe_id));
+diesel::joinable!(steps -> recipes (recipe_id));
+diesel::joinable!(steps -> step_groups (step_group_id));
 diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(user_roles -> users (user_id));
 
-diesel::allow_tables_to_appear_in_same_query!(roles, user_roles, users,);
+diesel::allow_tables_to_appear_in_same_query!(
+    ingredient_groups,
+    ingredients,
+    recipe_ingredients,
+    recipe_tags,
+    recipes,
+    roles,
+    step_groups,
+    steps,
+    tags,
+    user_roles,
+    users,
+);
