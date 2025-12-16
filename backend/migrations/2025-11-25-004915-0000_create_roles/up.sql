@@ -1,7 +1,7 @@
 -- Your SQL goes here
 CREATE TABLE IF NOT EXISTS roles
 (
-    id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY  DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL UNIQUE,
     description TEXT
 );

@@ -46,7 +46,7 @@ const submit = handleSubmit(async (values) => {
   <div class="min-h-screen flex items-center justify-center">
     <div class="w-full max-w-sm rounded-lg border bg-card p-5 shadow">
       <h2 class="mb-4 text-center text-xl font-semibold">
-        Create account
+        create account
       </h2>
 
       <Alert v-if="error" variant="destructive" class="mb-3">

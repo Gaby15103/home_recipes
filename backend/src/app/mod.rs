@@ -11,6 +11,7 @@ use actix_web::{
 use std::env;
 mod profiles;
 pub mod users;
+pub mod tags;
 
 pub struct AppState {
     pub db: Addr<DbExecutor>,
@@ -64,5 +65,9 @@ fn routes(app: &mut web::ServiceConfig) {
             .service(web::resource("user")
                 .route(web::get().to(users::get_current))
                 .route(web::put().to(users::update)))
+            .service(web::resource("tags/create")
+                .route(web::post().to(tags::create)))
+            .service(web::resource("tags/update")
+                .route(web::put().to(tags::update)))
     );
 }
