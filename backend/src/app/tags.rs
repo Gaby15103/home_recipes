@@ -1,13 +1,17 @@
-﻿use actix_web::{HttpResponse, web::{Data, Json}, HttpRequest};
+﻿use actix_web::{
+    HttpRequest, HttpResponse,
+    web::{Data, Json},
+};
 use validator::Validate;
 
 use super::AppState;
-use crate::models::Tag;
+use crate::models::{NewTag, Tag};
 use crate::prelude::*;
+use crate::utils::auth::{Auth, authenticate};
 use actix::Message;
-
+use diesel::{PgConnection, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
-use crate::utils::auth::{authenticate, Auth};
+
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -18,6 +22,13 @@ pub struct In<U> {
 pub struct CreateTag {
     #[validate(length(min = 1, max = 32))]
     pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum InputTag {
+    Existing { id: Uuid },
+    New { name: String },
 }
 
 #[derive(Debug)]
@@ -97,10 +108,10 @@ pub async fn update(
     update_tag.validate()?;
 
     let auth = authenticate(&state, &req).await?;
-    
+
     let res = state
         .db
-        .send(UpdateTagOuter {auth, update_tag})
+        .send(UpdateTagOuter { auth, update_tag })
         .await
         .map_err(|_| Error::InternalServerError)??;
 

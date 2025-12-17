@@ -2,12 +2,15 @@
 use validator::Validate;
 
 use super::AppState;
-use crate::models::Recipe;
+use crate::models::{Ingredient, Recipe, Tag};
 use crate::prelude::*;
 use actix::Message;
-
+use bigdecimal::BigDecimal;
+use diesel::sql_types::Array;
 use uuid::Uuid;
+use crate::app::tags::InputTag;
 use crate::utils::auth::{authenticate, Auth};
+use crate::utils::unit::IngredientUnit;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -15,6 +18,7 @@ pub struct In<U> {
 }
 
 #[derive(Debug, Validate, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub struct CreateRecipe {
     #[validate(length(min = 1, max = 32))]
     pub title: String,
@@ -29,6 +33,46 @@ pub struct CreateRecipe {
     pub author: String,
     pub author_id: Option<Uuid>,
     pub is_private: bool,
+    pub tags: Vec<InputTag>,
+    pub ingredient_groups: Vec<IngredientGroupInput>,
+    pub step_groups: Vec<StepGroupInput>
+}
+#[derive(Debug, Validate, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct IngredientGroupInput {
+    #[validate(length(min = 1, max = 50))]
+    pub title: String,
+    pub position: i32,
+    pub ingredients: Vec<IngredientInput>
+}
+
+#[derive(Debug, Validate, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct IngredientInput {
+    #[validate(length(min = 1, max = 50))]
+    pub name: String,
+    pub quantity: BigDecimal,
+    pub unit: IngredientUnit,
+    pub note: Option<String>,
+    pub position: i32
+}
+
+#[derive(Debug, Validate, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct StepGroupInput {
+    #[validate(length(min = 1, max = 50))]
+    pub title: String,
+    pub position: i32,
+    pub steps: Vec<StepInput>
+}
+
+#[derive(Debug, Validate, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct StepInput {
+    pub position: i32,
+    #[validate(length(min = 1))]
+    pub instruction: String,
+    pub duration_minutes: i32
 }
 
 #[derive(Debug)]

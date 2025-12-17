@@ -14,6 +14,7 @@ pub struct Tag {
     pub name: String,
 }
 
+
 // Insertable for creating new recipes
 #[derive(Insertable)]
 #[diesel(table_name = tags)]

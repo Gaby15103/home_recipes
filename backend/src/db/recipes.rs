@@ -1,11 +1,15 @@
 ﻿use actix::prelude::*;
 use diesel::prelude::*;
-
+use uuid::Uuid;
 use super::DbExecutor;
 use crate::app::recipes::{CreateRecipeOuter, RecipeResponse, UpdateRecipeOuter};
-use crate::models::{NewRecipe, Recipe, RecipeChange, Tag, User, UserChange};
+use crate::app::tags::InputTag;
+use crate::models::{NewRecipe, NewRecipeTag, NewTag, Recipe, RecipeChange, Tag, User, UserChange};
 use crate::prelude::*;
+use crate::schema::recipe_tags::dsl::recipe_tags;
+use crate::schema::recipe_tags::tag_id;
 use crate::schema::tags::dsl::tags;
+use crate::schema::tags::name;
 
 impl Message for CreateRecipeOuter {
     type Result = Result<RecipeResponse>;
@@ -33,6 +37,8 @@ impl Handler<CreateRecipeOuter> for DbExecutor{
         let inserted_recipe: Recipe = diesel::insert_into(recipes)
             .values(&new_recipe)
             .get_result(&mut conn)?;
+
+        crate::db::tags::create_or_associate_tags(&mut conn, inserted_recipe.id, msg.new_recipe.tags)?;
 
         Ok(RecipeResponse::from(inserted_recipe))
     }
