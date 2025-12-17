@@ -1,6 +1,7 @@
 ﻿mod auth;
 mod users;
 mod tags;
+mod recipes;
 
 use crate::prelude::*;
 use actix::prelude::{Actor, SyncContext};

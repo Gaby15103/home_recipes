@@ -12,6 +12,7 @@ use std::env;
 mod profiles;
 pub mod users;
 pub mod tags;
+pub mod recipes;
 
 pub struct AppState {
     pub db: Addr<DbExecutor>,
@@ -58,16 +59,20 @@ pub async fn start() -> std::io::Result<()> {
 fn routes(app: &mut web::ServiceConfig) {
     app.service(web::resource("/")).service(
         web::scope("/api")
-            .service(web::resource("users")
+            .service(web::resource("user/register")
                 .route(web::post().to(users::register)))
-            .service(web::resource("users/login")
+            .service(web::resource("user/login")
             .   route(web::post().to(users::login)))
             .service(web::resource("user")
                 .route(web::get().to(users::get_current))
                 .route(web::put().to(users::update)))
-            .service(web::resource("tags/create")
+            .service(web::resource("tag/create")
                 .route(web::post().to(tags::create)))
-            .service(web::resource("tags/update")
+            .service(web::resource("tag/update")
                 .route(web::put().to(tags::update)))
+            .service(web::resource("recipe/create")
+                .route(web::post().to(recipes::create)))
+            .service(web::resource("recipe/update")
+                .route(web::put().to(recipes::update)))
     );
 }

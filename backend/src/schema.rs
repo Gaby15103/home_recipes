@@ -41,13 +41,13 @@ diesel::table! {
         title -> Text,
         description -> Nullable<Text>,
         servings -> Int4,
-        prep_time_minutes -> Nullable<Int4>,
-        cook_time_minutes -> Nullable<Int4>,
+        prep_time_minutes -> Int4,
+        cook_time_minutes -> Int4,
         author -> Text,
         author_id -> Nullable<Uuid>,
         is_private -> Bool,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
+        created_at -> Nullable<Timestamptz>,
+        updated_at -> Nullable<Timestamptz>,
     }
 }
 

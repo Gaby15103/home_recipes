@@ -2,8 +2,8 @@
 use diesel::prelude::*;
 
 use super::DbExecutor;
-use crate::app::tags::{CreateTag, CreateTagOuter, TagResponse, UpdateTag, UpdateTagOuter};
-use crate::models::{NewTag, Tag, TagChange, User, UserChange};
+use crate::app::tags::{CreateTagOuter, TagResponse, UpdateTagOuter};
+use crate::models::{NewTag, Tag, TagChange};
 use crate::prelude::*;
 impl Message for CreateTagOuter {
     type Result = Result<TagResponse>;
