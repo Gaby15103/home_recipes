@@ -1,15 +1,13 @@
 ﻿use actix::prelude::*;
-use diesel::associations::HasTable;
 use diesel::prelude::*;
 use libreauth::pass::HashBuilder;
 
 use super::DbExecutor;
 use crate::app::users::{LoginUser, RegisterUser, UpdateUserOuter, UserResponse};
+use crate::db::roles::fetch_roles_for_user;
 use crate::models::{NewUser, User, UserChange};
 use crate::prelude::*;
 use crate::utils::{HASHER, PWD_SCHEME_VERSION};
-
-// message handler implementations ↓
 
 impl Message for RegisterUser {
     type Result = Result<UserResponse>;
@@ -23,7 +21,6 @@ impl Handler<RegisterUser> for DbExecutor {
 
         let mut conn = self.0.get()?; // PooledConnection
 
-        // Build insertable struct
         let new_user = NewUser {
             email: msg.email,
             username: msg.username,
@@ -34,12 +31,13 @@ impl Handler<RegisterUser> for DbExecutor {
             preferences: serde_json::json!({}),
         };
 
-        // Insert and return the user
         let inserted_user: User = diesel::insert_into(users)
             .values(&new_user)
-            .get_result(&mut conn)?; // propagate Diesel errors via `?`
+            .get_result(&mut conn)?;
 
-        Ok(UserResponse::from(inserted_user))
+        let roles = Vec::new();
+
+        Ok(UserResponse::from_user_and_roles(inserted_user, roles))
     }
 }
 
@@ -64,19 +62,19 @@ impl Handler<LoginUser> for DbExecutor {
         if checker.is_valid(provided_password_raw) {
             if checker.needs_update(Option::from(PWD_SCHEME_VERSION)) {
                 let new_password = HASHER.hash(provided_password_raw)?;
-                return match diesel::update(users.find(stored_user.id))
+                let updated_user: User = diesel::update(users.find(stored_user.id))
                     .set(password_hash.eq(new_password))
-                    .get_result::<User>(&mut conn)
-                {
-                    Ok(user) => Ok(user.into()),
-                    Err(e) => Err(e.into()),
-                };
+                    .get_result(&mut conn)?;
+
+                let user_roles = fetch_roles_for_user(&mut conn, updated_user.id)?;
+
+                return Ok(UserResponse::from_user_and_roles(updated_user, user_roles));
             }
-            Ok(stored_user.into())
+
+            let user_roles = fetch_roles_for_user(&mut conn, stored_user.id)?;
+            Ok(UserResponse::from_user_and_roles(stored_user, user_roles))
         } else {
-            Err(Error::Unauthorized(json!({
-                "error": "Wrong password",
-            })))
+            Err(Error::Unauthorized(json!({"error": "Wrong password"})))
         }
     }
 }
@@ -98,7 +96,7 @@ impl Handler<UpdateUserOuter> for DbExecutor {
 
         let updated_password = HASHER.hash(&update_user.password)?;
 
-        let updated_user = UserChange {
+        let updated_user_data  = UserChange {
             username: update_user.username,
             email: update_user.email,
             password_hash: updated_password,
@@ -108,12 +106,12 @@ impl Handler<UpdateUserOuter> for DbExecutor {
             preferences: Default::default(),
         };
 
-        match diesel::update(users.find(auth.user.id))
-            .set(&updated_user)
-            .get_result::<User>(&mut conn)
-        {
-            Ok(user) => Ok(user.into()),
-            Err(e) => Err(e.into()),
-        }
+        let updated_user = diesel::update(users.find(auth.user.id))
+            .set(&updated_user_data)
+            .get_result::<User>(&mut conn)?;
+
+        let user_roles = fetch_roles_for_user(&mut conn, updated_user.id)?;
+
+        Ok(UserResponse::from_user_and_roles(updated_user, user_roles))
     }
 }

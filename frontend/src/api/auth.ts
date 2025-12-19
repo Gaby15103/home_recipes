@@ -6,7 +6,7 @@ export function login(email: string, password: string) {
         user: { email, password },
     };
 
-    return api<LoginResponse>("/users/login", {
+    return api<LoginResponse>("/user/login", {
         method: "POST",
         data: payload, // Axios uses `data` instead of `body`
     });
@@ -23,7 +23,7 @@ export function registerUser(
         user: { username, email, password, first_name, last_name },
     };
 
-    return api<LoginResponse>("/users", {
+    return api<LoginResponse>("/user", {
         method: "POST",
         data: payload,
     });

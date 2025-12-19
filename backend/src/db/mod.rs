@@ -4,6 +4,7 @@ mod tags;
 mod recipes;
 pub mod ingredients;
 pub mod step;
+pub mod roles;
 
 use crate::prelude::*;
 use actix::prelude::{Actor, SyncContext};

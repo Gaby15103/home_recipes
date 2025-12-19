@@ -1,9 +1,9 @@
 ﻿use actix_web::{HttpRequest, HttpResponse, ResponseError, web::Data, web::Json};
 use std::convert::From;
 use validator::Validate;
-
+use crate::db::roles::fetch_roles_for_user;
 use super::AppState;
-use crate::models::User;
+use crate::models::{Role, User};
 use crate::prelude::*;
 use crate::utils::{
     auth::{Auth, authenticate},
@@ -106,10 +106,14 @@ pub struct UserResponseInner {
     pub last_name: String,
     pub avatar_url: Option<String>,
     pub preferences: serde_json::Value,
+    pub roles: Vec<Role>
 }
 
-impl From<User> for UserResponse {
-    fn from(user: User) -> Self {
+impl UserResponse {
+    pub fn from_user_and_roles(
+        user: User,
+        roles: Vec<Role>,
+    ) -> Self {
         UserResponse {
             user: UserResponseInner {
                 token: user.generate_jwt().unwrap(),
@@ -119,13 +123,14 @@ impl From<User> for UserResponse {
                 last_name: user.last_name,
                 avatar_url: user.avatar_url,
                 preferences: user.preferences,
+                roles,
             },
         }
     }
-}
 
-impl UserResponse {
-    fn create_with_auth(auth: Auth) -> Self {
+    pub fn from_auth(
+        auth: Auth,
+    ) -> Self {
         UserResponse {
             user: UserResponseInner {
                 token: auth.token,
@@ -135,10 +140,12 @@ impl UserResponse {
                 last_name: auth.user.last_name,
                 avatar_url: auth.user.avatar_url,
                 preferences: auth.user.preferences,
+                roles: auth.roles,
             },
         }
     }
 }
+
 
 pub async fn register(
     form: Json<In<RegisterUser>>,
@@ -176,7 +183,7 @@ pub async fn login(
 }
 pub async fn get_current(state: Data<AppState>, req: HttpRequest) -> Result<HttpResponse, Error> {
     let auth = authenticate(&state, &req).await?;
-    Ok(HttpResponse::Ok().json(UserResponse::create_with_auth(auth)))
+    Ok(HttpResponse::Ok().json(UserResponse::from_auth(auth)))
 }
 
 pub async fn update(

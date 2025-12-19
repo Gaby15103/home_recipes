@@ -9,5 +9,10 @@ export interface User {
     last_name: string;
     avatar_url: string | null;
     preferences: UserPreferences;
-    token?: string; // optional — only returned after login
+    roles: Role[]
+    token?: string;
+}
+export interface Role {
+    name: string;
+    description: string;
 }

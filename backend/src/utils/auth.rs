@@ -3,7 +3,7 @@ use actix_web::{HttpRequest, http::header::AUTHORIZATION, web::Data};
 use actix_web::http::header::HeaderValue;
 
 use crate::app::AppState;
-use crate::models::User;
+use crate::models::{Role, User};
 use crate::prelude::*;
 
 const TOKEN_PREFIX: &str = "Bearer ";
@@ -12,6 +12,7 @@ const TOKEN_PREFIX: &str = "Bearer ";
 pub struct Auth {
     pub user: User,
     pub token: String,
+    pub roles: Vec<Role>,
 }
 
 #[derive(Debug)]

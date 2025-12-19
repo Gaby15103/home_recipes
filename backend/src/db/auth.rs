@@ -2,6 +2,8 @@
 use diesel::prelude::*;
 
 use crate::db::DbExecutor;
+use crate::db::roles::fetch_roles_for_user;
+use crate::models::{Role, User};
 use crate::prelude::*;
 use crate::utils::{
     auth::{Auth, GenerateAuth},
@@ -24,12 +26,14 @@ impl Handler<GenerateAuth> for DbExecutor {
 
         let mut conn = self.0.get()?;
 
-        match users.find(claims.id).first(&mut conn) {
-            Ok(user) => Ok(Auth {
-                user,
-                token: msg.token,
-            }),
-            Err(e) => Err(e.into()),
-        }
+        let user: User = users.find(claims.id).first(&mut conn)?;
+
+        let roles: Vec<Role> = fetch_roles_for_user(&mut conn, user.id)?;
+
+        Ok(Auth {
+            user,
+            token: msg.token,
+            roles,
+        })
     }
 }

@@ -6,6 +6,12 @@ export const useUserStore = defineStore("user", {
         user: JSON.parse(localStorage.getItem("user")!) as User | null,
         token: localStorage.getItem("token") as string | null,
     }),
+    getters: {
+        hasRole: (state) => {
+            return (role: string) =>
+                state.user?.roles?.some(r => r.name === role) ?? false;
+        },
+    },
     actions: {
         setUser(userData: User, jwt: string) {
             this.user = userData;
