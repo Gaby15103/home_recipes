@@ -5,11 +5,9 @@
 use validator::Validate;
 
 use super::AppState;
-use crate::models::{NewTag, Tag};
+use crate::models::{Tag};
 use crate::prelude::*;
 use crate::utils::auth::{Auth, authenticate};
-use actix::Message;
-use diesel::{PgConnection, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
 
@@ -69,15 +67,6 @@ impl From<Tag> for TagResponse {
             },
         }
     }
-}
-
-#[derive(Debug)]
-pub struct CreateOrGetTag {
-    pub name: String,
-}
-
-impl Message for CreateOrGetTag {
-    type Result = Result<Tag, Error>;
 }
 
 pub async fn create(

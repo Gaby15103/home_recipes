@@ -5,8 +5,6 @@ use validator::Validate;
 use super::AppState;
 use crate::models::User;
 use crate::prelude::*;
-use crate::schema::users::first_name;
-use crate::utils::auth::GenerateAuth;
 use crate::utils::{
     auth::{Auth, authenticate},
     jwt::CanGenerateJwt,

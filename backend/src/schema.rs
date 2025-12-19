@@ -71,8 +71,7 @@ diesel::table! {
 diesel::table! {
     steps (id) {
         id -> Uuid,
-        recipe_id -> Uuid,
-        step_group_id -> Nullable<Uuid>,
+        step_group_id -> Uuid,
         position -> Int4,
         instruction -> Text,
         duration_minutes -> Nullable<Int4>,
@@ -122,7 +121,6 @@ diesel::joinable!(recipe_tags -> recipes (recipe_id));
 diesel::joinable!(recipe_tags -> tags (tag_id));
 diesel::joinable!(recipes -> users (author_id));
 diesel::joinable!(step_groups -> recipes (recipe_id));
-diesel::joinable!(steps -> recipes (recipe_id));
 diesel::joinable!(steps -> step_groups (step_group_id));
 diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(user_roles -> users (user_id));

@@ -15,7 +15,7 @@ pub struct RecipeIngredient {
     pub ingredient_id: Uuid,
     pub quantity: BigDecimal,
     pub unit: String,
-    pub note: String,
+    pub note: Option<String>,
     pub position: i32,
 }
 

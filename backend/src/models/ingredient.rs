@@ -14,7 +14,6 @@ pub struct Ingredient {
     pub name: String,
 }
 
-// Insertable for creating new recipes
 #[derive(Insertable)]
 #[diesel(table_name = ingredients)]
 pub struct NewIngredient {

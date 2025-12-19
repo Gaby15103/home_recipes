@@ -1,18 +1,19 @@
-﻿use crate::db::{DbExecutor, new_pool};
+﻿use crate::db::{new_pool, DbExecutor};
 use actix::prelude::{Addr, SyncArbiter};
 use actix_cors::Cors;
 use actix_web::{
-    App, HttpRequest, HttpServer,
-    http::header::{AUTHORIZATION, CONTENT_TYPE},
-    middleware::Logger,
-    web,
+    http::header::{AUTHORIZATION, CONTENT_TYPE}, middleware::Logger, web,
     web::Data,
+    App,
+    HttpRequest,
+    HttpServer,
 };
 use std::env;
 mod profiles;
 pub mod users;
 pub mod tags;
 pub mod recipes;
+pub mod step;
 
 pub struct AppState {
     pub db: Addr<DbExecutor>,

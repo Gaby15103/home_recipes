@@ -2,6 +2,7 @@
 mod users;
 mod tags;
 mod recipes;
+pub mod ingredients;
 
 use crate::prelude::*;
 use actix::prelude::{Actor, SyncContext};
@@ -10,9 +11,6 @@ use diesel::{
     r2d2::{self, ConnectionManager, Pool, PooledConnection},
 };
 use actix::Handler;
-use crate::models::User;
-use crate::utils::auth::{Auth, GenerateAuth};
-
 pub type Conn = PgConnection;
 
 pub type PgPool = Pool<ConnectionManager<Conn>>;

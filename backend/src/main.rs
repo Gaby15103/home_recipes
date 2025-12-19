@@ -19,6 +19,7 @@ mod models;
 mod prelude;
 mod schema;
 mod utils;
+mod dto;
 
 use std::env;
 

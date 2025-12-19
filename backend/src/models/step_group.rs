@@ -7,7 +7,7 @@ use crate::schema::{step_groups};
 // -----------------------------
 // StepGroup DB Model
 // -----------------------------
-#[derive(Queryable, Insertable, Identifiable, Debug)]
+#[derive(Queryable, Insertable, Identifiable, Debug, Selectable)]
 #[diesel(table_name = step_groups)]
 pub struct StepGroup {
     pub id: Uuid,

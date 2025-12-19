@@ -1,4 +1,5 @@
-﻿use serde::{Deserialize, Serialize};
+﻿use std::fmt;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,5 +84,38 @@ impl IngredientUnit {
 
         let base = from.to_base(value);
         Some(to.from_base(base))
+    }
+}
+
+impl fmt::Display for IngredientUnit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IngredientUnit::Gram => write!(f, "Gram"),
+            IngredientUnit::Kilogram => write!(f, "Kilogram"),
+            IngredientUnit::Milliliter => write!(f, "Milliliter"),
+            IngredientUnit::Liter => write!(f, "Liter"),
+            IngredientUnit::Teaspoon => write!(f, "Teaspoon"),
+            IngredientUnit::Tablespoon => write!(f, "Tablespoon"),
+            IngredientUnit::Cup => write!(f, "Cup"),
+            IngredientUnit::Piece => write!(f, "Piece"),
+        }
+    }
+}
+impl FromStr for IngredientUnit {
+
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<IngredientUnit, Self::Err> {
+        match input {
+            "Gram"  => Ok(IngredientUnit::Gram),
+            "Kilogram"  => Ok(IngredientUnit::Kilogram),
+            "Milliliter"  => Ok(IngredientUnit::Milliliter),
+            "Liter"  => Ok(IngredientUnit::Liter),
+            "Teaspoon"  => Ok(IngredientUnit::Teaspoon),
+            "Tablespoon"  => Ok(IngredientUnit::Tablespoon),
+            "Cup"  => Ok(IngredientUnit::Cup),
+            "Piece"  => Ok(IngredientUnit::Piece),
+            _      => Err(()),
+        }
     }
 }
