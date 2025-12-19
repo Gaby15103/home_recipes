@@ -13,7 +13,6 @@ mod profiles;
 pub mod users;
 pub mod tags;
 pub mod recipes;
-pub mod step;
 
 pub struct AppState {
     pub db: Addr<DbExecutor>,
@@ -75,5 +74,7 @@ fn routes(app: &mut web::ServiceConfig) {
                 .route(web::post().to(recipes::create)))
             .service(web::resource("recipe/update")
                 .route(web::put().to(recipes::update)))
+            .service(web::resource("recipe/get_all")
+                .route(web::get().to(recipes::get_all)))
     );
 }

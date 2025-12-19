@@ -6,6 +6,8 @@ use crate::app::tags::{CreateTagOuter, UpdateTagOuter};
 use crate::dto::{InputTag, TagResponse};
 use crate::models::{NewTag, Tag, TagChange};
 use crate::prelude::*;
+use crate::schema::{recipe_tags, tags};
+
 impl Message for CreateTagOuter {
     type Result = Result<TagResponse>;
 }
@@ -81,6 +83,21 @@ pub fn create_or_associate_tags(
 
     Ok(result_tags)
 }
+
+pub fn fetch_tags_for_recipe(
+    conn: &mut PgConnection,
+    recipe_id: Uuid,
+) -> Result<Vec<TagResponse>, diesel::result::Error> {
+
+    let tags_list: Vec<Tag> = tags::table
+        .inner_join(recipe_tags::table)
+        .filter(recipe_tags::recipe_id.eq(recipe_id))
+        .select(tags::all_columns)
+        .load(conn)?;
+
+    Ok(tags_list.into_iter().map(TagResponse::from).collect())
+}
+
 
 impl Message for UpdateTagOuter {
     type Result = Result<TagResponse>;

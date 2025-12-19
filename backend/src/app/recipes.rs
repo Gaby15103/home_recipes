@@ -5,7 +5,7 @@ use super::AppState;
 use crate::prelude::*;
 use crate::utils::auth::{authenticate, Auth};
 use crate::dto::*;
-
+use crate::schema::recipes::dsl::recipes;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -21,6 +21,7 @@ pub struct UpdateRecipe {
     pub auth: Auth,
     pub update_recipe: UpdateRecipeInput,
 }
+pub struct GetAllRecipes;
 
 pub async fn create(
     state: Data<AppState>,
@@ -59,3 +60,16 @@ pub async fn update(
 
     Ok(HttpResponse::Ok().json(res))
 }
+
+pub async fn get_all(
+    state: Data<AppState>,
+) -> Result<HttpResponse, Error> {
+    let res = state
+        .db
+        .send(GetAllRecipes)
+        .await
+        .map_err(|_| crate::error::Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(res))
+}
+

@@ -1,8 +1,9 @@
 ﻿use diesel::prelude::*;
 use uuid::Uuid;
 use crate::dto::{IngredientGroupInput, IngredientResponse, IngredientGroupResponse};
+use crate::models::{Ingredient, IngredientGroup, RecipeIngredient};
 use crate::prelude::*;
-
+use crate::schema::{ingredient_groups, ingredients, recipe_ingredients};
 /*
 impl Handler<CreateIngredientOuter> for DbExecutor{
     type Result = Result<IngredientResponse>;
@@ -101,6 +102,56 @@ pub fn create_ingredient_groups(
 
     Ok(result_groups)
 }
+
+pub fn fetch_ingredient_groups_for_recipe(
+    conn: &mut PgConnection,
+    recipe_id: Uuid,
+) -> Result<Vec<IngredientGroupResponse>, diesel::result::Error> {
+
+    let groups: Vec<IngredientGroup> = ingredient_groups::table
+        .filter(ingredient_groups::recipe_id.eq(recipe_id))
+        .order(ingredient_groups::position.asc())
+        .load(conn)?;
+
+    let mut result = Vec::with_capacity(groups.len());
+
+    for group in groups {
+        let ingredients_rows: Vec<(Ingredient, RecipeIngredient)> =
+            ingredients::table
+                .inner_join(
+                    recipe_ingredients::table.on(
+                        recipe_ingredients::ingredient_id.eq(ingredients::id),
+                    ),
+                )
+                .filter(recipe_ingredients::ingredient_group_id.eq(group.id))
+                .order(recipe_ingredients::position.asc())
+                .load(conn)?;
+
+
+        let ingredients = ingredients_rows
+            .into_iter()
+            .map(|(ingredient, ri)| IngredientResponse {
+                id: ingredient.id,
+                name: ingredient.name,
+                quantity: ri.quantity,
+                unit: ri.unit.parse().unwrap(),
+                note: ri.note,
+                position: ri.position,
+            })
+            .collect();
+
+        result.push(IngredientGroupResponse {
+            id: group.id,
+            title: group.title,
+            position: group.position,
+            ingredients,
+        });
+    }
+
+    Ok(result)
+}
+
+
 /*
 impl Handler<UpdateIngredientOuter> for DbExecutor{
     type Result = Result<IngredientResponse>;
