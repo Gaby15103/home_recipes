@@ -23,7 +23,7 @@ export function registerUser(
         user: { username, email, password, first_name, last_name },
     };
 
-    return api<LoginResponse>("/user", {
+    return api<LoginResponse>("/user/register", {
         method: "POST",
         data: payload,
     });

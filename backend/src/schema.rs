@@ -1,6 +1,17 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    _sqlx_migrations (version) {
+        version -> Int8,
+        description -> Text,
+        installed_on -> Timestamptz,
+        success -> Bool,
+        checksum -> Bytea,
+        execution_time -> Int8,
+    }
+}
+
+diesel::table! {
     ingredient_groups (id) {
         id -> Uuid,
         recipe_id -> Uuid,
@@ -53,7 +64,7 @@ diesel::table! {
 
 diesel::table! {
     roles (id) {
-        id -> Int4,
+        id -> Uuid,
         name -> Text,
         description -> Nullable<Text>,
     }
@@ -88,7 +99,7 @@ diesel::table! {
 diesel::table! {
     user_roles (user_id, role_id) {
         user_id -> Uuid,
-        role_id -> Int4,
+        role_id -> Uuid,
     }
 }
 
@@ -126,6 +137,7 @@ diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(user_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    _sqlx_migrations,
     ingredient_groups,
     ingredients,
     recipe_ingredients,

@@ -8,10 +8,19 @@ pub fn fetch_roles_for_user(
     conn: &mut PgConnection,
     user_id: Uuid,
 ) -> Result<Vec<Role>, diesel::result::Error> {
-    roles::table
-        .inner_join(user_roles::table.on(user_roles::role_id.eq(roles::id)))
+    use crate::schema::{roles, user_roles};
+
+    let role_ids = user_roles::table
+        .select(user_roles::role_id)
         .filter(user_roles::user_id.eq(user_id))
-        .select(Role::as_select())
-        .load(conn)
-        .map_err(Into::into)
+        .load::<Uuid>(conn)?;
+
+    // Now fetch roles by their IDs
+    let roles_for_user = roles::table
+        .filter(roles::id.eq_any(role_ids))
+        .load::<Role>(conn)?;
+
+    Ok(roles_for_user)
 }
+
+

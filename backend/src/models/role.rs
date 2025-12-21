@@ -1,14 +1,16 @@
 ﻿use diesel::{AsChangeset, AsExpression, Associations, FromSqlRow, HasQuery, Identifiable, Insertable, QueryId, Queryable, QueryableByName, Selectable, SqlType};
 use diesel::expression::ValidGrouping;
 use serde_derive::{Deserialize, Serialize};
+use uuid::Uuid;
 use crate::schema::{roles};
+use diesel::prelude::*;
 // -----------------------------
 // Role DB Model
 // -----------------------------
 #[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = roles)]
 pub struct Role {
-    pub id: i32,
+    pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
 }
