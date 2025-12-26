@@ -1,4 +1,6 @@
-﻿use super::DbExecutor;
+﻿use std::fs;
+use std::path::Path;
+use super::DbExecutor;
 use crate::app::recipes::{CreateRecipe, GetAllRecipes, UpdateRecipe};
 use crate::db::step::{create_step_groups, fetch_step_groups_for_recipe};
 use crate::db::ingredients::{create_ingredient_groups, fetch_ingredient_groups_for_recipe};
@@ -9,6 +11,7 @@ use crate::dto::{
 use crate::models::{NewRecipe, Recipe, RecipeChange};
 use crate::prelude::*;
 use actix::prelude::*;
+use actix_multipart::form::tempfile::TempFile;
 use diesel::prelude::*;
 use crate::schema::recipes::{created_at, is_private};
 use crate::schema::recipes::dsl::recipes;
@@ -22,12 +25,50 @@ impl Handler<CreateRecipe> for DbExecutor {
 
     fn handle(&mut self, msg: CreateRecipe, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipes::dsl::*;
+        use std::fs;
+        use std::path::{Path, PathBuf};
+        use uuid::Uuid;
+
+        let image_dir = PathBuf::from("assets/recipes");
+
+        fs::create_dir_all(&image_dir)
+            .map_err(|e| {
+                log::error!("Failed to create image directory: {}", e);
+                diesel::result::Error::RollbackTransaction
+            })?;
+
+        let temp_file = msg.main_image;
+
+        let extension = temp_file
+            .file_name
+            .as_deref()
+            .and_then(|name| Path::new(name).extension())
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("png");
+
+        let file_name = format!(
+            "recipe_{}_{}.{}",
+            Uuid::new_v4(),
+            chrono::Utc::now().timestamp(),
+            extension
+        );
+
+        let disk_path = image_dir.join(&file_name);
+
+        fs::copy(temp_file.file.path(), &disk_path)
+            .map_err(|e| {
+                log::error!("Failed to copy recipe image: {}", e);
+                diesel::result::Error::RollbackTransaction
+            })?;
+
+        let other_image_url = format!("/assets/recipes/{}", file_name);
 
         let mut conn = self.0.get()?;
 
         let new_recipe = NewRecipe {
             title: msg.new_recipe.title,
             description: msg.new_recipe.description,
+            image_url: other_image_url.to_string(),
             servings: msg.new_recipe.servings,
             prep_time_minutes: msg.new_recipe.prep_time_minutes,
             cook_time_minutes: msg.new_recipe.cook_time_minutes,
@@ -39,18 +80,22 @@ impl Handler<CreateRecipe> for DbExecutor {
         let inserted_recipe: Recipe = diesel::insert_into(recipes)
             .values(&new_recipe)
             .get_result(&mut conn)?;
-
-        let inserted_tags: Vec<TagResponse> =
-            create_or_associate_tags(&mut conn, inserted_recipe.id, msg.new_recipe.tags)?;
-
-        let inserted_ingredient_groups: Vec<IngredientGroupResponse> = create_ingredient_groups(
+        let inserted_tags = create_or_associate_tags(
+            &mut conn,
+            inserted_recipe.id,
+            msg.new_recipe.tags,
+        )?;
+        let inserted_ingredient_groups = create_ingredient_groups(
             &mut conn,
             inserted_recipe.id,
             msg.new_recipe.ingredient_groups,
         )?;
-
-        let inserted_step_groups: Vec<StepGroupResponse> =
-            create_step_groups(&mut conn, inserted_recipe.id, msg.new_recipe.step_groups)?;
+        let inserted_step_groups = create_step_groups(
+            &mut conn,
+            inserted_recipe.id,
+            msg.new_recipe.step_groups,
+            msg.step_image,
+        )?;
 
         Ok(RecipeResponse::from_parts(
             inserted_recipe,
@@ -76,6 +121,7 @@ impl Handler<UpdateRecipe> for DbExecutor {
         let update_recipe = RecipeChange {
             title: msg.update_recipe.title,
             description: msg.update_recipe.description,
+            image_url: "".to_string(),
             servings: msg.update_recipe.servings,
             prep_time_minutes: msg.update_recipe.prep_time_minutes,
             cook_time_minutes: msg.update_recipe.cook_time_minutes,
@@ -92,6 +138,7 @@ impl Handler<UpdateRecipe> for DbExecutor {
                 id: recipe.id,
                 title: recipe.title,
                 description: recipe.description,
+                image_url: "".to_string(),
                 servings: recipe.servings,
                 prep_time_minutes: recipe.cook_time_minutes,
                 cook_time_minutes: recipe.cook_time_minutes,

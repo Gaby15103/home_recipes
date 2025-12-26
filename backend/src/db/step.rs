@@ -1,4 +1,6 @@
-﻿use diesel::associations::HasTable;
+﻿use std::path::{Path, PathBuf};
+use actix_multipart::form::tempfile::TempFile;
+use diesel::associations::HasTable;
 use crate::dto::{StepGroupInput, StepGroupResponse, StepResponse};
 use crate::models::{Step, StepGroup};
 use crate::prelude::*;
@@ -8,47 +10,104 @@ use crate::schema::{step_groups, steps};
 
 pub fn create_step_groups(
     conn: &mut PgConnection,
-    recipe_id_val: Uuid,
+    recipe_id: Uuid,
     groups: Vec<StepGroupInput>,
+    mut images: Vec<TempFile>,
 ) -> Result<Vec<StepGroupResponse>, diesel::result::Error> {
-    use crate::schema::{
-        step_groups::dsl as stg,
-        steps::dsl as st
-    };
+    use crate::schema::{step_groups::dsl as stg, steps::dsl as st};
+    use std::fs;
+    use std::path::PathBuf;
+    use uuid::Uuid;
+
     let mut result_groups = Vec::with_capacity(groups.len());
+    let step_dir: PathBuf = PathBuf::from("assets/steps");
+
+    fs::create_dir_all(&step_dir)
+        .map_err(|e| {
+            log::error!("Failed to create steps directory: {}", e);
+            diesel::result::Error::RollbackTransaction
+        })?;
+
+    let mut image_cursor = 0;
 
     for group in groups {
-        let mut inserted_step_group: StepGroupResponse = StepGroupResponse::from(
+        // Insert step group
+        let mut inserted_group: StepGroupResponse = StepGroupResponse::from(
             diesel::insert_into(stg::step_groups)
                 .values((
-                    step_groups::dsl::recipe_id.eq(recipe_id_val),
-                    step_groups::dsl::title.eq(&group.title),
-                    step_groups::dsl::position.eq(group.position),
+                    stg::recipe_id.eq(recipe_id),
+                    stg::title.eq(&group.title),
+                    stg::position.eq(group.position),
                 ))
                 .returning(StepGroup::as_select())
                 .get_result(conn)?,
         );
 
-        for step in &group.steps {
-            let inserted_steps: StepResponse = StepResponse::from(
+        for step in group.steps {
+            // Insert step without image
+            let mut inserted_step: StepResponse = StepResponse::from(
                 diesel::insert_into(st::steps)
-                    .values(&(
-                        steps::dsl::step_group_id.eq(&inserted_step_group.id),
-                        steps::dsl::position.eq(&step.position),
-                        steps::dsl::instruction.eq(&step.instruction),
-                        steps::dsl::duration_minutes.eq(&step.duration_minutes),
+                    .values((
+                        st::step_group_id.eq(inserted_group.id),
+                        st::position.eq(step.position),
+                        st::instruction.eq(&step.instruction),
+                        st::duration_minutes.eq(step.duration_minutes),
                     ))
                     .returning(Step::as_select())
                     .get_result(conn)?,
             );
 
-            inserted_step_group.steps.push(inserted_steps);
+            // Attach image if available
+            if image_cursor < images.len() {
+                let temp_file = images.remove(image_cursor);
+
+                let ext: String = if let Some(name) = temp_file.file_name.as_deref() {
+                    let path = Path::new(name);
+                    path.extension()
+                        .and_then(|e| e.to_str())
+                        .unwrap_or("png")
+                        .to_string() // <-- now owned
+                } else {
+                    "png".to_string()
+                };
+
+
+
+                let file_name = format!(
+                    "step_{}_{}_{}.{}",
+                    inserted_step.id,
+                    Uuid::new_v4(),
+                    chrono::Utc::now().timestamp(),
+                    ext
+                );
+
+                let disk_path = step_dir.join(&file_name);
+
+                fs::copy(temp_file.file.path(), &disk_path)
+                    .map_err(|e| {
+                        log::error!("Failed to copy step image: {}", e);
+                        diesel::result::Error::RollbackTransaction
+                    })?;
+
+                let image_url = format!("/api/assets/steps/{}", file_name);
+
+                diesel::update(st::steps.find(inserted_step.id))
+                    .set(st::image_url.eq(&image_url))
+                    .execute(conn)?;
+
+                inserted_step.image_url = Some(image_url);
+            }
+
+            image_cursor += 1;
+            inserted_group.steps.push(inserted_step);
         }
-        result_groups.push(inserted_step_group);
+
+        result_groups.push(inserted_group);
     }
 
     Ok(result_groups)
 }
+
 
 pub fn fetch_step_groups_for_recipe(
     conn: &mut PgConnection,

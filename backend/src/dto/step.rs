@@ -22,6 +22,7 @@ pub struct StepResponse {
     pub step_group_id: Uuid,
     pub position: i32,
     pub instruction: String,
+    pub image_url: Option<String>,
     pub duration_minutes: Option<i32>,
 }
 
@@ -54,6 +55,7 @@ impl From<Step> for StepResponse {
             step_group_id: step.step_group_id,
             position: step.position,
             instruction: step.instruction,
+            image_url: step.image_url,
             duration_minutes: step.duration_minutes,
         }
     }

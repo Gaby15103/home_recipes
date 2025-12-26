@@ -9,6 +9,7 @@ use actix_web::{
     HttpServer,
 };
 use std::env;
+use actix_files::Files;
 mod profiles;
 pub mod users;
 pub mod tags;
@@ -76,5 +77,7 @@ fn routes(app: &mut web::ServiceConfig) {
                 .route(web::put().to(recipes::update)))
             .service(web::resource("recipe/get_all")
                 .route(web::get().to(recipes::get_all)))
+            .service(Files::new("/assets", "./assets")
+                .show_files_listing())
     );
 }

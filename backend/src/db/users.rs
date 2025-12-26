@@ -27,7 +27,7 @@ impl Handler<RegisterUser> for DbExecutor {
             password_hash: HASHER.hash(&msg.password)?,
             first_name: msg.first_name,
             last_name: msg.last_name,
-            avatar_url: Some("default.png".parse().unwrap()),
+            avatar_url: Some("/assets/users/default.png".parse().unwrap()),
             preferences: serde_json::json!({}),
         };
 

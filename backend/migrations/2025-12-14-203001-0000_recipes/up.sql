@@ -4,6 +4,7 @@ CREATE TABLE recipes
     id                UUID PRIMARY KEY  DEFAULT uuid_generate_v4(),
     title             TEXT        NOT NULL,
     description       TEXT,
+    image_url         TEXT        NOT NULL,
     servings          INTEGER     NOT NULL,
     prep_time_minutes INTEGER     NOT NULL,
     cook_time_minutes INTEGER     NOT NULL,

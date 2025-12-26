@@ -6,6 +6,14 @@ use crate::prelude::*;
 use crate::utils::auth::{authenticate, Auth};
 use crate::dto::*;
 use crate::schema::recipes::dsl::recipes;
+use actix_multipart::form::{json::Json as MpJson, tempfile::TempFile, MultipartForm};
+
+#[derive(MultipartForm)]
+pub struct CreateRecipeForm {
+    pub recipe: MpJson<In<CreateRecipeInput>>,
+    pub main_image: TempFile,
+    pub step_image: Vec<TempFile>,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -15,6 +23,8 @@ pub struct In<U> {
 pub struct CreateRecipe {
     pub auth: Auth,
     pub new_recipe: CreateRecipeInput,
+    pub main_image: TempFile,
+    pub step_image: Vec<TempFile>,
 }
 
 pub struct UpdateRecipe {
@@ -25,17 +35,18 @@ pub struct GetAllRecipes;
 
 pub async fn create(
     state: Data<AppState>,
-    (form, req): (Json<In<CreateRecipeInput>>, HttpRequest),
+    req: HttpRequest,
+    MultipartForm(form): MultipartForm<CreateRecipeForm>,
 ) -> Result<HttpResponse, Error> {
-    let new_recipe = form.into_inner().recipe;
+    let auth = authenticate(&state, &req).await?;
+
+    let new_recipe = form.recipe.into_inner().recipe;
 
     new_recipe.validate()?;
 
-    let auth = authenticate(&state, &req).await?;
-
     let res = state
         .db
-        .send(CreateRecipe { auth, new_recipe })
+        .send(CreateRecipe { auth, new_recipe, main_image: form.main_image, step_image: form.step_image })
         .await
         .map_err(|_| crate::error::Error::InternalServerError)??;
 

@@ -51,6 +51,7 @@ diesel::table! {
         id -> Uuid,
         title -> Text,
         description -> Nullable<Text>,
+        image_url -> Text,
         servings -> Int4,
         prep_time_minutes -> Int4,
         cook_time_minutes -> Int4,
@@ -85,6 +86,7 @@ diesel::table! {
         step_group_id -> Uuid,
         position -> Int4,
         instruction -> Text,
+        image_url -> Nullable<Text>,
         duration_minutes -> Nullable<Int4>,
     }
 }

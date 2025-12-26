@@ -13,6 +13,7 @@ pub struct Recipe {
     pub id: Uuid,
     pub title: String,
     pub description: Option<String>,
+    pub image_url: String,
     pub servings: i32,
     pub prep_time_minutes: i32,
     pub cook_time_minutes: i32,
@@ -29,6 +30,7 @@ pub struct Recipe {
 pub struct NewRecipe {
     pub title: String,
     pub description: Option<String>,
+    pub image_url: String,
     pub servings: i32,
     pub prep_time_minutes: i32,
     pub cook_time_minutes: i32,
@@ -42,6 +44,7 @@ pub struct NewRecipe {
 pub struct RecipeChange {
     pub title: String,
     pub description: Option<String>,
+    pub image_url: String,
     pub servings: i32,
     pub prep_time_minutes: i32,
     pub cook_time_minutes: i32,

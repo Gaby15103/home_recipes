@@ -6,6 +6,7 @@ CREATE TABLE steps
 
     position         INTEGER NOT NULL,
     instruction      TEXT    NOT NULL,
+    image_url        TEXT,
     duration_minutes INTEGER
 );
 

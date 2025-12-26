@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import NavLink from "@/components/NavLink.vue";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const userStore = useUserStore();
 
 // Computed properties for the user
@@ -47,7 +49,7 @@ function logout() {
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
             <Button class="flex items-center gap-2">
-              <img :src="'/src/assets/'+user.avatar_url" alt="avatar" class="w-8 h-8 rounded-full"/>
+              <img :src="API_URL+user.avatar_url" alt="avatar" class="w-8 h-8 rounded-full"/>
               <span class="hidden sm:inline">{{ user.username }}</span>
             </Button>
           </DropdownMenuTrigger>

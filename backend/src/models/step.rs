@@ -14,6 +14,7 @@ pub struct Step {
     pub step_group_id: Uuid,
     pub position: i32,
     pub instruction: String,
+    pub image_url: Option<String>,
     pub duration_minutes: Option<i32>
 }
 // Insertable for creating new recipes
@@ -23,6 +24,7 @@ pub struct NewStep {
     pub step_group_id: Uuid,
     pub position: i32,
     pub instruction: String,
+    pub image_url: Option<String>,
     pub duration_minutes: i32
 }
 
@@ -32,5 +34,6 @@ pub struct StepChange {
     pub step_group_id: Uuid,
     pub position: i32,
     pub instruction: String,
+    pub image_url: Option<String>,
     pub duration_minutes: i32
 }
