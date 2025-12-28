@@ -163,14 +163,18 @@ impl Handler<GetAllRecipes> for DbExecutor {
 
     fn handle(
         &mut self,
-        _: GetAllRecipes,
+        get_all_recipes: GetAllRecipes,
         _: &mut Self::Context,
     ) -> Self::Result {
         let mut conn = self.0.get()?;
 
-        // 1️⃣ Load all public recipes
-        let recipe_models: Vec<Recipe> = recipes
-            .filter(is_private.eq(false))
+        let mut query = recipes.into_boxed();
+        if !get_all_recipes.private
+        {
+            query = query.filter(is_private.eq(false));
+        }
+
+        let recipe_models: Vec<Recipe> = query
             .order(created_at.desc())
             .load(&mut conn)?;
 

@@ -10,6 +10,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import NavLink from "@/components/NavLink.vue";
+import { useSidebarStore } from '@/stores/sidebar'
+
+const sidebarStore = useSidebarStore()
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -59,10 +62,11 @@ function logout() {
                 Profile
               </RouterLink>
             </DropdownMenuItem>
-            <DropdownMenuItem v-if="userStore.hasRole('ADMIN')" as-child>
-              <RouterLink to="/Admin">
-                Admin
-              </RouterLink>
+            <DropdownMenuItem
+                v-if="userStore.hasRole('ADMIN')"
+                @click="sidebarStore.toggle()"
+            >
+              Admin Panel
             </DropdownMenuItem>
             <DropdownMenuItem @click="logout">
               Logout

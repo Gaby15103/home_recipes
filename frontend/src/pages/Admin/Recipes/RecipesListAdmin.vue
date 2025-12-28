@@ -1,18 +1,14 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, onMounted } from "vue";
 import type { Recipe } from "@/models/Recipe.ts";
 import { getAllRecipes } from "@/api/recipe";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
-// State for recipes
 const recipes = ref<Recipe[]>([]);
 const loading = ref(true);
 
-// Fetch recipes on mount
 onMounted(async () => {
   try {
-    recipes.value = await getAllRecipes();
+    recipes.value = await getAllRecipes(true);
   } catch (err) {
     console.error("Failed to fetch recipes:", err);
   } finally {
@@ -38,7 +34,9 @@ onMounted(async () => {
           class="border rounded shadow hover:shadow-lg transition p-4 flex flex-col"
       >
         <!-- Temporary placeholder image -->
-          <img :src="API_URL+recipe.image_url" class="h-40 w-full mb-4 flex items-center justify-center">
+        <div class="bg-gray-200 h-40 w-full mb-4 flex items-center justify-center text-gray-500">
+          Image
+        </div>
 
         <!-- Recipe info -->
         <h2 class="text-xl font-semibold mb-2">{{ recipe.title }}</h2>

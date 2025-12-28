@@ -11,6 +11,9 @@ export const useUserStore = defineStore("user", {
             return (role: string) =>
                 state.user?.roles?.some(r => r.name === role) ?? false;
         },
+        isAuthenticated: (state) => {
+            return !!state.user && !!state.token;
+        },
     },
     actions: {
         setUser(userData: User, jwt: string) {

@@ -1,6 +1,7 @@
 export interface Recipe {
     title: string;
     description: string|null;
+    image_url: string;
     serving: number;
     prep_time_minutes: number;
     cook_time_minutes: number;
@@ -52,5 +53,6 @@ export interface Step {
     step_group_id: string;
     position: number;
     instructions: string;
+    image_url: string|null;
     duration_minutes: number|null;
 }
