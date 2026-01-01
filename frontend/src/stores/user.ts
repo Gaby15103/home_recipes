@@ -1,34 +1,28 @@
-﻿import { defineStore } from "pinia";
-import type { User } from "@/models/User";
+﻿import { defineStore } from "pinia"
+import type { User } from "@/models/User"
 
 export const useUserStore = defineStore("user", {
     state: () => ({
-        user: JSON.parse(localStorage.getItem("user")!) as User | null,
-        token: localStorage.getItem("token") as string | null,
+        user: null as User | null,
+        loading: false,
     }),
+
     getters: {
+        isAuthenticated: (state) => !!state.user,
+
         hasRole: (state) => {
             return (role: string) =>
-                state.user?.roles?.some(r => r.name === role) ?? false;
-        },
-        isAuthenticated: (state) => {
-            return !!state.user && !!state.token;
+                state.user?.roles?.some(r => r.name === role) ?? false
         },
     },
+
     actions: {
-        setUser(userData: User, jwt: string) {
-            this.user = userData;
-            this.token = jwt;
-
-            localStorage.setItem("user", JSON.stringify(userData));
-            localStorage.setItem("token", jwt);
+        setUser(user: User) {
+            this.user = user
         },
-        logout() {
-            this.user = null;
-            this.token = null;
 
-            localStorage.removeItem("user");
-            localStorage.removeItem("token");
+        clearUser() {
+            this.user = null
         },
     },
-});
+})

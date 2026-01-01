@@ -1,5 +1,6 @@
 ﻿use actix_web::{HttpRequest, HttpResponse, ResponseError, web::Data, web::Json};
 use std::convert::From;
+use actix_web::cookie::{Cookie, SameSite};
 use validator::Validate;
 use crate::db::roles::fetch_roles_for_user;
 use super::AppState;
@@ -179,11 +180,40 @@ pub async fn login(
         .await
         .map_err(|_| Error::InternalServerError)??;
 
-    Ok(HttpResponse::Ok().json(res))
+    let token = res.user.token.clone();
+
+    let cookie = Cookie::build("access_token", token)
+        .path("/")
+        .http_only(true)
+        .same_site(SameSite::Lax)
+        .secure(false)
+        .finish();
+
+    Ok(
+        HttpResponse::Ok()
+            .cookie(cookie)
+            .json(res)
+    )
 }
 pub async fn get_current(state: Data<AppState>, req: HttpRequest) -> Result<HttpResponse, Error> {
     let auth = authenticate(&state, &req).await?;
-    Ok(HttpResponse::Ok().json(UserResponse::from_auth(auth)))
+    Ok(
+        HttpResponse::Ok()
+            .json(UserResponse::from_auth(auth))
+    )
+}
+pub async fn logout(state: Data<AppState>) -> Result<HttpResponse, Error> {
+    Ok(
+        HttpResponse::Ok()
+        .cookie(
+        Cookie::build("access_token", "")
+        .path("/")
+        .http_only(true)
+        .max_age(time::Duration::seconds(0))
+        .finish()
+        )
+        .finish()
+    )
 }
 
 pub async fn update(

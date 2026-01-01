@@ -42,7 +42,7 @@ pub async fn start() -> std::io::Result<()> {
         let cors = Cors::default()
             .allowed_origin("http://localhost:5173") // your frontend URL
             .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "OPTIONS"])
-            .allowed_headers(vec![AUTHORIZATION, CONTENT_TYPE])
+            .allowed_headers(vec![CONTENT_TYPE])
             .supports_credentials()
             .max_age(3600);
         App::new()
@@ -64,6 +64,8 @@ fn routes(app: &mut web::ServiceConfig) {
                 .route(web::post().to(users::register)))
             .service(web::resource("user/login")
             .   route(web::post().to(users::login)))
+            .service(web::resource("user/logout")
+                .   route(web::post().to(users::logout)))
             .service(web::resource("user")
                 .route(web::get().to(users::get_current))
                 .route(web::put().to(users::update)))

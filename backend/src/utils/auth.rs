@@ -21,16 +21,20 @@ pub struct GenerateAuth {
 }
 
 pub async fn authenticate(state: &Data<AppState>, req: &HttpRequest) -> Result<Auth, Error> {
-    let token = preprocess_authz_token(req.headers().get(AUTHORIZATION))?;
-
     let db = state.db.clone();
+    let cookie = req
+        .cookie("access_token")
+        .ok_or_else(|| Error::Unauthorized(json!({
+            "error": "No auth cookie"
+        })))?;
 
-    let result = db
-        .send(GenerateAuth {
-            token: token.clone(),
-        })
+    let token = cookie.value().to_string();
+
+    let result = state
+        .db
+        .send(GenerateAuth { token })
         .await
-        .map_err(|_| Error::InternalServerError)?; // MailboxError → 500
+        .map_err(|_| Error::InternalServerError)?;
 
     result
 }

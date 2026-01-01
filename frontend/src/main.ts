@@ -5,6 +5,7 @@ import "./style.css";
 import { router } from "./router";
 import { createPinia } from "pinia";
 import {useUserStore} from "@/stores/user.ts";
+import {getCurrentUser} from "@/api/auth.ts";
 
 const app = createApp(App);
 
@@ -15,6 +16,12 @@ app.mount("#app");
 
 const userStore = useUserStore();
 
+try {
+    const res = await getCurrentUser();
+    userStore.setUser(res.user)
+} catch {
+    userStore.clearUser();
+}
 router.beforeEach((to, from, next) => {
     const userStore = useUserStore()
 
