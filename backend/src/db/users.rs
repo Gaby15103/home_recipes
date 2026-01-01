@@ -3,11 +3,12 @@ use diesel::prelude::*;
 use libreauth::pass::HashBuilder;
 
 use super::DbExecutor;
-use crate::app::users::{LoginUser, RegisterUser, UpdateUserOuter, UserResponse};
+use crate::app::users::{LoginUser, RegisterUser, UpdateUserOuter, UserResponse, UserResponseOuter};
 use crate::db::roles::fetch_roles_for_user;
 use crate::models::{NewUser, User, UserChange};
 use crate::prelude::*;
 use crate::utils::{HASHER, PWD_SCHEME_VERSION};
+use crate::utils::jwt::CanGenerateJwt;
 
 impl Message for RegisterUser {
     type Result = Result<UserResponse>;
@@ -37,16 +38,16 @@ impl Handler<RegisterUser> for DbExecutor {
 
         let roles = Vec::new();
 
-        Ok(UserResponse::from_user_and_roles(inserted_user, roles))
+        Ok(UserResponse::from_user_and_roles(&inserted_user, roles))
     }
 }
 
 impl Message for LoginUser {
-    type Result = Result<UserResponse>;
+    type Result = Result<UserResponseOuter>;
 }
 
 impl Handler<LoginUser> for DbExecutor {
-    type Result = Result<UserResponse>;
+    type Result = Result<UserResponseOuter>;
 
     fn handle(&mut self, msg: LoginUser, _: &mut Self::Context) -> Self::Result {
         use crate::schema::users::dsl::*;
@@ -56,7 +57,6 @@ impl Handler<LoginUser> for DbExecutor {
         let mut conn = self.0.get()?;
 
         let stored_user: User = users.filter(email.eq(msg.email)).first(&mut conn)?;
-        println!("{:?}", stored_user);
         let checker = HashBuilder::from_phc(stored_user.password_hash.trim())?;
 
         if checker.is_valid(provided_password_raw) {
@@ -68,11 +68,17 @@ impl Handler<LoginUser> for DbExecutor {
 
                 let user_roles = fetch_roles_for_user(&mut conn, updated_user.id)?;
 
-                return Ok(UserResponse::from_user_and_roles(updated_user, user_roles));
+                return Ok(UserResponseOuter {
+                    user: UserResponse::from_user_and_roles(&stored_user, user_roles),
+                    token: stored_user.generate_jwt()?
+                });
             }
 
             let user_roles = fetch_roles_for_user(&mut conn, stored_user.id)?;
-            Ok(UserResponse::from_user_and_roles(stored_user, user_roles))
+            Ok(UserResponseOuter {
+                user: UserResponse::from_user_and_roles(&stored_user, user_roles),
+                token: stored_user.generate_jwt()?
+            })
         } else {
             Err(Error::Unauthorized(json!({"error": "Wrong password"})))
         }
@@ -112,6 +118,6 @@ impl Handler<UpdateUserOuter> for DbExecutor {
 
         let user_roles = fetch_roles_for_user(&mut conn, updated_user.id)?;
 
-        Ok(UserResponse::from_user_and_roles(updated_user, user_roles))
+        Ok(UserResponse::from_user_and_roles(&updated_user, user_roles))
     }
 }

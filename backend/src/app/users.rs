@@ -97,11 +97,15 @@ pub struct UpdateUserOuter {
 pub struct UserResponse {
     pub user: UserResponseInner,
 }
+#[derive(Debug, Serialize)]
+pub struct UserResponseOuter {
+    pub user: UserResponse,
+    pub token: String,
+}
 
 #[derive(Debug, Serialize)]
 pub struct UserResponseInner {
     pub email: String,
-    pub token: String,
     pub username: String,
     pub first_name: String,
     pub last_name: String,
@@ -112,18 +116,17 @@ pub struct UserResponseInner {
 
 impl UserResponse {
     pub fn from_user_and_roles(
-        user: User,
+        user: &User,
         roles: Vec<Role>,
     ) -> Self {
         UserResponse {
             user: UserResponseInner {
-                token: user.generate_jwt().unwrap(),
-                email: user.email,
-                username: user.username,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                avatar_url: user.avatar_url,
-                preferences: user.preferences,
+                email: user.email.clone(),
+                username: user.username.clone(),
+                first_name: user.first_name.clone(),
+                last_name: user.last_name.clone(),
+                avatar_url: user.avatar_url.clone(),
+                preferences: user.preferences.clone(),
                 roles,
             },
         }
@@ -134,7 +137,6 @@ impl UserResponse {
     ) -> Self {
         UserResponse {
             user: UserResponseInner {
-                token: auth.token,
                 email: auth.user.email,
                 username: auth.user.username,
                 first_name: auth.user.first_name,
@@ -180,9 +182,7 @@ pub async fn login(
         .await
         .map_err(|_| Error::InternalServerError)??;
 
-    let token = res.user.token.clone();
-
-    let cookie = Cookie::build("access_token", token)
+    let cookie = Cookie::build("access_token", res.token)
         .path("/")
         .http_only(true)
         .same_site(SameSite::Lax)
@@ -192,7 +192,7 @@ pub async fn login(
     Ok(
         HttpResponse::Ok()
             .cookie(cookie)
-            .json(res)
+            .json(res.user),
     )
 }
 pub async fn get_current(state: Data<AppState>, req: HttpRequest) -> Result<HttpResponse, Error> {
