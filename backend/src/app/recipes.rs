@@ -6,7 +6,6 @@ use super::AppState;
 use crate::prelude::*;
 use crate::utils::auth::{authenticate, Auth};
 use crate::dto::*;
-use crate::schema::recipes::dsl::recipes;
 use actix_multipart::form::{json::Json as MpJson, tempfile::TempFile, MultipartForm};
 use crate::models::Role;
 
@@ -32,9 +31,6 @@ pub struct CreateRecipe {
 pub struct UpdateRecipe {
     pub auth: Auth,
     pub update_recipe: UpdateRecipeInput,
-}
-pub struct GetAllRecipes{
- pub private: bool,
 }
 
 pub async fn create(
@@ -78,34 +74,63 @@ pub async fn update(
 
 #[derive(Debug, Deserialize)]
 pub struct GetFilter{
-    private: Option<bool>,
+    pub scope: Option<String>,
+
+    pub search: Option<String>,
+    pub ingredient: Option<String>,
+    pub tags: Option<String>,
+
+    pub min_prep: Option<i32>,
+    pub max_prep: Option<i32>,
+    pub min_cook: Option<i32>,
+    pub max_cook: Option<i32>,
+
+    pub min_steps: Option<i32>,
+    pub max_steps: Option<i32>,
+
+    pub date_from: Option<chrono::NaiveDate>,
+    pub date_to: Option<chrono::NaiveDate>,
 }
+
+pub struct GetAllRecipes {
+    pub filters: GetFilter,
+    pub include_private: bool,
+}
+
 
 pub async fn get_all(
     state: Data<AppState>,
     query: web::Query<GetFilter>,
     req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
-    let mut res: Vec<RecipeResponse> = Vec::new();
-    if query.private.unwrap_or(false) {
+
+    let is_admin_scope = matches!(query.scope.as_deref(), Some("true"));
+
+    let include_private = if is_admin_scope {
         let auth = authenticate(&state, &req).await?;
-        if auth.roles.iter().any(|r| r.name == "ADMIN" || r.name == "MODERATOR") {
-            res = state
-                .db
-                .send(GetAllRecipes {private: query.private.unwrap_or(false)})
-                .await
-                .map_err(|_| crate::error::Error::InternalServerError)??;
-        } else {
+
+        let allowed = auth.roles.iter().any(|r|
+            r.name == "ADMIN" || r.name == "MODERATOR"
+        );
+
+        if !allowed {
             return Ok(HttpResponse::Unauthorized().finish());
         }
-    }else{
-        res = state
-            .db
-            .send(GetAllRecipes {private: query.private.unwrap_or(false)})
-            .await
-            .map_err(|_| crate::error::Error::InternalServerError)??;
-    }
 
-    Ok(HttpResponse::Ok().json(res))
+        true
+    } else {
+        false
+    };
+
+    let recipes = state
+        .db
+        .send(GetAllRecipes {
+            filters: query.into_inner(),
+            include_private,
+        })
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(recipes))
 }
 

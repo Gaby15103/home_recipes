@@ -1,10 +1,14 @@
 ﻿<script setup lang="ts">
 import { RouterLink } from "vue-router"
 import { Button } from "@/components/ui/button"
+import {useUserStore} from "@/stores/user.ts";
+
+const userStore = useUserStore();
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center text-center">
+  <div class="min-h-screen flex flex-col items-center justify-center text-center" \
+       v-if="!userStore.isAuthenticated">
     <h1 class="text-4xl font-bold mb-4">
       🍳 Home Recipes
     </h1>
@@ -13,7 +17,7 @@ import { Button } from "@/components/ui/button"
       Browse delicious homemade recipes and manage your own cookbook.
     </p>
 
-    <div class="flex gap-4">
+    <div class="flex gap-4" >
       <RouterLink to="/login">
         <Button>Login</Button>
       </RouterLink>

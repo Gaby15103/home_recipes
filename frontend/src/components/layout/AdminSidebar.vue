@@ -12,6 +12,13 @@ import {Users, Shield, Settings, PanelLeft} from "lucide-vue-next"
 import { useSidebarStore } from '@/stores/sidebar'
 import {Button} from "@/components/ui/button";
 import {cn} from "@/lib/utils.ts";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent
+} from "@/components/ui/collapsible";
+import { Book } from 'lucide-vue-next'
+
 
 const sidebarStore = useSidebarStore()
 </script>
@@ -35,8 +42,51 @@ const sidebarStore = useSidebarStore()
         </SidebarGroupLabel>
         <SidebarMenu>
           <SidebarMenuItem>
+            <Collapsible class="group/collapsible">
+              <CollapsibleTrigger as-child>
+                <SidebarMenuButton>
+                  <Book />
+                  <span>Recipes</span>
+                </SidebarMenuButton>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarMenuSub>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton as-child>
+                      <RouterLink to="/admin/recipes">
+                        <span class="ml-[10%]">List</span>
+                      </RouterLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton as-child>
+                      <RouterLink to="/admin/recipes/create">
+                        <span class="ml-[10%]">Create</span>
+                      </RouterLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton as-child>
+                      <RouterLink to="/admin/recipes/edit">
+                        <span class="ml-[10%]">Edit</span>
+                      </RouterLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton as-child>
+                      <RouterLink to="/admin/recipes/categories">
+                        <span class="ml-[10%]">Categories</span>
+                      </RouterLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenuSub>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
             <SidebarMenuButton as-child>
-              <RouterLink to="/admin/users">
+              <RouterLink to="/">
                 <Users />
                 <span>Users</span>
               </RouterLink>
@@ -45,7 +95,7 @@ const sidebarStore = useSidebarStore()
 
           <SidebarMenuItem>
             <SidebarMenuButton as-child>
-              <RouterLink to="/admin/roles">
+              <RouterLink to="/">
                 <Shield />
                 <span>Roles</span>
               </RouterLink>
@@ -54,7 +104,7 @@ const sidebarStore = useSidebarStore()
 
           <SidebarMenuItem>
             <SidebarMenuButton as-child>
-              <RouterLink to="/admin/settings">
+              <RouterLink to="/">
                 <Settings />
                 <span>Settings</span>
               </RouterLink>

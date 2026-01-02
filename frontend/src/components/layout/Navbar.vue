@@ -22,7 +22,7 @@ const userStore = useUserStore();
 const user = computed(() => userStore.user || null);
 
 function logout() {
-  userStore.logout();
+  userStore.clearUser();
 }
 </script>
 
@@ -37,7 +37,7 @@ function logout() {
           Recipes
         </NavLink>
 
-        <NavLink to="/Tags" class="text-sm font-medium text-muted-foreground hover:text-foreground">
+        <NavLink to="/" class="text-sm font-medium text-muted-foreground hover:text-foreground">
           Tags
         </NavLink>
       </div>
@@ -58,7 +58,7 @@ function logout() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem as-child>
-              <RouterLink to="/Profile">
+              <RouterLink to="/">
                 Profile
               </RouterLink>
             </DropdownMenuItem>

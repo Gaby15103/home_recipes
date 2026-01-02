@@ -3,8 +3,6 @@ import { ref, onMounted } from "vue";
 import type { Recipe } from "@/models/Recipe.ts";
 import { getAllRecipes } from "@/api/recipe";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 // State for recipes
 const recipes = ref<Recipe[]>([]);
 const loading = ref(true);
@@ -25,22 +23,18 @@ onMounted(async () => {
   <div class="container mx-auto p-4">
     <h1 class="text-3xl font-bold mb-6">All Recipes</h1>
 
-    <!-- Loading spinner / placeholder -->
     <div v-if="loading" class="flex justify-center items-center h-32">
-      <div class="loader"></div>
+      <Spinner />
     </div>
 
-    <!-- Recipes grid -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       <div
           v-for="recipe in recipes"
           :key="recipe.title + recipe.author_id"
           class="border rounded shadow hover:shadow-lg transition p-4 flex flex-col"
       >
-        <!-- Temporary placeholder image -->
-          <img :src="API_URL+recipe.image_url" class="h-40 w-full mb-4 flex items-center justify-center">
+          <img :src="$apiUrl+recipe.image_url" class="h-40 w-full mb-4 flex items-center justify-center">
 
-        <!-- Recipe info -->
         <h2 class="text-xl font-semibold mb-2">{{ recipe.title }}</h2>
         <p class="text-gray-600 text-sm mb-2" v-if="recipe.description">
           {{ recipe.description }}
@@ -50,7 +44,6 @@ onMounted(async () => {
           Prep: {{ recipe.prep_time_minutes }} min | Cook: {{ recipe.cook_time_minutes }} min
         </p>
 
-        <!-- Tags -->
         <div class="mt-2 flex flex-wrap gap-1">
           <span
               v-for="tag in recipe.tags"
@@ -64,19 +57,3 @@ onMounted(async () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.loader {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3490dc;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>

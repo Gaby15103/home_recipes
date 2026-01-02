@@ -163,15 +163,52 @@ impl Handler<GetAllRecipes> for DbExecutor {
 
     fn handle(
         &mut self,
-        get_all_recipes: GetAllRecipes,
+        msg: GetAllRecipes,
         _: &mut Self::Context,
     ) -> Self::Result {
+        use crate::schema::recipes::dsl::*;
+
         let mut conn = self.0.get()?;
 
         let mut query = recipes.into_boxed();
-        if !get_all_recipes.private
-        {
+
+        if !msg.include_private {
             query = query.filter(is_private.eq(false));
+        }
+
+        // 🔍 Filters
+        if let Some(search) = &msg.filters.search {
+            let pattern = format!("%{}%", search);
+
+            query = query.filter(
+                title.ilike(pattern.clone())
+                    .or(description.ilike(pattern))
+            );
+        }
+
+
+        if let Some(min) = msg.filters.min_prep {
+            query = query.filter(prep_time_minutes.ge(min));
+        }
+
+        if let Some(max) = msg.filters.max_prep {
+            query = query.filter(prep_time_minutes.le(max));
+        }
+
+        if let Some(min) = msg.filters.min_cook {
+            query = query.filter(cook_time_minutes.ge(min));
+        }
+
+        if let Some(max) = msg.filters.max_cook {
+            query = query.filter(cook_time_minutes.le(max));
+        }
+
+        if let Some(from) = msg.filters.date_from {
+            query = query.filter(created_at.ge(from.and_hms_opt(0, 0, 0).unwrap()));
+        }
+
+        if let Some(to) = msg.filters.date_to {
+            query = query.filter(created_at.le(to.and_hms_opt(23, 59, 59).unwrap()));
         }
 
         let recipe_models: Vec<Recipe> = query
@@ -183,13 +220,10 @@ impl Handler<GetAllRecipes> for DbExecutor {
         for recipe in recipe_models {
             let recipe_id = recipe.id;
 
-            let tags: Vec<TagResponse> =
-                fetch_tags_for_recipe(&mut conn, recipe_id)?;
-
-            let ingredient_groups: Vec<IngredientGroupResponse> =
+            let tags = fetch_tags_for_recipe(&mut conn, recipe_id)?;
+            let ingredient_groups =
                 fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
-
-            let step_groups: Vec<StepGroupResponse> =
+            let step_groups =
                 fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
 
             result.push(
@@ -198,10 +232,12 @@ impl Handler<GetAllRecipes> for DbExecutor {
                     tags,
                     ingredient_groups,
                     step_groups,
-                )
+                ),
             );
         }
+
         Ok(result)
     }
 }
+
 

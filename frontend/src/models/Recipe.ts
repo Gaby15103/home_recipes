@@ -56,3 +56,17 @@ export interface Step {
     image_url: string|null;
     duration_minutes: number|null;
 }
+
+export interface RecipeFilter {
+    search: string | null,            // name / description
+    ingredient: string | null,
+    tags: Tag[],
+    minPrep: number | null,
+    maxPrep: number | null,
+    minCook: number | null,
+    maxCook: number | null,
+    minSteps: number | null,
+    maxSteps: number | null,
+    dateFrom: string | null,
+    dateTo: string | null,
+}
