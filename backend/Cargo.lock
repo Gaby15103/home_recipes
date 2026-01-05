@@ -504,6 +504,7 @@ dependencies = [
  "env_logger",
  "failure",
  "futures",
+ "futures-util",
  "http 1.4.0",
  "jsonwebtoken",
  "lazy_static",

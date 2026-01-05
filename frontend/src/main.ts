@@ -1,9 +1,9 @@
-import { createApp } from "vue";
+import {createApp} from "vue";
 import App from "./App.vue";
 import "./style.css";
 
-import { router } from "./router";
-import { createPinia } from "pinia";
+import {router} from "./router";
+import {createPinia} from "pinia";
 import {useUserStore} from "@/stores/user.ts";
 import {getCurrentUser} from "@/api/auth.ts";
 
@@ -29,7 +29,7 @@ router.beforeEach((to, from, next) => {
 
     // Not logged in
     if (to.meta.requiresAuth && !userStore.isAuthenticated) {
-        return next({ path: "/login" })
+        return next({path: "/login"})
     }
 
     // Role-based protection
@@ -39,7 +39,7 @@ router.beforeEach((to, from, next) => {
         )
 
         if (!allowed) {
-            return next({ path: "/403" }) // forbidden page
+            return next({path: "/403"}) // forbidden page
         }
     }
 

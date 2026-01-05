@@ -2,7 +2,7 @@
 use uuid::Uuid;
 use crate::dto::ingredient::{IngredientInput, IngredientResponse};
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize,Serialize)]
 pub struct IngredientGroupInput {
     pub title: String,
     pub position: i32,

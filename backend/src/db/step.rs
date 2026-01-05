@@ -6,6 +6,7 @@ use crate::models::{Step, StepGroup};
 use crate::prelude::*;
 use diesel::prelude::*;
 use uuid::Uuid;
+use crate::app::recipes::StepImageMeta;
 use crate::schema::{step_groups, steps};
 
 pub fn create_step_groups(
@@ -13,22 +14,26 @@ pub fn create_step_groups(
     recipe_id: Uuid,
     groups: Vec<StepGroupInput>,
     mut images: Vec<TempFile>,
+    step_image_meta: Vec<StepImageMeta>,
 ) -> Result<Vec<StepGroupResponse>, diesel::result::Error> {
     use crate::schema::{step_groups::dsl as stg, steps::dsl as st};
+    use std::collections::HashMap;
     use std::fs;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use uuid::Uuid;
 
-    let mut result_groups = Vec::with_capacity(groups.len());
+    let image_map: HashMap<(usize, usize), usize> = step_image_meta
+        .iter()
+        .map(|m| ((m.group_position, m.step_position), m.index))
+        .collect();
+
     let step_dir: PathBuf = PathBuf::from("assets/steps");
+    fs::create_dir_all(&step_dir).map_err(|e| {
+        log::error!("Failed to create steps directory: {}", e);
+        diesel::result::Error::RollbackTransaction
+    })?;
 
-    fs::create_dir_all(&step_dir)
-        .map_err(|e| {
-            log::error!("Failed to create steps directory: {}", e);
-            diesel::result::Error::RollbackTransaction
-        })?;
-
-    let mut image_cursor = 0;
+    let mut result_groups = Vec::with_capacity(groups.len());
 
     for group in groups {
         // Insert step group
@@ -44,7 +49,7 @@ pub fn create_step_groups(
         );
 
         for step in group.steps {
-            // Insert step without image
+            // Insert step
             let mut inserted_step: StepResponse = StepResponse::from(
                 diesel::insert_into(st::steps)
                     .values((
@@ -57,21 +62,18 @@ pub fn create_step_groups(
                     .get_result(conn)?,
             );
 
-            // Attach image if available
-            if image_cursor < images.len() {
-                let temp_file = images.remove(image_cursor);
+            // Attach image if this step has one
+            if let Some(&image_index) =
+                image_map.get(&(group.position as usize, step.position as usize))
+            {
+                let temp_file = &mut images[image_index];
 
-                let ext: String = if let Some(name) = temp_file.file_name.as_deref() {
-                    let path = Path::new(name);
-                    path.extension()
-                        .and_then(|e| e.to_str())
-                        .unwrap_or("png")
-                        .to_string() // <-- now owned
-                } else {
-                    "png".to_string()
-                };
-
-
+                let ext = temp_file
+                    .file_name
+                    .as_deref()
+                    .and_then(|n| Path::new(n).extension())
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("png");
 
                 let file_name = format!(
                     "step_{}_{}_{}.{}",
@@ -83,13 +85,12 @@ pub fn create_step_groups(
 
                 let disk_path = step_dir.join(&file_name);
 
-                fs::copy(temp_file.file.path(), &disk_path)
-                    .map_err(|e| {
-                        log::error!("Failed to copy step image: {}", e);
-                        diesel::result::Error::RollbackTransaction
-                    })?;
+                fs::copy(temp_file.file.path(), &disk_path).map_err(|e| {
+                    log::error!("Failed to copy step image: {}", e);
+                    diesel::result::Error::RollbackTransaction
+                })?;
 
-                let image_url = format!("/api/assets/steps/{}", file_name);
+                let image_url = format!("/assets/steps/{}", file_name);
 
                 diesel::update(st::steps.find(inserted_step.id))
                     .set(st::image_url.eq(&image_url))
@@ -98,7 +99,6 @@ pub fn create_step_groups(
                 inserted_step.image_url = Some(image_url);
             }
 
-            image_cursor += 1;
             inserted_group.steps.push(inserted_step);
         }
 
@@ -107,6 +107,7 @@ pub fn create_step_groups(
 
     Ok(result_groups)
 }
+
 
 
 pub fn fetch_step_groups_for_recipe(

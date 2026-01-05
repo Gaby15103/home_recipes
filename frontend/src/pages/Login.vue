@@ -33,7 +33,7 @@ const submit = handleSubmit(async (values) => {
   error.value = ""
   try {
     const res = await login(values.email, values.password)
-    userStore.setUser(res.user, res.user.token)
+    userStore.setUser(res.user)
     await router.push("/home")
   } catch (e: any) {
     error.value = e.message || "Login failed"

@@ -2,14 +2,14 @@
 use uuid::Uuid;
 use crate::models::{Step, StepGroup};
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize,Serialize)]
 pub struct StepInput {
     pub position: i32,
     pub instruction: String,
     pub duration_minutes: Option<i32>,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize,Serialize)]
 pub struct StepGroupInput {
     pub title: String,
     pub position: i32,

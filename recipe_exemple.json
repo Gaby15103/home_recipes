@@ -1,0 +1,118 @@
+﻿{
+  "title": "pasta",
+  "description": "a simple pasta recipe",
+  "serving": 4,
+  "prep_time_minutes": 5,
+  "cook_time_minutes": 10,
+  "author": null,
+  "author_id": null,
+  "is_private": false,
+  "tags": [],
+  "ingredients_groups": [
+    {
+      "title": "pasta",
+      "position": 0,
+      "ingredients": [
+        {
+          "name": "salt",
+          "quantity": 1,
+          "unite": "Piece",
+          "note": null,
+          "position": 0
+        },
+        {
+          "name": "spagethi",
+          "quantity": 400,
+          "unite": "Gram",
+          "note": null,
+          "position": 1
+        }
+      ]
+    },
+    {
+      "title": "sauce",
+      "position": 1,
+      "ingredients": [
+        {
+          "name": "tomato",
+          "quantity": 1,
+          "unite": "Piece",
+          "note": null,
+          "position": 0
+        },
+        {
+          "name": "olive oil",
+          "quantity": 2,
+          "unite": "Tablespoon",
+          "note": null,
+          "position": 1
+        },
+        {
+          "name": "chopped garlic",
+          "quantity": 2,
+          "unite": "Piece",
+          "note": null,
+          "position": 2
+        },
+        {
+          "name": "chopped oignon",
+          "quantity": 1,
+          "unite": "Piece",
+          "note": null,
+          "position": 3
+        },
+        {
+          "name": "chicken stock",
+          "quantity": 1,
+          "unite": "Cup",
+          "note": null,
+          "position": 4
+        }
+      ]
+    }
+  ],
+  "step_group": [
+    {
+      "title": "pasta",
+      "position": 0,
+      "steps": [
+        {
+          "position": 0,
+          "instructions": "Add water and salt to a pot and boil until ebulition.",
+          "duration_minutes": null,
+          "image_file": null
+        },
+        {
+          "position": 1,
+          "instructions": "When boiling add the pasta and wait 10 minutes then remove pasta from water",
+          "duration_minutes": null,
+          "image_file": null
+        }
+      ]
+    },
+    {
+      "title": "sauce",
+      "position": 1,
+      "steps": [
+        {
+          "position": 0,
+          "instructions": "in a pan saute garlic and oignon in oliv oil until tender",
+          "duration_minutes": null,
+          "image_file": null
+        },
+        {
+          "position": 1,
+          "instructions": " when slightly translucent add tomato can, basilic and chicken stock.. let it simer for 15 minutes at medium low",
+          "duration_minutes": null,
+          "image_file": null
+        },
+        {
+          "position": 2,
+          "instructions": "when the sauce as reduce add it to the psata in a plate and ther you have boy",
+          "duration_minutes": null,
+          "image_file": null
+        }
+      ]
+    }
+  ]
+}

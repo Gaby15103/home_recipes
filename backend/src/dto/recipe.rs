@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::dto::{tag::TagResponse, ingredient_group::{IngredientGroupInput, IngredientGroupResponse}, step::StepGroupInput, StepGroupResponse, InputTag};
 use crate::models::{IngredientGroup, Recipe, StepGroup, Tag};
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize, Serialize)]
 pub struct CreateRecipeInput {
     pub title: String,
     pub description: Option<String>,

@@ -1,7 +1,7 @@
 ﻿use std::fs;
 use std::path::Path;
 use super::DbExecutor;
-use crate::app::recipes::{CreateRecipe, GetAllRecipes, UpdateRecipe};
+use crate::app::recipes::{CreateRecipe, GetAllRecipes, GetRecipeById, UpdateRecipe};
 use crate::db::step::{create_step_groups, fetch_step_groups_for_recipe};
 use crate::db::ingredients::{create_ingredient_groups, fetch_ingredient_groups_for_recipe};
 use crate::db::tags::{create_or_associate_tags, fetch_tags_for_recipe};
@@ -15,6 +15,36 @@ use actix_multipart::form::tempfile::TempFile;
 use diesel::prelude::*;
 use crate::schema::recipes::{created_at, is_private};
 use crate::schema::recipes::dsl::recipes;
+
+impl Message for GetRecipeById {
+    type Result = Result<RecipeResponse>;
+}
+
+impl Handler<GetRecipeById> for DbExecutor {
+    type Result = Result<RecipeResponse>;
+
+    fn handle(&mut self, msg: GetRecipeById, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipes::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        // Fetch the main recipe
+        let recipe_model: Recipe = recipes.find(msg.id).first(&mut conn)?;
+
+        // Fetch related data
+        let tags = fetch_tags_for_recipe(&mut conn, recipe_model.id)?;
+        let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_model.id)?;
+        let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_model.id)?;
+
+        // Compose response
+        Ok(RecipeResponse::from_parts(
+            recipe_model,
+            tags,
+            ingredient_groups,
+            step_groups,
+        ))
+    }
+}
 
 impl Message for CreateRecipe {
     type Result = Result<RecipeResponse>;
@@ -95,6 +125,7 @@ impl Handler<CreateRecipe> for DbExecutor {
             inserted_recipe.id,
             msg.new_recipe.step_groups,
             msg.step_image,
+            msg.step_images_meta
         )?;
 
         Ok(RecipeResponse::from_parts(

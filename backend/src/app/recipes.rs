@@ -1,5 +1,4 @@
-﻿use std::collections::HashMap;
-use actix_web::{HttpResponse, web::{Data, Json}, HttpRequest, web};
+﻿use actix_web::{HttpResponse, web::{Data, Json}, HttpRequest, web};
 use validator::Validate;
 
 use super::AppState;
@@ -7,14 +6,23 @@ use crate::prelude::*;
 use crate::utils::auth::{authenticate, Auth};
 use crate::dto::*;
 use actix_multipart::form::{json::Json as MpJson, tempfile::TempFile, MultipartForm};
-use crate::models::Role;
+use uuid::Uuid;
 
 #[derive(MultipartForm)]
 pub struct CreateRecipeForm {
     pub recipe: MpJson<In<CreateRecipeInput>>,
     pub main_image: TempFile,
-    pub step_image: Vec<TempFile>,
+    pub step_images: Vec<TempFile>,
+    pub step_images_meta: MpJson<Vec<StepImageMeta>>,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StepImageMeta {
+    pub group_position: usize,
+    pub step_position: usize,
+    pub index: usize, // index in step_image[]
+}
+
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -26,11 +34,32 @@ pub struct CreateRecipe {
     pub new_recipe: CreateRecipeInput,
     pub main_image: TempFile,
     pub step_image: Vec<TempFile>,
+    pub step_images_meta: Vec<StepImageMeta>,
 }
 
 pub struct UpdateRecipe {
     pub auth: Auth,
     pub update_recipe: UpdateRecipeInput,
+}
+
+
+pub struct GetRecipeById {
+    pub id: Uuid,
+}
+pub async fn get_by_id(
+    state: web::Data<AppState>,
+    path: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    let id_str = path.into_inner();
+    let id = Uuid::parse_str(&id_str).map_err(|_| Error::InternalServerError)?;
+
+    let recipe = state
+        .db
+        .send(GetRecipeById { id })
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(recipe))
 }
 
 pub async fn create(
@@ -46,7 +75,13 @@ pub async fn create(
 
     let res = state
         .db
-        .send(CreateRecipe { auth, new_recipe, main_image: form.main_image, step_image: form.step_image })
+        .send(CreateRecipe {
+            auth,
+            new_recipe,
+            main_image: form.main_image,
+            step_image: form.step_images,
+            step_images_meta: form.step_images_meta.into_inner(),
+        })
         .await
         .map_err(|_| crate::error::Error::InternalServerError)??;
 

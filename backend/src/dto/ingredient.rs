@@ -5,7 +5,7 @@ use crate::dto::TagResponse;
 use crate::models::{Ingredient, RecipeIngredient, Tag};
 use crate::utils::unit::IngredientUnit;
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize,Serialize)]
 pub struct IngredientInput {
     #[validate(length(min = 1, max = 50))]
     pub name: String,

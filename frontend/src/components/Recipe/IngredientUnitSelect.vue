@@ -1,0 +1,41 @@
+﻿<script setup lang="ts">
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { IngredientUnit } from "@/models/Recipe"
+
+const props = defineProps<{
+  modelValue: IngredientUnit
+}>()
+
+const emit = defineEmits<{
+  (e: "update:modelValue", value: IngredientUnit): void
+}>()
+
+const units = Object.values(IngredientUnit)
+</script>
+
+<template>
+  <Select
+      :model-value="modelValue"
+      @update:model-value="emit('update:modelValue', $event)"
+  >
+    <SelectTrigger class="w-full">
+      <SelectValue placeholder="Unit" />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem
+          v-for="unit in units"
+          :key="unit"
+          :value="unit"
+      >
+        {{ unit }}
+      </SelectItem>
+    </SelectContent>
+  </Select>
+</template>

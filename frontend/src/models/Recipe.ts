@@ -1,4 +1,5 @@
 export interface Recipe {
+    id: string;
     title: string;
     description: string|null;
     image_url: string;
@@ -9,8 +10,8 @@ export interface Recipe {
     author_id: string|null;
     is_private: boolean;
     tags: Tag[];
-    ingredients_groups: IngredientGroup[];
-    step_group: StepGroup[];
+    ingredient_groups: IngredientGroup[];
+    step_groups: StepGroup[];
 }
 
 export interface Tag {
@@ -27,11 +28,12 @@ export interface Ingredient {
     id: string;
     name: string;
     quantity: number;
-    unite: IngredientUnit;
+    unit: IngredientUnit;
     note: string|null;
     position: number;
 }
 
+//TODO add pinch, a can, unique like 1 oignon or an other where you put with our without mesure
 export enum IngredientUnit {
     Gram = "Gram",
     Kilogram = "Kilogram",
@@ -52,7 +54,7 @@ export interface Step {
     id: string;
     step_group_id: string;
     position: number;
-    instructions: string;
+    instruction: string;
     image_url: string|null;
     duration_minutes: number|null;
 }

@@ -7,6 +7,7 @@ import List from "@/pages/Admin/Recipes/List.vue";
 import Create from "@/pages/Admin/Recipes/Create.vue";
 import Edit from "@/pages/Admin/Recipes/Edit.vue";
 import Categories from "@/pages/Admin/Recipes/Categories.vue";
+import Recipe from "@/pages/Recipe.vue";
 
 
 
@@ -27,7 +28,7 @@ const routes = [
     { path: "/login", component: Login },
     { path: "/register", component: Register },
     { path: "/recipes", component: Recipes },
-    { path: "/recipes/:id", component: Recipes },
+    { path: "/recipe/:id", component: Recipe },
 ]
 
 export const router = createRouter({
