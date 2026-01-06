@@ -8,6 +8,7 @@ use jwt::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
 use libreauth::pass::ErrorCode as PassErrorCode;
 use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::convert::From;
+use actix_web::error::QueryPayloadError;
 use validator::ValidationErrors;
 
 #[derive(Fail, Debug)]
@@ -49,6 +50,15 @@ impl ResponseError for Error {
                 HttpResponse::InternalServerError().json("Internal Server Error")
             }
         }
+    }
+}
+
+impl From<QueryPayloadError> for Error {
+    fn from(err: QueryPayloadError) -> Self {
+        Error::UnprocessableEntity(json!({
+            "error": "Invalid query parameters",
+            "details": err.to_string(),
+        }))
     }
 }
 

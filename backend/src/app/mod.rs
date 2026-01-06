@@ -41,6 +41,24 @@ fn json_error_handler(err: error::JsonPayloadError, _req: &actix_web::HttpReques
     error::InternalError::from_response(err, response).into()
 }
 
+fn query_error_handler(
+    err: error::QueryPayloadError,
+    _req: &actix_web::HttpRequest,
+) -> error::Error {
+    let detail = err.to_string();
+
+    let response = match &err {
+        error::QueryPayloadError::Deserialize(inner) => {
+            HttpResponse::BadRequest()
+                .body(format!("Invalid query parameter: {}", inner))
+        }
+        _ => HttpResponse::BadRequest()
+            .body(format!("Bad query string: {}", detail)),
+    };
+
+    error::InternalError::from_response(err, response).into()
+}
+
 pub async fn start() -> std::io::Result<()> {
     let frontend_origin = env::var("FRONTEND_ORIGIN").ok();
 
@@ -71,6 +89,10 @@ pub async fn start() -> std::io::Result<()> {
             )
             .app_data(web::JsonConfig::default()
                 .error_handler(json_error_handler))
+            .app_data(
+                web::QueryConfig::default()
+                    .error_handler(query_error_handler)
+            )
             .app_data(web::PayloadConfig::new(100 * 1024 * 1024))
             .wrap(Logger::default())
             .wrap(cors)
@@ -83,38 +105,54 @@ pub async fn start() -> std::io::Result<()> {
     Ok(())
 }
 fn routes(app: &mut web::ServiceConfig) {
-    app.service(
-        web::resource("/api/debug")
-            .route(web::post().to(debug::debug_multipart_parsed),
-            )
-    );
+    app
+        .service(debug_routes())
+        .service(api_routes())
+        .service(static_routes());
+}
+
+fn static_routes() -> actix_web::Scope {
+    web::scope("")
+        .service(Files::new("/assets", "./assets")
+            .show_files_listing())
+}
 
 
+fn api_routes() -> actix_web::Scope {
+    web::scope("/api")
+        .service(user_routes())
+        .service(recipe_routes())
+        .service(tag_routes())
+}
 
-    app.service(web::resource("/")).service(
-        web::scope("/api")
-            .service(web::resource("user/register")
-                .route(web::post().to(users::register)))
-            .service(web::resource("user/login")
-            .   route(web::post().to(users::login)))
-            .service(web::resource("user/logout")
-                .   route(web::post().to(users::logout)))
-            .service(web::resource("user")
-                .route(web::get().to(users::get_current))
-                .route(web::put().to(users::update)))
-            .service(web::resource("tag/create")
-                .route(web::post().to(tags::create)))
-            .service(web::resource("tag/update")
-                .route(web::put().to(tags::update)))
-            .service(web::resource("recipe/{id}")
-                .route(web::get().to(recipes::get_by_id)))
-            .service(web::resource("recipe/create")
-                .route(web::post().to(recipes::create)))
-            .service(web::resource("recipe/update")
-                .route(web::put().to(recipes::update)))
-            .service(web::resource("recipe/get_all")
-                .route(web::get().to(recipes::get_all)))
-            .service(Files::new("/assets", "./assets")
-                .show_files_listing())
-    );
+
+fn debug_routes() -> actix_web::Scope {
+    web::scope("/api/debug")
+        .route("", web::post().to(debug::debug_multipart_parsed))
+}
+
+fn user_routes() -> actix_web::Scope {
+    web::scope("/user")
+        .route("/register", web::post().to(users::register))
+        .route("/login", web::post().to(users::login))
+        .route("/logout", web::post().to(users::logout))
+        .route("", web::get().to(users::get_current))
+        .route("", web::put().to(users::update))
+}
+
+fn tag_routes() -> actix_web::Scope {
+    web::scope("/tag")
+        .route("/create", web::post().to(tags::create))
+        .route("/update", web::put().to(tags::update))
+}
+
+fn recipe_routes() -> actix_web::Scope {
+    web::scope("/recipe")
+        // STATIC ROUTES FIRST
+        .route("/get_all", web::get().to(recipes::get_all))
+        .route("/create", web::post().to(recipes::create))
+        .route("/update", web::put().to(recipes::update))
+
+        // DYNAMIC ROUTES LAST
+        .route("/{id}", web::get().to(recipes::get_by_id))
 }

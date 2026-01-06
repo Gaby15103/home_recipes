@@ -8,7 +8,7 @@ use crate::dto::*;
 use actix_multipart::form::{json::Json as MpJson, tempfile::TempFile, MultipartForm};
 use uuid::Uuid;
 
-#[derive(MultipartForm)]
+#[derive(Debug, MultipartForm)]
 pub struct CreateRecipeForm {
     pub recipe: MpJson<In<CreateRecipeInput>>,
     pub main_image: TempFile,

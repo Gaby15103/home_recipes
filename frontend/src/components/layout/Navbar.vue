@@ -60,15 +60,6 @@ function logout() {
                 Recipes
               </NavLink>
             </NavigationMenuItem>
-
-            <NavigationMenuItem>
-              <NavLink
-                  to="/"
-                  class="text-sm font-medium text-muted-foreground hover:text-foreground transition"
-              >
-                Tags
-              </NavLink>
-            </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
       </div>
@@ -85,7 +76,7 @@ function logout() {
                 class="flex items-center gap-2 px-2"
             >
               <img
-                  :src="API_URL + user.avatar_url"
+                  :src="$apiUrl + user.avatar_url"
                   alt="avatar"
                   class="h-8 w-8 rounded-full"
               />

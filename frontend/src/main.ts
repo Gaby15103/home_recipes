@@ -9,7 +9,7 @@ import {getCurrentUser} from "@/api/auth.ts";
 
 const app = createApp(App);
 
-app.config.globalProperties.$apiUrl = import.meta.env.VITE_API_URL;
+app.config.globalProperties.$apiUrl = import.meta.env.VITE_STATIC_URL;
 
 app.use(router);
 app.use(createPinia());
