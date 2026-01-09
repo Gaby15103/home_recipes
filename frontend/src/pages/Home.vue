@@ -1,14 +1,14 @@
 ﻿<script setup lang="ts">
 import { RouterLink } from "vue-router"
 import { Button } from "@/components/ui/button"
-import {useUserStore} from "@/stores/user.ts";
+import {useAuthStore} from "@/stores/auth";
 
-const userStore = useUserStore();
+const authStore = useAuthStore();
 </script>
 
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center text-center" \
-       v-if="!userStore.isAuthenticated">
+       v-if="!authStore.isAuthenticated">
     <h1 class="text-4xl font-bold mb-4">
       🍳 Home Recipes
     </h1>

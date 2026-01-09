@@ -8,7 +8,7 @@ use crate::db::tags::{create_or_associate_tags, fetch_tags_for_recipe};
 use crate::dto::{
     CreateRecipeInput, IngredientGroupResponse, RecipeResponse, StepGroupResponse, TagResponse,
 };
-use crate::models::{NewRecipe, Recipe, RecipeChange};
+use crate::models::{IngredientGroup, NewRecipe, Recipe, RecipeChange};
 use crate::prelude::*;
 use actix::prelude::*;
 use actix_multipart::form::tempfile::TempFile;
@@ -252,10 +252,10 @@ impl Handler<GetAllRecipes> for DbExecutor {
             let recipe_id = recipe.id;
 
             let tags = fetch_tags_for_recipe(&mut conn, recipe_id)?;
-            let ingredient_groups =
-                fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
-            let step_groups =
-                fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
+            let ingredient_groups= Vec::new();
+                //fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
+            let step_groups = Vec::new();
+                //fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
 
             result.push(
                 RecipeResponse::from_parts(

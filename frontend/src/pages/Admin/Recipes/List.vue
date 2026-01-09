@@ -69,7 +69,7 @@ async function applyFilters() {
         <p class="text-gray-600 text-sm mb-2" v-if="recipe.description">
           {{ recipe.description }}
         </p>
-        <p class="text-gray-500 text-xs mb-1">Servings: {{ recipe.serving }}</p>
+        <p class="text-gray-500 text-xs mb-1">Servings: {{ recipe.servings }}</p>
         <p class="text-gray-500 text-xs">
           Prep: {{ recipe.prep_time_minutes }} min | Cook: {{ recipe.cook_time_minutes }} min
         </p>

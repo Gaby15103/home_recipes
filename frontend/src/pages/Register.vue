@@ -9,7 +9,6 @@ import {toTypedSchema} from "@vee-validate/zod"
 import {registerSchema} from "@/validators/auth"
 import {registerUser} from "@/api/auth"
 import {useRouter} from "vue-router"
-import {useUserStore} from "@/stores/user.ts";
 
 const router = useRouter()
 const error = ref("")

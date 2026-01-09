@@ -1,5 +1,5 @@
 ﻿// models/RecipeCreate.ts
-import {IngredientUnit, type Tag} from "./Recipe"
+import {IngredientUnit} from "./Recipe"
 
 export type StepCreateUI = StepCreate & {
     _uid: string
@@ -38,6 +38,11 @@ export interface IngredientCreate {
     position: number;
 }
 
+export type InputTag =
+    | { type: 'existing'; id: string }
+    | { type: 'new'; name: string }
+
+
 export interface RecipeCreate {
     title: string
     description: string | null
@@ -47,7 +52,7 @@ export interface RecipeCreate {
     author: null
     author_id: null
     is_private: boolean
-    tags: Tag[]
+    tags: InputTag[]
     ingredient_groups: IngredientGroupCreate[]
     step_groups: StepGroupCreate[]
 }

@@ -5,11 +5,10 @@
 use validator::Validate;
 
 use super::AppState;
-use crate::models::{Tag};
+use crate::models::Tag;
 use crate::prelude::*;
 use crate::utils::auth::{Auth, authenticate};
 use uuid::Uuid;
-
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -105,4 +104,17 @@ pub async fn update(
         .map_err(|_| Error::InternalServerError)??;
 
     Ok(HttpResponse::Ok().json(res))
+}
+pub struct GetAllTags;
+pub async fn get_all(
+    state: Data<AppState>,
+    req: HttpRequest
+) -> Result<HttpResponse, Error> {
+    let tags = state
+        .db
+        .send(GetAllTags{})
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(tags))
 }

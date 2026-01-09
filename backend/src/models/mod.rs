@@ -8,6 +8,7 @@ mod tag;
 mod step_group;
 mod step;
 mod recipe_tag;
+mod session;
 
 pub use self::{
     user::*,
@@ -20,4 +21,5 @@ pub use self::{
     recipe::*,
     step_group::*,
     step::*,
+    session::*,
 };

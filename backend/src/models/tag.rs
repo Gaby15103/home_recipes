@@ -7,7 +7,7 @@ use crate::schema::{tags};
 // -----------------------------
 // Tag DB Model
 // -----------------------------
-#[derive(Queryable, Insertable, Identifiable, Debug)]
+#[derive(Queryable, Insertable, Identifiable, Debug, Selectable)]
 #[diesel(table_name = tags)]
 pub struct Tag {
     pub id: Uuid,

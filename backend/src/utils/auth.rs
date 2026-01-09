@@ -1,7 +1,7 @@
 ﻿use actix::Message;
 use actix_web::{HttpRequest, http::header::AUTHORIZATION, web::Data};
 use actix_web::http::header::HeaderValue;
-
+use uuid::Uuid;
 use crate::app::AppState;
 use crate::models::{Role, User};
 use crate::prelude::*;
@@ -11,49 +11,37 @@ const TOKEN_PREFIX: &str = "Bearer ";
 #[derive(Debug)]
 pub struct Auth {
     pub user: User,
-    pub token: String,
+    pub session_id: Uuid,
     pub roles: Vec<Role>,
 }
 
+pub struct GetSessionAuth {
+    pub session_id: Uuid,
+}
 #[derive(Debug)]
-pub struct GenerateAuth {
-    pub token: String,
+pub struct SessionAuth {
+    pub session_id: Uuid,
+    pub user: User,
+    pub roles: Vec<Role>,
 }
 
 pub async fn authenticate(state: &Data<AppState>, req: &HttpRequest) -> Result<Auth, Error> {
-    let db = state.db.clone();
     let cookie = req
-        .cookie("access_token")
-        .ok_or_else(|| Error::Unauthorized(json!({
-            "error": "No auth cookie"
-        })))?;
+        .cookie("session_id")
+        .ok_or_else(|| Error::Unauthorized(json!({"error": "No session"})))?;
 
-    let token = cookie.value().to_string();
+    let session_id = Uuid::parse_str(cookie.value())
+        .map_err(|_| Error::Unauthorized(json!({"error": "Invalid session"})))?;
 
-    let result = state
-        .db
-        .send(GenerateAuth { token })
-        .await
-        .map_err(|_| Error::InternalServerError)?;
+    let auth_data = state.db.send(GetSessionAuth { session_id }).await??;
 
-    result
-}
-
-fn preprocess_authz_token(token: Option<&HeaderValue>) -> Result<String> {
-    let token = match token {
-        Some(token) => token.to_str().unwrap(),
-        None => {
-            return Err(Error::Unauthorized(json!({
-                "error": "No authorization was provided",
-            })));
-        }
-    };
-
-    if !token.starts_with(TOKEN_PREFIX) {
-        return Err(Error::Unauthorized(json!({
-            "error": "Invalid authorization method",
-        })));
+    if auth_data.session_id == Uuid::nil() {
+        return Err(Error::Unauthorized(json!({"error": "Session not found"})));
     }
 
-    Ok(token.replacen(TOKEN_PREFIX, "", 1))
+    Ok(Auth {
+        user: auth_data.user,
+        session_id: auth_data.session_id,
+        roles: auth_data.roles,
+    })
 }

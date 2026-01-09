@@ -1,14 +1,13 @@
 ﻿<script setup lang="ts">
-import { useUserStore } from "@/stores/user";
+import { useAuthStore } from "@/stores/auth";
 import { computed } from "vue";
 
 const props = defineProps<{ role: string }>();
-const userStore = useUserStore();
+const authStore = useAuthStore();
 
 const hasAccess = computed(() => {
-  const user = userStore.user;
-  if (!user) return false;
-  return user.roles.some(r => r.name === props.role);
+  if (!authStore.isAuthenticated) return false;
+  return authStore.hasRole(props.role)
 });
 </script>
 

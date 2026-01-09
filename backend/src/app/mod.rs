@@ -144,6 +144,7 @@ fn tag_routes() -> actix_web::Scope {
     web::scope("/tag")
         .route("/create", web::post().to(tags::create))
         .route("/update", web::put().to(tags::update))
+        .route("/get_all", web::get().to(tags::get_all))
 }
 
 fn recipe_routes() -> actix_web::Scope {

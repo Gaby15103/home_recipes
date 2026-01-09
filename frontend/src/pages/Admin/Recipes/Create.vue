@@ -11,8 +11,9 @@ import IngredientsEditor from "@/pages/Admin/Recipes/IngredientsEditor.vue";
 import StepsEditor from "@/pages/Admin/Recipes/StepsEditor.vue";
 import type {RecipeCreate, StepImage} from "@/models/RecipeCreate.ts";
 import {createRecipe} from "@/api/recipe.ts"
-import {router} from "@/router";
+import router from "@/router";
 import JsonImporter from "@/components/json/JsonImporter.vue";
+import TagsMultiSelect from "@/components/Recipe/TagsMultiSelect.vue";
 
 const recipe = ref<RecipeCreate>({
   title: "",
@@ -124,6 +125,14 @@ async function submit() {
           <Label>Cook time (min)</Label>
           <Input type="number" min="0" v-model.number="recipe.cook_time_minutes"/>
         </div>
+      </CardContent>
+    </Card>
+    <Card>
+      <CardHeader>
+        Tags
+      </CardHeader>
+      <CardContent class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <TagsMultiSelect v-model:model-value="recipe.tags"/>
       </CardContent>
     </Card>
 

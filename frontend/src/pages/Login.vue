@@ -11,14 +11,13 @@ import {
 } from '@/components/ui/field'
 import {loginSchema} from "@/validators/auth"
 import {useForm, Field as VeeField} from 'vee-validate'
-import {login} from "@/api/auth"
-import {useUserStore} from "@/stores/user"
+import {useAuthStore} from "@/stores/auth"
 import {useRouter} from "vue-router"
 import {toTypedSchema} from "@vee-validate/zod";
 
 const router = useRouter()
 const error = ref("")
-const userStore = useUserStore()
+const authStore = useAuthStore()
 
 
 const {handleSubmit} = useForm({
@@ -32,8 +31,7 @@ const {handleSubmit} = useForm({
 const submit = handleSubmit(async (values) => {
   error.value = ""
   try {
-    const res = await login(values.email, values.password)
-    userStore.setUser(res.user)
+    await authStore.login(values.email, values.password)
     await router.push("/home")
   } catch (e: any) {
     error.value = e.message || "Login failed"

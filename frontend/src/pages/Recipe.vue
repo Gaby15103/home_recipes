@@ -2,7 +2,6 @@
 import {ref, onMounted, watch, nextTick, useTemplateRef} from "vue";
 import {useRoute} from "vue-router";
 import {getRecipeById} from "@/api/recipe";
-import { printRecipe } from "@/utils/RecipePrinter.ts";
 import PrintModal from "@/components/printer/PrintModal.vue";
 import {Separator} from "@/components/ui/separator";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
@@ -89,7 +88,7 @@ function shareRecipe() {
               <ul class="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-300">
                 <li>Prep: {{ recipe.prep_time_minutes }} min</li>
                 <li>Cook: {{ recipe.cook_time_minutes }} min</li>
-                <li>Servings: {{ recipe.serving }}</li>
+                <li>Servings: {{ recipe.servings }}</li>
               </ul>
 
               <!-- Description -->
@@ -122,8 +121,6 @@ function shareRecipe() {
         </CardContent>
       </Card>
 
-      <Separator/>
-
       <!-- Ingredients Section -->
       <Card class="shadow-md">
         <CardHeader>
@@ -154,10 +151,11 @@ function shareRecipe() {
           </template>
         </CardContent>
 
-        <Separator/>
+        <Separator class="max-w-[95%] mx-auto min-h-0.5 rounded-xl" />
+
         <CardHeader class="flex justify-between">
           <CardTitle class="text-2xl">Preparations</CardTitle>
-          <div>
+          <div class="grid grid-cols-1 gap-6 justify-items-end">
             <Label for="showStepImagesId" >Show Step Images:</Label>
             <Switch if="showStepImagesId" v-model="showStepImages"/>
           </div>

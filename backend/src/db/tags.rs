@@ -2,18 +2,19 @@
 use diesel::prelude::*;
 use uuid::Uuid;
 use super::DbExecutor;
-use crate::app::tags::{CreateTagOuter, UpdateTagOuter};
+use crate::app::tags::{CreateTagOuter, GetAllTags, UpdateTagOuter};
 use crate::dto::{InputTag, TagResponse};
 use crate::models::{NewTag, Tag, TagChange};
 use crate::prelude::*;
 use crate::schema::{recipe_tags, tags};
+use crate::schema::recipes::dsl::recipes;
 
 impl Message for CreateTagOuter {
     type Result = Result<TagResponse>;
 }
 
 
-impl Handler<CreateTagOuter> for DbExecutor{
+impl Handler<CreateTagOuter> for DbExecutor {
     type Result = Result<TagResponse>;
 
     fn handle(&mut self, msg: CreateTagOuter, ctx: &mut Self::Context) -> Self::Result {
@@ -21,7 +22,7 @@ impl Handler<CreateTagOuter> for DbExecutor{
 
         let mut conn = self.0.get()?;
 
-        let new_tag =  NewTag{
+        let new_tag = NewTag {
             name: msg.new_tag.name,
         };
 
@@ -88,7 +89,6 @@ pub fn fetch_tags_for_recipe(
     conn: &mut PgConnection,
     recipe_id: Uuid,
 ) -> Result<Vec<TagResponse>, diesel::result::Error> {
-
     let tags_list: Vec<Tag> = tags::table
         .inner_join(recipe_tags::table)
         .filter(recipe_tags::recipe_id.eq(recipe_id))
@@ -103,7 +103,7 @@ impl Message for UpdateTagOuter {
     type Result = Result<TagResponse>;
 }
 
-impl Handler<UpdateTagOuter> for DbExecutor{
+impl Handler<UpdateTagOuter> for DbExecutor {
     type Result = Result<TagResponse>;
 
     fn handle(&mut self, msg: UpdateTagOuter, _: &mut Self::Context) -> Self::Result {
@@ -123,5 +123,29 @@ impl Handler<UpdateTagOuter> for DbExecutor{
             Ok(tag) => Ok(tag.into()),
             Err(e) => Err(e.into()),
         }
+    }
+}
+
+impl Message for GetAllTags {
+type Result = Result<Vec<TagResponse>>;
+}
+
+impl Handler<GetAllTags> for DbExecutor {
+    type Result = Result<Vec<TagResponse>>;
+
+    fn handle(&mut self, msg: GetAllTags, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::tags::dsl::*;
+
+        let mut conn = self.0.get()?;
+        let tag_models: Vec<Tag> = tags
+            .order(name.asc())
+            .load(&mut conn)?;
+
+        let responses = tag_models
+            .into_iter()
+            .map(TagResponse::from)
+            .collect();
+
+        Ok(responses)
     }
 }

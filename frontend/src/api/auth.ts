@@ -34,3 +34,9 @@ export function getCurrentUser() {
         method: "GET",
     });
 }
+
+export function logout() {
+    return api("/user/logout", {
+        method: "POST"
+    });
+}

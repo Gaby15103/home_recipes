@@ -57,7 +57,8 @@ export function printRecipe(recipe: Recipe, options: {
 
     const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) return;
-    printWindow.document.write(`<html><head><title>${recipe.title}</title></head><body>${recipeHtml}</body></html>`);
+    printWindow.document.open();
+    printWindow.document.write(`<html lang="eng"><head><title>${recipe.title}</title></head><body>${recipeHtml}</body></html>`);
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();

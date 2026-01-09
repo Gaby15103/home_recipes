@@ -19,18 +19,22 @@ import {
   NavigationMenuList,
 } from "@/components/ui/navigation-menu"
 
-import {useUserStore} from "@/stores/user"
+import {useAuthStore} from "@/stores/auth.ts";
 import {useSidebarStore} from "@/stores/sidebar"
+import router from "@/router";
 
-const API_URL = import.meta.env.VITE_API_URL
-
-const userStore = useUserStore()
+const authStore = useAuthStore()
 const sidebarStore = useSidebarStore()
 
-const user = computed(() => userStore.user || null)
+const user = computed(() => authStore.user || null)
 
-function logout() {
-  userStore.clearUser()
+async function logout() {
+  try {
+    await authStore.logout()
+    await router.push("/home")
+  } catch (e: any) {
+    console.log(e.message)
+  }
 }
 </script>
 
@@ -94,7 +98,7 @@ function logout() {
             </DropdownMenuItem>
 
             <DropdownMenuItem
-                v-if="userStore.hasRole('ADMIN')"
+                v-if="authStore.hasRole('ADMIN')"
                 @click="sidebarStore.toggle()"
             >
               Admin Panel

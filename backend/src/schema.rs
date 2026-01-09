@@ -61,6 +61,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    sessions (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        expires_at -> Timestamptz,
+        created_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     step_groups (id) {
         id -> Uuid,
         recipe_id -> Uuid,
@@ -122,6 +131,7 @@ diesel::joinable!(recipe_ingredients -> ingredients (ingredient_id));
 diesel::joinable!(recipe_tags -> recipes (recipe_id));
 diesel::joinable!(recipe_tags -> tags (tag_id));
 diesel::joinable!(recipes -> users (author_id));
+diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(step_groups -> recipes (recipe_id));
 diesel::joinable!(steps -> step_groups (step_group_id));
 diesel::joinable!(user_roles -> roles (role_id));
@@ -134,6 +144,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     recipe_tags,
     recipes,
     roles,
+    sessions,
     step_groups,
     steps,
     tags,

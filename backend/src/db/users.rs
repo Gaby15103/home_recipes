@@ -1,14 +1,15 @@
 ﻿use actix::prelude::*;
+use chrono::{Duration, Utc};
 use diesel::prelude::*;
 use libreauth::pass::HashBuilder;
 
 use super::DbExecutor;
-use crate::app::users::{LoginUser, RegisterUser, UpdateUserOuter, UserResponse, UserResponseOuter};
+use crate::app::users::{DeleteSession, LoginUser, RegisterUser, UpdateUserOuter, UserResponse, UserResponseOuter};
 use crate::db::roles::fetch_roles_for_user;
-use crate::models::{NewUser, User, UserChange};
+use crate::models::{NewSession, NewUser, Session, User, UserChange};
 use crate::prelude::*;
+use crate::schema::sessions::dsl::sessions;
 use crate::utils::{HASHER, PWD_SCHEME_VERSION};
-use crate::utils::jwt::CanGenerateJwt;
 
 impl Message for RegisterUser {
     type Result = Result<UserResponse>;
@@ -50,38 +51,59 @@ impl Handler<LoginUser> for DbExecutor {
     type Result = Result<UserResponseOuter>;
 
     fn handle(&mut self, msg: LoginUser, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::sessions::dsl::sessions;
         use crate::schema::users::dsl::*;
 
-        let provided_password_raw = &msg.password;
+        let mut conn = self.0.get()?; // pooled connection
+
+        let stored_user: User = users.filter(email.eq(&msg.email)).first(&mut conn)?;
+        let checker = HashBuilder::from_phc(stored_user.password_hash.trim())?;
+
+        if !checker.is_valid(&msg.password) {
+            return Err(Error::Unauthorized(json!({"error": "Wrong password"})));
+        }
+
+        if checker.needs_update(Some(PWD_SCHEME_VERSION)) {
+            let new_hash = HASHER.hash(&msg.password)?;
+            diesel::update(users.find(stored_user.id))
+                .set(password_hash.eq(new_hash))
+                .execute(&mut conn)?;
+        }
+
+        let roles = fetch_roles_for_user(&mut conn, stored_user.id)?;
+
+        let expires_at = Utc::now() + Duration::days(30);
+        let new_session = NewSession {
+            user_id: stored_user.id,
+            expires_at,
+        };
+        let session: Session = diesel::insert_into(sessions)
+            .values(&new_session)
+            .get_result(&mut conn)?;
+
+        Ok(UserResponseOuter {
+            user: UserResponse::from_user_and_roles(&stored_user, roles),
+            session_id: session.id,
+        })
+    }
+}
+
+impl Message for DeleteSession {
+    type Result = Result<()>;
+}
+
+impl Handler<DeleteSession> for DbExecutor {
+    type Result = Result<()>;
+
+    fn handle(&mut self, msg: DeleteSession, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::sessions::dsl::*;
 
         let mut conn = self.0.get()?;
 
-        let stored_user: User = users.filter(email.eq(msg.email)).first(&mut conn)?;
-        let checker = HashBuilder::from_phc(stored_user.password_hash.trim())?;
+        diesel::delete(sessions.filter(id.eq(msg.session_id)))
+            .execute(&mut conn)?;
 
-        if checker.is_valid(provided_password_raw) {
-            if checker.needs_update(Option::from(PWD_SCHEME_VERSION)) {
-                let new_password = HASHER.hash(provided_password_raw)?;
-                let updated_user: User = diesel::update(users.find(stored_user.id))
-                    .set(password_hash.eq(new_password))
-                    .get_result(&mut conn)?;
-
-                let user_roles = fetch_roles_for_user(&mut conn, updated_user.id)?;
-
-                return Ok(UserResponseOuter {
-                    user: UserResponse::from_user_and_roles(&stored_user, user_roles),
-                    token: stored_user.generate_jwt()?
-                });
-            }
-
-            let user_roles = fetch_roles_for_user(&mut conn, stored_user.id)?;
-            Ok(UserResponseOuter {
-                user: UserResponse::from_user_and_roles(&stored_user, user_roles),
-                token: stored_user.generate_jwt()?
-            })
-        } else {
-            Err(Error::Unauthorized(json!({"error": "Wrong password"})))
-        }
+        Ok(())
     }
 }
 
@@ -102,7 +124,7 @@ impl Handler<UpdateUserOuter> for DbExecutor {
 
         let updated_password = HASHER.hash(&update_user.password)?;
 
-        let updated_user_data  = UserChange {
+        let updated_user_data = UserChange {
             username: update_user.username,
             email: update_user.email,
             password_hash: updated_password,

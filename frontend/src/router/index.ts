@@ -8,13 +8,12 @@ import Create from "@/pages/Admin/Recipes/Create.vue";
 import Edit from "@/pages/Admin/Recipes/Edit.vue";
 import Categories from "@/pages/Admin/Recipes/Categories.vue";
 import Recipe from "@/pages/Recipe.vue";
-
-
+import {useAuthStore} from "@/stores/auth.ts";
 
 const routes = [
     {
         path: "/admin",
-        meta: { roles: ["ADMIN", "MODERATOR"] },
+        meta: { requiresAuth: true, roles: ["ADMIN", "MODERATOR"] },
         redirect: "/admin/recipes",
         children: [
             { path: "recipes", component: List },
@@ -31,7 +30,7 @@ const routes = [
     { path: "/recipe/:id", component: Recipe },
 ]
 
-export const router = createRouter({
+const router = createRouter({
     history: createWebHistory(),
     routes: routes,
     scrollBehavior(to, from, savedPosition) {
@@ -50,3 +49,28 @@ export const router = createRouter({
         return {top: 0};
     },
 });
+
+router.beforeEach(async (to,from) => {
+    const authStore = useAuthStore();
+
+    if (to.meta.requiresAuth) {
+        if (!authStore.user) {
+            try {
+                await authStore.loadUser(); // load user from /api/user
+            } catch {
+                return "/login"; // not logged in
+            }
+        }
+
+        if (to.meta.roles) {
+            const allowed = (to.meta.roles as string[]).some(role =>
+                authStore.hasRole(role)
+            );
+            if (!allowed) return from.path; // forbidden page
+        }
+    }
+
+    return true;
+});
+
+export default router;

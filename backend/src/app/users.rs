@@ -1,6 +1,7 @@
 ﻿use actix_web::{HttpRequest, HttpResponse, ResponseError, web::Data, web::Json};
 use std::convert::From;
 use actix_web::cookie::{Cookie, SameSite};
+use uuid::Uuid;
 use validator::Validate;
 use crate::db::roles::fetch_roles_for_user;
 use super::AppState;
@@ -100,7 +101,7 @@ pub struct UserResponse {
 #[derive(Debug, Serialize)]
 pub struct UserResponseOuter {
     pub user: UserResponse,
-    pub token: String,
+    pub session_id: Uuid,
 }
 
 #[derive(Debug, Serialize)]
@@ -182,7 +183,7 @@ pub async fn login(
         .await
         .map_err(|_| Error::InternalServerError)??;
 
-    let cookie = Cookie::build("access_token", res.token)
+    let cookie = Cookie::build("session_id", res.session_id.to_string())
         .path("/")
         .http_only(true)
         .same_site(SameSite::Lax)
@@ -202,15 +203,27 @@ pub async fn get_current(state: Data<AppState>, req: HttpRequest) -> Result<Http
             .json(UserResponse::from_auth(auth))
     )
 }
-pub async fn logout(state: Data<AppState>) -> Result<HttpResponse, Error> {
-    Ok(
-        HttpResponse::Ok()
+
+pub struct DeleteSession {
+    pub session_id: Uuid,
+}
+pub async fn logout(state: Data<AppState>, req: HttpRequest) -> Result<HttpResponse, Error> {
+    if let Some(cookie) = req.cookie("session_id") {
+        let session_id = cookie.value().parse::<uuid::Uuid>().ok();
+
+        if let Some(id) = session_id {
+            let _ = state.db.send(DeleteSession { session_id: id }).await;
+        }
+    }
+
+    Ok(HttpResponse::Ok()
         .cookie(
-        Cookie::build("access_token", "")
-        .path("/")
-        .http_only(true)
-        .max_age(time::Duration::seconds(0))
-        .finish()
+            Cookie::build("session_id", "")
+                .path("/")
+                .http_only(true)
+                .secure(false) // change to true if using HTTPS
+                .max_age(time::Duration::seconds(0))
+                .finish(),
         )
         .finish()
     )

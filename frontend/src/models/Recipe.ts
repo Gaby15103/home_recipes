@@ -3,7 +3,7 @@ export interface Recipe {
     title: string;
     description: string|null;
     image_url: string;
-    serving: number;
+    servings: number;
     prep_time_minutes: number;
     cook_time_minutes: number;
     author: string|null;
