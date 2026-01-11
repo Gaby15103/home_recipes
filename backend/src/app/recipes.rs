@@ -16,11 +16,19 @@ pub struct CreateRecipeForm {
     pub step_images_meta: MpJson<Vec<StepImageMeta>>,
 }
 
+#[derive(Debug, MultipartForm)]
+pub struct UpdateRecipeForm {
+    pub recipe: MpJson<In<UpdateRecipeInput>>,
+    pub main_image: Option<TempFile>,
+    pub step_images: Vec<TempFile>,
+    pub step_images_meta: MpJson<Vec<StepImageMeta>>,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StepImageMeta {
     pub group_position: usize,
     pub step_position: usize,
-    pub index: usize, // index in step_image[]
+    pub index: usize,
 }
 
 
@@ -33,13 +41,16 @@ pub struct CreateRecipe {
     pub auth: Auth,
     pub new_recipe: CreateRecipeInput,
     pub main_image: TempFile,
-    pub step_image: Vec<TempFile>,
+    pub step_images: Vec<TempFile>,
     pub step_images_meta: Vec<StepImageMeta>,
 }
 
 pub struct UpdateRecipe {
     pub auth: Auth,
     pub update_recipe: UpdateRecipeInput,
+    pub main_image: Option<TempFile>,
+    pub step_images: Vec<TempFile>,
+    pub step_images_meta: Vec<StepImageMeta>,
 }
 
 
@@ -79,7 +90,7 @@ pub async fn create(
             auth,
             new_recipe,
             main_image: form.main_image,
-            step_image: form.step_images,
+            step_images: form.step_images,
             step_images_meta: form.step_images_meta.into_inner(),
         })
         .await
@@ -90,9 +101,10 @@ pub async fn create(
 
 pub async fn update(
     state: Data<AppState>,
-    (form, req): (Json<In<UpdateRecipeInput>>, HttpRequest),
+    req: HttpRequest,
+    MultipartForm(form): MultipartForm<UpdateRecipeForm>,
 ) -> Result<HttpResponse, Error> {
-    let update_recipe = form.into_inner().recipe;
+    let update_recipe = form.recipe.into_inner().recipe;
 
     update_recipe.validate()?;
 
@@ -100,7 +112,13 @@ pub async fn update(
 
     let res = state
         .db
-        .send(UpdateRecipe { auth, update_recipe })
+        .send(UpdateRecipe {
+            auth,
+            update_recipe,
+            main_image: form.main_image,
+            step_images: form.step_images,
+            step_images_meta: form.step_images_meta.into_inner(),
+        })
         .await
         .map_err(|_| crate::error::Error::InternalServerError)??;
 

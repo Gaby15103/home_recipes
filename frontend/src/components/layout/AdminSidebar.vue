@@ -60,21 +60,21 @@ const sidebarStore = useSidebarStore()
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton as-child>
-                      <RouterLink to="/admin/recipes/create">
+                      <RouterLink to="/admin/recipe/create">
                         <span class="ml-[10%]">Create</span>
                       </RouterLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton as-child>
-                      <RouterLink to="/admin/recipes/edit">
+                      <RouterLink to="/admin/recipe/edit">
                         <span class="ml-[10%]">Edit</span>
                       </RouterLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton as-child>
-                      <RouterLink to="/admin/recipes/categories">
+                      <RouterLink to="/admin/recipe/categories">
                         <span class="ml-[10%]">Categories</span>
                       </RouterLink>
                     </SidebarMenuButton>

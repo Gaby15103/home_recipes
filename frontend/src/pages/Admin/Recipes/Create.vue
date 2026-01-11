@@ -51,7 +51,7 @@ async function submit() {
   console.log("Recipe payload:", recipe.value)
   try {
     const res = await createRecipe(recipe.value, mainImageFile.value, stepImages.value)
-    await router.push("/recipes/" + res.id)
+    await router.push("/recipe/" + res.id)
   } catch (e: any) {
     console.error(e)
   }

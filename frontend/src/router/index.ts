@@ -8,19 +8,38 @@ import Create from "@/pages/Admin/Recipes/Create.vue";
 import Edit from "@/pages/Admin/Recipes/Edit.vue";
 import Categories from "@/pages/Admin/Recipes/Categories.vue";
 import Recipe from "@/pages/Recipe.vue";
+import UserSettings from "@/components/layout/settings/Layout.vue"
 import {useAuthStore} from "@/stores/auth.ts";
+import AdminDashBoard from "@/pages/Admin/AdminDashBoard.vue";
+import Profile from "@/pages/Settings/Profile.vue";
+import Password from "@/pages/Settings/Password.vue";
+import TwoFactor from "@/pages/Settings/TwoFactor.vue";
+import Appearance from "@/pages/Settings/Appearance.vue";
 
 const routes = [
     {
         path: "/admin",
-        meta: { requiresAuth: true, roles: ["ADMIN", "MODERATOR"] },
-        redirect: "/admin/recipes",
+        meta: { requiresAuth: true, roles: ["ADMIN", "MODERATOR"], layout: "AdminLayout" },
+        redirect: "/admin/dashboard",
         children: [
+            { path: "dashboard", component: AdminDashBoard },
             { path: "recipes", component: List },
-            { path: "recipes/create", component: Create },
-            { path: "recipes/edit", component: Edit },
-            { path: "recipes/Categories", component: Categories },
+            { path: "recipe/create", component: Create },
+            { path: "recipe/edit/:id", component: Edit },
+            { path: "recipe/Categories", component: Categories },
         ],
+    },
+    {
+        path: "/user",
+        meta: {requiresAuth: true, roles: ["ADMIN", "MODERATOR"], layout: "AdminLayout"},
+        redirect: "/user/edit",
+        children: [
+            { path: "edit", component: UserSettings },
+            { path: "edit/profile", component: Profile },
+            { path: "edit/password", component: Password },
+            { path: "edit/two-factor'", component: TwoFactor },
+            { path: "edit/appearance", component: Appearance },
+        ]
     },
 
     { path: "/", component: Home },
@@ -66,7 +85,7 @@ router.beforeEach(async (to,from) => {
             const allowed = (to.meta.roles as string[]).some(role =>
                 authStore.hasRole(role)
             );
-            if (!allowed) return from.path; // forbidden page
+            if (!allowed) return from.path;
         }
     }
 

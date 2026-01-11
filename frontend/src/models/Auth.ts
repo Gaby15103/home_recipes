@@ -1,4 +1,4 @@
-﻿import type {User} from "@/models/User.ts";
+﻿import type {User, UserPreferences} from "@/models/User.ts";
 
 export interface LoginRequest {
     user: {
@@ -19,6 +19,17 @@ export interface RegisterRequest {
         first_name: string;
         last_name: string;
     };
+}
+export interface EditUser {
+    user: {
+        username: string;
+        email: string;
+        password: string|null;
+        first_name: string;
+        last_name: string;
+        avatar_url: string;
+        preferences: UserPreferences;
+    }
 }
 
 export type RegisterResponse = LoginResponse;

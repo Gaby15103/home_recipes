@@ -112,6 +112,7 @@ pub struct UserResponseInner {
     pub last_name: String,
     pub avatar_url: Option<String>,
     pub preferences: serde_json::Value,
+    pub emai_verified: bool,
     pub roles: Vec<Role>
 }
 
@@ -128,6 +129,7 @@ impl UserResponse {
                 last_name: user.last_name.clone(),
                 avatar_url: user.avatar_url.clone(),
                 preferences: user.preferences.clone(),
+                emai_verified: user.email_verified.unwrap().clone(),
                 roles,
             },
         }
@@ -144,6 +146,7 @@ impl UserResponse {
                 last_name: auth.user.last_name,
                 avatar_url: auth.user.avatar_url,
                 preferences: auth.user.preferences,
+                emai_verified: auth.user.email_verified.unwrap().clone(),
                 roles: auth.roles,
             },
         }

@@ -1,7 +1,7 @@
 ﻿use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::dto::{tag::TagResponse, ingredient_group::{IngredientGroupInput, IngredientGroupResponse}, step::StepGroupInput, StepGroupResponse, InputTag};
+use crate::dto::{tag::TagResponse, ingredient_group::{IngredientGroupInput, IngredientGroupResponse}, step::StepGroupInput, StepGroupResponse, InputTag, IngredientGroupUpdate, StepGroupUpdate};
 use crate::models::{IngredientGroup, Recipe, StepGroup, Tag};
 
 #[derive(Debug, Validate, Deserialize, Serialize)]
@@ -36,20 +36,21 @@ pub struct RecipeResponse {
     pub step_groups: Vec<StepGroupResponse>,
 }
 
-#[derive(Debug, Validate, Deserialize)]
+#[derive(Debug, Validate, Deserialize, Serialize)]
 pub struct UpdateRecipeInput {
     pub id: Uuid,
     pub title: String,
     pub description: Option<String>,
+    pub image_url: Option<String>,
     pub servings: i32,
     pub prep_time_minutes: i32,
     pub cook_time_minutes: i32,
     pub author: String,
     pub author_id: Option<Uuid>,
     pub is_private: bool,
-    pub tags: Vec<Uuid>,
-    pub ingredient_groups: Vec<IngredientGroupInput>,
-    pub step_groups: Vec<StepGroupInput>,
+    pub tags: Vec<InputTag>,
+    pub ingredient_groups: Vec<IngredientGroupUpdate>,
+    pub step_groups: Vec<StepGroupUpdate>,
 }
 
 impl RecipeResponse {

@@ -16,7 +16,7 @@ pub struct StepGroupInput {
     pub steps: Vec<StepInput>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct StepResponse {
     pub id: Uuid,
     pub step_group_id: Uuid,
@@ -26,12 +26,29 @@ pub struct StepResponse {
     pub duration_minutes: Option<i32>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Validate, Serialize)]
+pub struct StepUpdate {
+    pub id: Option<Uuid>,
+    pub position: i32,
+    pub instruction: String,
+    pub image_url: Option<String>,
+    pub duration_minutes: Option<i32>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StepGroupResponse {
     pub id: Uuid,
     pub title: String,
     pub position: i32,
     pub steps: Vec<StepResponse>,
+}
+
+#[derive(Debug, Deserialize, Validate, Serialize)]
+pub struct StepGroupUpdate {
+    pub id: Option<Uuid>,
+    pub title: String,
+    pub position: i32,
+    pub steps: Vec<StepUpdate>,
 }
 
 impl StepGroupResponse {

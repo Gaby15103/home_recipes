@@ -1,29 +1,9 @@
 ﻿use diesel::prelude::*;
 use uuid::Uuid;
-use crate::dto::{IngredientGroupInput, IngredientResponse, IngredientGroupResponse};
+use crate::dto::{IngredientGroupInput, IngredientResponse, IngredientGroupResponse, IngredientGroupUpdate};
 use crate::models::{Ingredient, IngredientGroup, RecipeIngredient};
 use crate::prelude::*;
 use crate::schema::{ingredient_groups, ingredients, recipe_ingredients};
-/*
-impl Handler<CreateIngredientOuter> for DbExecutor{
-    type Result = Result<IngredientResponse>;
-
-    fn handle(&mut self, msg: CreateIngredientOuter, ctx: &mut Self::Context) -> Self::Result {
-        use crate::schema::ingredients::dsl::*;
-
-        let mut conn = self.0.get()?;
-
-        let new_ingredient =  NewIngredient{
-            name: msg.new_ingredient.name,
-        };
-
-        let inserted_ingredient: Ingredient = diesel::insert_into(ingredients)
-            .values(&new_ingredient)
-            .get_result(&mut conn)?;
-
-        Ok(IngredientResponse::from(inserted_ingredient))
-    }
-}*/
 
 pub fn create_ingredient_groups(
     conn: &mut PgConnection,
@@ -151,27 +131,135 @@ pub fn fetch_ingredient_groups_for_recipe(
     Ok(result)
 }
 
+pub fn sync_ingredient_groups(
+    conn: &mut PgConnection,
+    recipe_id: Uuid,
+    groups: Vec<IngredientGroupUpdate>,
+) -> Result<Vec<IngredientGroupResponse>, diesel::result::Error> {
+    use crate::schema::{
+        ingredient_groups::dsl as ig,
+        ingredients::dsl as ing,
+        recipe_ingredients::dsl as ri,
+    };
+    use std::collections::HashSet;
 
-/*
-impl Handler<UpdateIngredientOuter> for DbExecutor{
-    type Result = Result<IngredientResponse>;
+    // --- Fetch existing group ids
+    let existing_ids: HashSet<Uuid> = ig::ingredient_groups
+        .filter(ig::recipe_id.eq(recipe_id))
+        .select(ig::id)
+        .load::<Uuid>(conn)?
+        .into_iter()
+        .collect();
 
-    fn handle(&mut self, msg: UpdateIngredientOuter, _: &mut Self::Context) -> Self::Result {
-        use crate::schema::ingredients::dsl::*;
+    let mut kept_ids = HashSet::new();
 
-        let mut conn = self.0.get()?;
+    for group in &groups {
+        let group_id = if let Some(id) = group.id {
+            // --- Update group
+            diesel::update(ig::ingredient_groups.find(id))
+                .set((
+                    ig::title.eq(&group.title),
+                    ig::position.eq(group.position),
+                ))
+                .execute(conn)?;
 
+            kept_ids.insert(id);
+            id
+        } else {
+            // --- Insert group
+            let new_id: Uuid = diesel::insert_into(ig::ingredient_groups)
+                .values((
+                    ig::recipe_id.eq(recipe_id),
+                    ig::title.eq(&group.title),
+                    ig::position.eq(group.position),
+                ))
+                .returning(ig::id)
+                .get_result(conn)?;
 
-        let updated_ingredient = IngredientChange {
-            name: msg.update_ingredient.name,
+            kept_ids.insert(new_id);
+            new_id
         };
 
-        match diesel::update(ingredients.find(msg.update_ingredient.id))
-            .set(&updated_ingredient)
-            .get_result::<Ingredient>(&mut conn)
-        {
-            Ok(ingredient) => Ok(ingredient.into()),
-            Err(e) => Err(e.into()),
+        // ---------- Ingredients ----------
+        let existing_ing_ids: HashSet<Uuid> = ri::recipe_ingredients
+            .filter(ri::ingredient_group_id.eq(group_id))
+            .select(ri::id)
+            .load::<Uuid>(conn)?
+            .into_iter()
+            .collect();
+
+        let mut kept_ing_ids = HashSet::new();
+
+        for ingredient in &group.ingredients {
+            // Normalize name
+            let normalized_name = ingredient.name.trim().to_lowercase();
+
+            // Find or create ingredient
+            let ingredient_id: Uuid = match ing::ingredients
+                .filter(ing::name.eq(&normalized_name))
+                .select(ing::id)
+                .first::<Uuid>(conn)
+            {
+                Ok(id) => id,
+                Err(diesel::result::Error::NotFound) => {
+                    diesel::insert_into(ing::ingredients)
+                        .values(ing::name.eq(&normalized_name))
+                        .returning(ing::id)
+                        .get_result(conn)?
+                }
+                Err(e) => return Err(e),
+            };
+
+            if let Some(ri_id) = ingredient.id {
+                // --- Update recipe_ingredient
+                diesel::update(ri::recipe_ingredients.find(ri_id))
+                    .set((
+                        ri::ingredient_id.eq(ingredient_id),
+                        ri::quantity.eq(&ingredient.quantity),
+                        ri::unit.eq(ingredient.unit.to_string()),
+                        ri::note.eq(&ingredient.note),
+                        ri::position.eq(ingredient.position),
+                    ))
+                    .execute(conn)?;
+
+                kept_ing_ids.insert(ri_id);
+            } else {
+                // --- Insert recipe_ingredient
+                let new_ri_id: Uuid = diesel::insert_into(ri::recipe_ingredients)
+                    .values((
+                        ri::ingredient_group_id.eq(group_id),
+                        ri::ingredient_id.eq(ingredient_id),
+                        ri::quantity.eq(&ingredient.quantity),
+                        ri::unit.eq(ingredient.unit.to_string()),
+                        ri::note.eq(&ingredient.note),
+                        ri::position.eq(ingredient.position),
+                    ))
+                    .returning(ri::id)
+                    .get_result(conn)?;
+
+                kept_ing_ids.insert(new_ri_id);
+            }
+        }
+
+        // --- Delete removed ingredients
+        let removed_ing_ids: Vec<Uuid> =
+            existing_ing_ids.difference(&kept_ing_ids).cloned().collect();
+
+        if !removed_ing_ids.is_empty() {
+            diesel::delete(ri::recipe_ingredients.filter(ri::id.eq_any(removed_ing_ids)))
+                .execute(conn)?;
         }
     }
-}*/
+
+    // --- Delete removed groups
+    let removed_group_ids: Vec<Uuid> =
+        existing_ids.difference(&kept_ids).cloned().collect();
+
+    if !removed_group_ids.is_empty() {
+        diesel::delete(ig::ingredient_groups.filter(ig::id.eq_any(removed_group_ids)))
+            .execute(conn)?;
+    }
+
+    // --- Return updated state
+    fetch_ingredient_groups_for_recipe(conn, recipe_id)
+}

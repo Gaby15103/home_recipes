@@ -5,3 +5,8 @@ import { twMerge } from "tailwind-merge"
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+export type Href = string | { url: string }
+
+export function toUrl(href: Href) {
+  return typeof href === 'string' ? href : href.url
+}

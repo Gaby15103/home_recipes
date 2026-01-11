@@ -15,9 +15,19 @@ pub struct IngredientInput {
     pub position: i32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct IngredientResponse {
     pub id: Uuid,
+    pub name: String,
+    pub quantity: BigDecimal,
+    pub unit: IngredientUnit,
+    pub note: Option<String>,
+    pub position: i32,
+}
+
+#[derive(Debug, Deserialize, Validate, Serialize)]
+pub struct IngredientUpdate {
+    pub id: Option<Uuid>,
     pub name: String,
     pub quantity: BigDecimal,
     pub unit: IngredientUnit,

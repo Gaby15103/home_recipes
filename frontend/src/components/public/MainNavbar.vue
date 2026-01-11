@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/navigation-menu"
 
 import {useAuthStore} from "@/stores/auth.ts";
-import {useSidebarStore} from "@/stores/sidebar"
+import {useSidebarStore} from "@/stores/sidebar.ts"
 import router from "@/router";
 
 const authStore = useAuthStore()
@@ -97,11 +97,10 @@ async function logout() {
               </RouterLink>
             </DropdownMenuItem>
 
-            <DropdownMenuItem
-                v-if="authStore.hasRole('ADMIN')"
-                @click="sidebarStore.toggle()"
-            >
-              Admin Panel
+            <DropdownMenuItem>
+            <RouterLink to="/admin/dashboard">
+              Admin Dashboard
+            </RouterLink>
             </DropdownMenuItem>
 
             <DropdownMenuItem

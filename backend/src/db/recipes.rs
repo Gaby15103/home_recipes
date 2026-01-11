@@ -2,8 +2,8 @@
 use std::path::Path;
 use super::DbExecutor;
 use crate::app::recipes::{CreateRecipe, GetAllRecipes, GetRecipeById, UpdateRecipe};
-use crate::db::step::{create_step_groups, fetch_step_groups_for_recipe};
-use crate::db::ingredients::{create_ingredient_groups, fetch_ingredient_groups_for_recipe};
+use crate::db::step::{create_step_groups, fetch_step_groups_for_recipe, sync_step_groups};
+use crate::db::ingredients::{create_ingredient_groups, fetch_ingredient_groups_for_recipe, sync_ingredient_groups};
 use crate::db::tags::{create_or_associate_tags, fetch_tags_for_recipe};
 use crate::dto::{
     CreateRecipeInput, IngredientGroupResponse, RecipeResponse, StepGroupResponse, TagResponse,
@@ -15,6 +15,7 @@ use actix_multipart::form::tempfile::TempFile;
 use diesel::prelude::*;
 use crate::schema::recipes::{created_at, is_private};
 use crate::schema::recipes::dsl::recipes;
+use crate::utils::image_upload::upload_recipe_image;
 
 impl Message for GetRecipeById {
     type Result = Result<RecipeResponse>;
@@ -124,7 +125,7 @@ impl Handler<CreateRecipe> for DbExecutor {
             &mut conn,
             inserted_recipe.id,
             msg.new_recipe.step_groups,
-            msg.step_image,
+            msg.step_images,
             msg.step_images_meta
         )?;
 
@@ -149,10 +150,18 @@ impl Handler<UpdateRecipe> for DbExecutor {
 
         let mut conn = self.0.get()?;
 
-        let update_recipe = RecipeChange {
+        let new_image_url: String = if let Some(temp_file) = msg.main_image {
+            upload_recipe_image(temp_file)?
+        } else {
+            // fallback to existing image_url, or empty string if None
+            msg.update_recipe.image_url.clone().unwrap_or_default()
+        };
+
+
+        let change = RecipeChange {
             title: msg.update_recipe.title,
             description: msg.update_recipe.description,
-            image_url: "".to_string(),
+            image_url: new_image_url,
             servings: msg.update_recipe.servings,
             prep_time_minutes: msg.update_recipe.prep_time_minutes,
             cook_time_minutes: msg.update_recipe.cook_time_minutes,
@@ -161,27 +170,37 @@ impl Handler<UpdateRecipe> for DbExecutor {
             is_private: msg.update_recipe.is_private,
         };
 
-        match diesel::update(recipes.find(msg.update_recipe.id))
-            .set(&update_recipe)
-            .get_result::<Recipe>(&mut conn)
-        {
-            Ok(recipe) => Ok(RecipeResponse {
-                id: recipe.id,
-                title: recipe.title,
-                description: recipe.description,
-                image_url: "".to_string(),
-                servings: recipe.servings,
-                prep_time_minutes: recipe.cook_time_minutes,
-                cook_time_minutes: recipe.cook_time_minutes,
-                author: recipe.author,
-                author_id: recipe.author_id,
-                is_private: recipe.is_private,
-                tags: vec![],
-                ingredient_groups: vec![],
-                step_groups: vec![],
-            }),
-            Err(e) => Err(e.into()),
-        }
+
+        let recipe: Recipe = diesel::update(recipes.find(msg.update_recipe.id))
+            .set(change)
+            .get_result(&mut conn)?;
+
+        let tags = create_or_associate_tags(
+            &mut conn,
+            recipe.id,
+            msg.update_recipe.tags,
+        )?;
+
+        let ingredient_groups = sync_ingredient_groups(
+            &mut conn,
+            recipe.id,
+            msg.update_recipe.ingredient_groups,
+        )?;
+
+        let step_groups = sync_step_groups(
+            &mut conn,
+            recipe.id,
+            msg.update_recipe.step_groups,
+            msg.step_images,
+            msg.step_images_meta,
+        )?;
+
+        Ok(RecipeResponse::from_parts(
+            recipe,
+            tags,
+            ingredient_groups,
+            step_groups,
+        ))
     }
 }
 

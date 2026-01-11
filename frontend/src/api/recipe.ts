@@ -105,3 +105,44 @@ export async function createRecipe(
         timeout: 30000, // large images might need more time
     });
 }
+
+export async function updateRecipe(
+    id: string,
+    recipe: Recipe,
+    stepImages: StepImage[],
+    mainImageFile?: File | null
+) {
+    const form = new FormData()
+
+    form.append("recipe", JSON.stringify({
+        recipe: {
+            ...recipe,
+            id,
+        }
+    }))
+
+    if (mainImageFile) {
+        form.append("main_image", mainImageFile)
+    }
+
+    const step_image_meta = stepImages.map((img, index) => {
+        form.append("step_images[]", img.image_file)
+
+        return {
+            group_position: img.group_position,
+            step_position: img.step_position,
+            index,
+        }
+    })
+
+    if (step_image_meta.length > 0) {
+        form.append("step_image_meta", JSON.stringify(step_image_meta))
+    }
+    return api(`/recipes/${id}`, {
+        method: "PATCH",
+        data: form,
+        headers: {
+            "Content-Type": "multipart/form-data",
+        },
+    })
+}

@@ -14,7 +14,7 @@ defineProps<{
   >
     <span
         :class="[
-        'text-sm font-medium transition-colors cursor-pointer',
+        'flex items-center gap-2 text-sm font-medium transition-colors cursor-pointer',
         (exact ? isExactActive : isActive)
           ? 'text-foreground'
           : 'text-muted-foreground hover:text-foreground'

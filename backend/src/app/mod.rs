@@ -137,7 +137,7 @@ fn user_routes() -> actix_web::Scope {
         .route("/login", web::post().to(users::login))
         .route("/logout", web::post().to(users::logout))
         .route("", web::get().to(users::get_current))
-        .route("", web::put().to(users::update))
+        .route("edit", web::put().to(users::update))
 }
 
 fn tag_routes() -> actix_web::Scope {

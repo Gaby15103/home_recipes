@@ -1,5 +1,6 @@
 ﻿import { api } from "./client";
-import type { LoginRequest, LoginResponse, RegisterRequest } from "@/models/Auth";
+import type {EditUser, LoginRequest, LoginResponse, RegisterRequest} from "@/models/Auth";
+import type {User} from "@/models/User.ts";
 
 export function login(email: string, password: string) {
     const payload: LoginRequest = {
@@ -39,4 +40,28 @@ export function logout() {
     return api("/user/logout", {
         method: "POST"
     });
+}
+export function editUser(user: User, password: string|null = null){
+    const payload: EditUser = {
+        user: {
+            username: user.username,
+            email: user.email,
+            password: password,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            avatar_url: user.avatar_url,
+            preferences: user.preferences,
+        }
+    }
+    return api("/user/edit",{
+        method: "PATCH",
+        data: payload,
+    })
+}
+
+export function deleteUser(password: string) {
+    return api("/user", {
+        method: "DELETE",
+        data: { password },
+    })
 }

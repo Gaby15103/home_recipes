@@ -45,25 +45,23 @@ pub fn create_or_associate_tags(
     recipe_id_val: Uuid,
     input_tags: Vec<InputTag>,
 ) -> Result<Vec<TagResponse>, diesel::result::Error> {
+    use crate::schema::{tags, recipe_tags};
+
     let mut result_tags = Vec::with_capacity(input_tags.len());
 
     for input_tag in input_tags {
-        use crate::schema::tags::dsl::*;
+        // --- Resolve tag (existing or new)
         let resolved_tag: Tag = match input_tag {
             InputTag::Existing { id: existing_id } => {
-                // Fetch the existing tag
-                tags.filter(id.eq(existing_id))
+                tags::table.filter(tags::id.eq(existing_id))
                     .first::<Tag>(conn)?
             }
             InputTag::New { name: tag_name } => {
-                // Normalize or trim if needed
                 let normalized_name = tag_name.trim();
-
-                match tags.filter(name.eq(normalized_name)).first::<Tag>(conn) {
+                match tags::table.filter(tags::name.eq(normalized_name)).first::<Tag>(conn) {
                     Ok(tag) => tag, // tag already exists
                     Err(diesel::result::Error::NotFound) => {
-                        // Insert new tag
-                        diesel::insert_into(tags)
+                        diesel::insert_into(tags::table)
                             .values(NewTag { name: normalized_name.to_string() })
                             .get_result(conn)?
                     }
@@ -72,18 +70,22 @@ pub fn create_or_associate_tags(
             }
         };
 
-        // Associate tag with recipe in recipe_tags
-        use crate::schema::recipe_tags::dsl::*;
-        diesel::insert_into(recipe_tags)
-            .values((recipe_id.eq(recipe_id_val), tag_id.eq(resolved_tag.id)))
+        // --- Associate tag with recipe (ignore duplicates)
+        diesel::insert_into(recipe_tags::table)
+            .values((
+                recipe_tags::recipe_id.eq(recipe_id_val),
+                recipe_tags::tag_id.eq(resolved_tag.id),
+            ))
+            .on_conflict((recipe_tags::recipe_id, recipe_tags::tag_id))
+            .do_nothing()
             .execute(conn)?;
 
-        // Push to result vec
         result_tags.push(resolved_tag.into());
     }
 
     Ok(result_tags)
 }
+
 
 pub fn fetch_tags_for_recipe(
     conn: &mut PgConnection,
