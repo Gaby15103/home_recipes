@@ -187,3 +187,52 @@ pub async fn get_all(
     Ok(HttpResponse::Ok().json(recipes))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GetAllRecipesByPage {
+    pub filters: Option<GetFilter>,
+    pub include_private: bool,
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginatedRecipes {
+    pub data: Vec<RecipeResponse>,
+    pub total: i64,
+    pub page: i64,
+    pub per_page: i64,
+}
+
+pub async fn get_by_page(
+    state: Data<AppState>,
+    query: web::Query<GetAllRecipesByPage>,
+    req: HttpRequest,
+) -> Result<HttpResponse, Error> {
+    let query = query.into_inner();
+
+    let include_private = if query.include_private {
+        let auth = authenticate(&state, &req).await?;
+        let allowed = auth.roles.iter().any(|r| r.name == "ADMIN" || r.name == "MODERATOR");
+        if !allowed {
+            return Ok(HttpResponse::Unauthorized().finish());
+        }
+        true
+    } else {
+        false
+    };
+
+    let recipes = state
+        .db
+        .send(GetAllRecipesByPage {
+            filters: query.filters,
+            include_private,
+            page: query.page,
+            per_page: query.per_page,
+        })
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(recipes))
+}
+
+

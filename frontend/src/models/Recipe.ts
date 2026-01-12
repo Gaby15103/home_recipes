@@ -72,3 +72,27 @@ export interface RecipeFilter {
     dateFrom: string | null,
     dateTo: string | null,
 }
+// Params interface matching backend filter
+export interface GetRecipesParams {
+    page?: number;
+    perPage?: number;
+    scope?: string;
+    search?: string;
+    ingredient?: string;
+    tags?: string;
+    minPrep?: number;
+    maxPrep?: number;
+    minCook?: number;
+    maxCook?: number;
+    minSteps?: number;
+    maxSteps?: number;
+    dateFrom?: string; // "YYYY-MM-DD"
+    dateTo?: string;   // "YYYY-MM-DD"
+    sort?: string;
+}
+export interface PaginatedRecipes {
+    data: Recipe[]
+    total: number
+    page: number
+    perPage: number
+}

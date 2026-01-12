@@ -7,22 +7,26 @@ import { toUrl } from '@/lib/utils';
 import { type NavItem } from '@/types';
 import NavLink from "@/components/NavLink.vue";
 
+import { useRoute } from "vue-router";
+
+const route = useRoute();
+
 const sidebarNavItems: NavItem[] = [
   {
     title: 'Profile',
-    href: '/user/edit/profile',
+    href: '/admin/user/edit/profile',
   },
   {
     title: 'Password',
-    href: '/user/edit/password',
+    href: '/admin/user/edit/password',
   },
   {
     title: 'Two-Factor Auth',
-    href: '/user/edit/two-factor',
+    href: '/admin/user/edit/two-factor',
   },
   {
     title: 'Appearance',
-    href: '/user/edit/appearance',
+    href: '/admin/user/edit/appearance',
   },
 ];
 

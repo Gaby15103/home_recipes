@@ -1,13 +1,15 @@
 ﻿<script setup lang="ts">
 import type {BreadcrumbItem} from '@/types';
 import AdminSidebarLayout from "@/components/admin/AdminSidebarLayout.vue";
+import {computed} from "vue";
+import {useRoute} from "vue-router";
 
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/admin/dashboard',
-  },
-];
+const route = useRoute();
+
+const breadcrumbs = computed(() => {
+  return (route.meta.breadcrumb as BreadcrumbItem[]) ?? []
+})
+
 </script>
 
 <template>

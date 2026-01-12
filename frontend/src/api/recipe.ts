@@ -1,5 +1,5 @@
 import {api} from "./client";
-import type {Recipe, RecipeFilter} from "@/models/Recipe.ts";
+import type {GetRecipesParams, PaginatedRecipes, Recipe, RecipeFilter} from "@/models/Recipe.ts";
 import type {RecipeCreate, StepImage} from "@/models/RecipeCreate.ts";
 import axios from "axios";
 import {ref} from "vue";
@@ -145,4 +145,34 @@ export async function updateRecipe(
             "Content-Type": "multipart/form-data",
         },
     })
+}
+export function getAllRecipesByPage(params: GetRecipesParams = {}): Promise<PaginatedRecipes> {
+    const queryParams = new URLSearchParams();
+
+    queryParams.append("include_private", "true");
+
+    // Pagination
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.perPage) queryParams.append('per_page', params.perPage.toString());
+
+    // Filters (flattened)
+    if (params.scope) queryParams.append('scope', params.scope);
+    if (params.search) queryParams.append('search', params.search);
+    if (params.ingredient) queryParams.append('ingredient', params.ingredient);
+    if (params.tags) queryParams.append('tags', params.tags);
+    if (params.minPrep) queryParams.append('min_prep', params.minPrep.toString());
+    if (params.maxPrep) queryParams.append('max_prep', params.maxPrep.toString());
+    if (params.minCook) queryParams.append('min_cook', params.minCook.toString());
+    if (params.maxCook) queryParams.append('max_cook', params.maxCook.toString());
+    if (params.minSteps) queryParams.append('min_steps', params.minSteps.toString());
+    if (params.maxSteps) queryParams.append('max_steps', params.maxSteps.toString());
+    if (params.dateFrom) queryParams.append('date_from', params.dateFrom);
+    if (params.dateTo) queryParams.append('date_to', params.dateTo);
+
+    // Sorting (optional, if backend supports)
+    if (params.sort) queryParams.append('sort', params.sort);
+
+    return api<PaginatedRecipes>(`/recipe/get_by_page?${queryParams.toString()}`, {
+        method: 'GET',
+    });
 }

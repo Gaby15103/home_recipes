@@ -1,22 +1,20 @@
-﻿import { computed, readonly } from 'vue'
-import { toUrl } from '@/lib/utils'
-
-const currentUrlReactive = computed(() => {
-    if (typeof window === 'undefined') return '/'
-    return new URL(window.location.href).pathname
-})
+﻿import { computed, readonly } from "vue";
+import { useRoute } from "vue-router";
+import { toUrl } from "@/lib/utils";
 
 export function useActiveUrl() {
-    function urlIsActive(
-        urlToCheck: string,
-        currentUrl?: string,
-    ) {
-        const urlToCompare = currentUrl ?? currentUrlReactive.value
-        return toUrl(urlToCheck) === urlToCompare
+    const route = useRoute();
+
+    const currentUrl = computed(() => {
+        return route.path;
+    });
+
+    function urlIsActive(urlToCheck: string) {
+        return toUrl(urlToCheck) === currentUrl.value;
     }
 
     return {
-        currentUrl: readonly(currentUrlReactive),
+        currentUrl: readonly(currentUrl),
         urlIsActive,
-    }
+    };
 }

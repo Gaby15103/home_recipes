@@ -151,6 +151,7 @@ fn recipe_routes() -> actix_web::Scope {
     web::scope("/recipe")
         // STATIC ROUTES FIRST
         .route("/get_all", web::get().to(recipes::get_all))
+        .route("/get_by_page", web::get().to(recipes::get_by_page))
         .route("/create", web::post().to(recipes::create))
         .route("/update", web::put().to(recipes::update))
 

@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import {Book, Folder, LayoutGrid} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import NavLink from "@/components/NavLink.vue";
 
@@ -22,6 +22,25 @@ const mainNavItems: NavItem[] = [
     href: "/admin/dashboard",
     icon: LayoutGrid,
   },
+  {
+    title: 'Recipes',
+    href: "",
+    icon: Book,
+    subNavItems: [
+      {
+        title: 'Dashboard',
+        href: "/admin/recipe",
+      },
+      {
+        title: 'List',
+        href: "/admin/recipe/list",
+      },
+      {
+        title: 'Create',
+        href: "/admin/recipe/create",
+      },
+    ]
+  }
 ];
 
 const footerNavItems: NavItem[] = [
@@ -49,6 +68,7 @@ const footerNavItems: NavItem[] = [
 
     <SidebarContent>
       <NavMain :items="mainNavItems" />
+
     </SidebarContent>
 
     <SidebarFooter>

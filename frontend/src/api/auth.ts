@@ -58,6 +58,20 @@ export function editUser(user: User, password: string|null = null){
         data: payload,
     })
 }
+export function editPassword(
+    current_password: string,
+    password: string,
+    password_confirmation: string
+) {
+    return api("/user/password", {
+        method: "PATCH",
+        data: {
+            current_password,
+            password,
+            password_confirmation,
+        },
+    });
+}
 
 export function deleteUser(password: string) {
     return api("/user", {

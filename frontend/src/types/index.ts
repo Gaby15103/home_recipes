@@ -10,6 +10,14 @@ export interface NavItem {
     href: string;
     icon?: LucideIcon;
     isActive?: boolean;
+    subNavItems?: SubNavItem[];
 }
+export interface SubNavItem {
+    title: string;
+    href: string;
+    icon?: LucideIcon;
+}
+
+
 
 export type BreadcrumbItemType = BreadcrumbItem;
