@@ -13,13 +13,33 @@ withDefaults(defineProps<Props>(), {
   breadcrumbs: () => [],
 });
 </script>
-
 <template>
-  <AppShell variant="sidebar">
+  <AppShell id="qqc" variant="sidebar" class="h-screen">
     <AdminSidebar />
-    <AppContent variant="sidebar" class="overflow-x-hidden">
-      <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-      <slot />
+
+    <AppContent variant="sidebar" class="flex flex-col">
+      <AppSidebarHeader
+          :breadcrumbs="breadcrumbs"
+          class="bg-appshell h-16 flex items-center px-6 border-b border-sidebar-border/70 rounded-tl-xl rounded-tr-xl"
+      />
+
+      <!-- Scrollable slot content -->
+      <div class="flex-1 min-h-0 overflow-y-auto px-6 py-4 scrollbar-hide">
+        <div class="max-w-6xl mx-auto space-y-6">
+          <slot />
+        </div>
+      </div>
     </AppContent>
   </AppShell>
 </template>
+<style lang="css" scoped>
+/* Hide scrollbar but still allow scrolling */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+</style>
+

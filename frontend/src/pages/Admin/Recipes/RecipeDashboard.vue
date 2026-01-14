@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import RecipeTable from "@/pages/Admin/Recipes/RecipeTable.vue"
 import { getAllRecipesByPage } from "@/api/recipe.ts"
 import type { Recipe } from "@/models/Recipe.ts"
+import router from "@/router";
 
 // ------------------------- Stats -------------------------
 const stats = ref([
@@ -60,7 +61,7 @@ function previousPage() {
 onMounted(fetchRecipes)
 
 function goToCreate() {
-  console.log("Create recipe")
+  router.push("/admin/recipe/create")
 }
 </script>
 

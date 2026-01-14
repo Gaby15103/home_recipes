@@ -60,7 +60,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto p-6 space-y-6">
+  <div class="max-w-4xl min-w-6xl mx-auto p-6 space-y-6">
     <h1 class="text-3xl font-bold">Create Recipe</h1>
     <JsonImporter v-model="recipe" />
     <!-- Basic info -->
