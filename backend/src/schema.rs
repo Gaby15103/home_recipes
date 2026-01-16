@@ -1,6 +1,14 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    favorites (user_id, recipe_id) {
+        user_id -> Uuid,
+        recipe_id -> Uuid,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     ingredient_groups (id) {
         id -> Uuid,
         recipe_id -> Uuid,
@@ -17,6 +25,28 @@ diesel::table! {
 }
 
 diesel::table! {
+    recipe_analytics (id) {
+        id -> Uuid,
+        recipe_id -> Uuid,
+        user_id -> Nullable<Uuid>,
+        viewed_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    recipe_comments (id) {
+        id -> Uuid,
+        recipe_id -> Uuid,
+        user_id -> Uuid,
+        parent_id -> Nullable<Uuid>,
+        content -> Text,
+        created_at -> Timestamptz,
+        edited_at -> Nullable<Timestamptz>,
+        deleted_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     recipe_ingredients (id) {
         id -> Uuid,
         ingredient_group_id -> Uuid,
@@ -29,9 +59,28 @@ diesel::table! {
 }
 
 diesel::table! {
+    recipe_ratings (recipe_id, user_id) {
+        recipe_id -> Uuid,
+        user_id -> Uuid,
+        rating -> Int4,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     recipe_tags (recipe_id, tag_id) {
         recipe_id -> Uuid,
         tag_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    recipe_versions (id) {
+        id -> Uuid,
+        recipe_id -> Uuid,
+        data -> Jsonb,
+        edited_by -> Uuid,
+        created_at -> Timestamptz,
     }
 }
 
@@ -122,14 +171,27 @@ diesel::table! {
         last_login_at -> Nullable<Timestamptz>,
         created_at -> Nullable<Timestamptz>,
         updated_at -> Nullable<Timestamptz>,
+        two_factor_secret -> Nullable<Text>,
+        two_factor_recovery_codes -> Nullable<Jsonb>,
+        two_factor_confirmed_at -> Nullable<Timestamp>,
     }
 }
 
+diesel::joinable!(favorites -> recipes (recipe_id));
+diesel::joinable!(favorites -> users (user_id));
 diesel::joinable!(ingredient_groups -> recipes (recipe_id));
+diesel::joinable!(recipe_analytics -> recipes (recipe_id));
+diesel::joinable!(recipe_analytics -> users (user_id));
+diesel::joinable!(recipe_comments -> recipes (recipe_id));
+diesel::joinable!(recipe_comments -> users (user_id));
 diesel::joinable!(recipe_ingredients -> ingredient_groups (ingredient_group_id));
 diesel::joinable!(recipe_ingredients -> ingredients (ingredient_id));
+diesel::joinable!(recipe_ratings -> recipes (recipe_id));
+diesel::joinable!(recipe_ratings -> users (user_id));
 diesel::joinable!(recipe_tags -> recipes (recipe_id));
 diesel::joinable!(recipe_tags -> tags (tag_id));
+diesel::joinable!(recipe_versions -> recipes (recipe_id));
+diesel::joinable!(recipe_versions -> users (edited_by));
 diesel::joinable!(recipes -> users (author_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(step_groups -> recipes (recipe_id));
@@ -138,10 +200,15 @@ diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(user_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    favorites,
     ingredient_groups,
     ingredients,
+    recipe_analytics,
+    recipe_comments,
     recipe_ingredients,
+    recipe_ratings,
     recipe_tags,
+    recipe_versions,
     recipes,
     roles,
     sessions,

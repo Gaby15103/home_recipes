@@ -1,25 +1,22 @@
 ﻿use super::DbExecutor;
-use crate::app::recipes::{
-    CreateRecipe, GetAllRecipes, GetAllRecipesByPage, GetRecipeById, PaginatedRecipes, UpdateRecipe,
-};
+use crate::app::recipes::{GetAllRecipes, GetAllRecipesByPage, PaginatedRecipes};
 use crate::db::ingredients::{
     create_ingredient_groups, fetch_ingredient_groups_for_recipe, sync_ingredient_groups,
 };
 use crate::db::step::{create_step_groups, fetch_step_groups_for_recipe, sync_step_groups};
 use crate::db::tags::{create_or_associate_tags, fetch_tags_for_recipe};
-use crate::dto::{
-    CreateRecipeInput, IngredientGroupResponse, RecipeResponse, StepGroupResponse, TagResponse,
-};
-use crate::models::{IngredientGroup, NewRecipe, Recipe, RecipeChange};
+use crate::dto::{CreateComment, CreateRecipe, DeleteComment, DeleteRecipe, GetFavoriteRecipes, GetRecipeAnalytics, GetRecipeById, GetRecipeComments, GetRecipeRating, GetRecipeVersion, GetRecipeVersions, IngredientGroupResponse, RecipeCommentResponse, RecipeRatingResponse, RecipeResponse, RecipeVersionResponse, RegisterRecipeView, RestoreRecipeVersion, SetRecipeRating, StepGroupResponse, TagResponse, ToggleFavorite, UnsetRecipeRating, UpdateRecipe, UpdateRecipeInput};
+use crate::models::{NewFavorite, NewRecipe, NewRecipeAnalytics, NewRecipeComment, NewRecipeRating, NewRecipeVersion, Recipe, RecipeChange, RecipeComment, RecipeVersion, User};
 use crate::prelude::*;
-use crate::schema::recipes::dsl::recipes;
-use crate::schema::recipes::{created_at, is_private};
 use crate::utils::image_upload::upload_recipe_image;
 use actix::prelude::*;
-use actix_multipart::form::tempfile::TempFile;
+use actix_web::error::ErrorNotFound;
+use chrono::Utc;
+use diesel::dsl::sql;
 use diesel::prelude::*;
-use std::fs;
-use std::path::Path;
+use diesel::sql_types::{Double, Nullable};
+use uuid::Uuid;
+use crate::error::DbError;
 
 impl Message for GetRecipeById {
     type Result = Result<RecipeResponse>;
@@ -168,6 +165,16 @@ impl Handler<UpdateRecipe> for DbExecutor {
             is_private: msg.update_recipe.is_private,
         };
 
+        let current_recipe_snapshot = RecipeResponse::from_parts(
+            recipes.find(msg.update_recipe.id).first::<Recipe>(&mut conn)?,
+            fetch_tags_for_recipe(&mut conn, msg.update_recipe.id)?,
+            fetch_ingredient_groups_for_recipe(&mut conn, msg.update_recipe.id)?,
+            fetch_step_groups_for_recipe(&mut conn, msg.update_recipe.id)?,
+        );
+
+        create_recipe_version(&mut conn, &current_recipe_snapshot, msg.auth.user)?;
+
+
         let recipe: Recipe = diesel::update(recipes.find(msg.update_recipe.id))
             .set(change)
             .get_result(&mut conn)?;
@@ -193,6 +200,31 @@ impl Handler<UpdateRecipe> for DbExecutor {
         ))
     }
 }
+
+fn create_recipe_version(
+    conn: &mut PgConnection,
+    recipe_snapshot: &RecipeResponse, // full current recipe
+    user: User,
+) -> Result<Uuid> {
+    use crate::schema::recipe_versions::dsl::*;
+
+    let snapshot_json = serde_json::to_value(recipe_snapshot).unwrap();
+
+    let new_version = NewRecipeVersion {
+        recipe_id: recipe_snapshot.id,
+        data: snapshot_json,
+        edited_by: user.id,
+    };
+
+    // Insert and get the generated id
+    let inserted_id: Uuid = diesel::insert_into(recipe_versions)
+        .values(&new_version)
+        .returning(crate::schema::recipe_versions::id)
+        .get_result(conn)?;
+
+    Ok(inserted_id)
+}
+
 
 impl Message for GetAllRecipes {
     type Result = Result<Vec<RecipeResponse>>;
@@ -360,5 +392,472 @@ impl Handler<GetAllRecipesByPage> for DbExecutor {
             page,
             per_page,
         })
+    }
+}
+
+impl Message for DeleteRecipe {
+    type Result = Result<(), DbError>;
+}
+
+impl Handler<DeleteRecipe> for DbExecutor {
+    type Result = Result<(), DbError>;
+
+    fn handle(&mut self, msg: DeleteRecipe, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipes::dsl::*;
+
+        let mut conn = self.0.get().map_err(DbError::Pool)?;
+
+        let affected = diesel::delete(recipes.filter(id.eq(msg.recipe_id)))
+            .execute(&mut conn)?;
+
+        if affected == 0 {
+            return Err(DbError::NotFound);
+        }
+
+        Ok(())
+    }
+}
+
+
+
+impl Message for ToggleFavorite {
+    type Result = Result<bool>;
+}
+
+impl Handler<ToggleFavorite> for DbExecutor {
+    type Result = Result<bool>;
+
+    fn handle(&mut self, msg: ToggleFavorite, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::favorites::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        let exists = diesel::select(diesel::dsl::exists(
+            favorites
+                .filter(user_id.eq(msg.user_id))
+                .filter(recipe_id.eq(msg.recipe_id)),
+        ))
+            .get_result::<bool>(&mut conn)?;
+
+        if exists {
+            diesel::delete(
+                favorites
+                    .filter(user_id.eq(msg.user_id))
+                    .filter(recipe_id.eq(msg.recipe_id)),
+            )
+                .execute(&mut conn)?;
+            Ok(false)
+        } else {
+            diesel::insert_into(favorites)
+                .values(NewFavorite {
+                    user_id: msg.user_id,
+                    recipe_id: msg.recipe_id,
+                })
+                .execute(&mut conn)?;
+            Ok(true)
+        }
+    }
+}
+
+impl Message for GetFavoriteRecipes {
+    type Result = Result<Vec<RecipeResponse>>;
+}
+
+impl Handler<GetFavoriteRecipes> for DbExecutor {
+    type Result = Result<Vec<RecipeResponse>>;
+
+    fn handle(&mut self, msg: GetFavoriteRecipes, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::{favorites, recipes};
+
+        let mut conn = self.0.get()?;
+
+        // 1) Load all favorited recipes for user
+        let recipe_rows: Vec<Recipe> = favorites::table
+            .inner_join(recipes::table)
+            .filter(favorites::user_id.eq(msg.user_id))
+            .select(recipes::all_columns)
+            .order(favorites::created_at.desc())
+            .load(&mut conn)?;
+
+        // 2) Build full responses
+        let mut responses = Vec::with_capacity(recipe_rows.len());
+
+        for recipe in recipe_rows {
+            let recipe_id = recipe.id;
+
+            let tags = fetch_tags_for_recipe(&mut conn, recipe_id)?;
+            let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
+            let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
+
+            responses.push(
+                RecipeResponse::from_parts(
+                    recipe,
+                    tags,
+                    ingredient_groups,
+                    step_groups,
+                )
+            );
+        }
+
+        Ok(responses)
+    }
+}
+
+
+impl Message for SetRecipeRating {
+    type Result = Result<()>;
+}
+impl Handler<SetRecipeRating> for DbExecutor {
+    type Result = Result<()>;
+
+    fn handle(&mut self, msg: SetRecipeRating, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_ratings::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        diesel::insert_into(recipe_ratings)
+            .values(NewRecipeRating {
+                recipe_id: msg.recipe_id,
+                user_id: msg.user_id,
+                rating: msg.rating,
+            })
+            .on_conflict((recipe_id, user_id))
+            .do_update()
+            .set(rating.eq(msg.rating))
+            .execute(&mut conn)?;
+
+        Ok(())
+    }
+}
+
+impl Message for GetRecipeRating {
+    type Result = Result<RecipeRatingResponse>;
+}
+
+impl Handler<GetRecipeRating> for DbExecutor {
+    type Result = Result<RecipeRatingResponse>;
+
+    fn handle(&mut self, msg: GetRecipeRating, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_ratings::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        let (avg, count): (Option<f64>, i64) = recipe_ratings
+            .filter(recipe_id.eq(msg.recipe_id))
+            .select((
+                sql::<Nullable<Double>>("AVG(rating)"),
+                diesel::dsl::count_star(),
+            ))
+            .first(&mut conn)?;
+
+        let user_rating = if let Some(uid) = msg.user_id {
+            recipe_ratings
+                .filter(recipe_id.eq(msg.recipe_id))
+                .filter(user_id.eq(uid))
+                .select(rating)
+                .first(&mut conn)
+                .optional()?
+        } else {
+            None
+        };
+
+        Ok(RecipeRatingResponse {
+            average: avg.unwrap_or(0.0) as f32,
+            count,
+            user_rating,
+        })
+    }
+}
+
+impl Message for UnsetRecipeRating {
+    type Result = Result<()>;
+}
+
+impl Handler<UnsetRecipeRating> for DbExecutor {
+    type Result = Result<()>;
+
+    fn handle(&mut self, msg: UnsetRecipeRating, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_ratings::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        diesel::delete(
+            recipe_ratings
+                .filter(recipe_id.eq(msg.recipe_id))
+                .filter(user_id.eq(msg.user_id)),
+        )
+            .execute(&mut conn)?;
+
+        Ok(())
+    }
+}
+
+
+impl Message for CreateComment {
+    type Result = Result<RecipeCommentResponse>;
+}
+
+impl Handler<CreateComment> for DbExecutor {
+    type Result = Result<RecipeCommentResponse>;
+
+    fn handle(&mut self, msg: CreateComment, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_comments::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        let comment = diesel::insert_into(recipe_comments)
+            .values(NewRecipeComment {
+                recipe_id: msg.recipe_id,
+                user_id: msg.user_id,
+                parent_id: msg.parent_id,
+                content: msg.content,
+            })
+            .get_result::<RecipeComment>(&mut conn)?;
+
+        Ok(RecipeCommentResponse {
+            id: comment.id,
+            user_id: comment.user_id,
+            content: comment.content,
+            created_at: comment.created_at,
+            edited_at: comment.edited_at,
+            children: Vec::new(),
+        })
+    }
+}
+
+impl Message for GetRecipeComments {
+    type Result = Result<Vec<RecipeCommentResponse>>;
+}
+
+impl Handler<GetRecipeComments> for DbExecutor {
+    type Result = Result<Vec<RecipeCommentResponse>>;
+
+    fn handle(&mut self, msg: GetRecipeComments, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_comments::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        let rows: Vec<RecipeComment> = recipe_comments
+            .filter(recipe_id.eq(msg.recipe_id))
+            .filter(deleted_at.is_null())
+            .order(created_at.asc())
+            .load(&mut conn)?;
+
+        // map id -> response node
+        use std::collections::HashMap;
+        let mut map: HashMap<Uuid, RecipeCommentResponse> = HashMap::new();
+
+        for c in &rows {
+            map.insert(
+                c.id,
+                RecipeCommentResponse {
+                    id: c.id,
+                    user_id: c.user_id,
+                    content: c.content.clone(),
+                    created_at: c.created_at,
+                    edited_at: c.edited_at,
+                    children: Vec::new(),
+                },
+            );
+        }
+
+        let mut roots = Vec::new();
+
+        for c in rows {
+            let node = map.remove(&c.id).unwrap();
+
+            if let Some(pid) = c.parent_id {
+                if let Some(parent) = map.get_mut(&pid) {
+                    parent.children.push(node);
+                }
+            } else {
+                roots.push(node);
+            }
+        }
+        Ok(roots)
+    }
+}
+
+
+impl Message for DeleteComment {
+    type Result = Result<()>;
+}
+
+impl Handler<DeleteComment> for DbExecutor {
+    type Result = Result<()>;
+
+    fn handle(&mut self, msg: DeleteComment, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_comments::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        diesel::update(recipe_comments.find(msg.comment_id))
+            .set(deleted_at.eq(Some(Utc::now())))
+            .execute(&mut conn)?;
+
+        Ok(())
+    }
+}
+
+impl Message for RegisterRecipeView {
+    type Result = Result<()>;
+}
+impl Handler<RegisterRecipeView> for DbExecutor {
+    type Result = Result<()>;
+
+    fn handle(&mut self, msg: RegisterRecipeView, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_analytics::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        diesel::insert_into(recipe_analytics)
+            .values(NewRecipeAnalytics {
+                recipe_id: msg.recipe_id,
+                user_id: msg.user_id,
+            })
+            .execute(&mut conn)?;
+
+        Ok(())
+    }
+}
+
+impl Message for GetRecipeAnalytics {
+    type Result = Result<i64>;
+}
+
+impl Handler<GetRecipeAnalytics> for DbExecutor {
+    type Result = Result<i64>;
+
+    fn handle(&mut self, msg: GetRecipeAnalytics, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_analytics::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        let count = recipe_analytics
+            .filter(recipe_id.eq(msg.recipe_id))
+            .count()
+            .get_result(&mut conn)?;
+
+        Ok(count)
+    }
+}
+
+impl Message for GetRecipeVersions {
+    type Result = Result<Vec<RecipeVersionResponse>>;
+}
+
+impl Handler<GetRecipeVersions> for DbExecutor {
+    type Result = Result<Vec<RecipeVersionResponse>, Error>;
+
+    fn handle(&mut self, msg: GetRecipeVersions, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_versions::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        // Load all versions for this recipe directly as RecipeVersion structs
+        let versions: Vec<RecipeVersion> = recipe_versions
+            .filter(recipe_id.eq(msg.recipe_id))
+            .order(created_at.desc())
+            .load::<RecipeVersion>(&mut conn)?;
+
+        // Convert to your response type, deserializing JSONB
+        let responses: Vec<RecipeVersionResponse> = versions
+            .into_iter()
+            .map(|v| {
+                let recipe: RecipeResponse = serde_json::from_value(v.data)
+                    .expect("Failed to deserialize recipe JSON");
+
+                RecipeVersionResponse {
+                    id: v.id,
+                    recipe_id: v.recipe_id,
+                    recipe,
+                    created_at: v.created_at,
+                    edited_by: v.edited_by,
+                }
+            })
+            .collect();
+
+        Ok(responses)
+    }
+}
+
+impl Message for GetRecipeVersion {
+    type Result = Result<RecipeVersionResponse>;
+}
+
+impl Handler<GetRecipeVersion> for DbExecutor {
+    type Result = Result<RecipeVersionResponse>;
+
+    fn handle(&mut self, msg: GetRecipeVersion, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipe_versions::dsl::*;
+
+        let mut conn = self.0.get()?;
+
+        let row: (Uuid, Uuid, serde_json::Value, chrono::NaiveDateTime, Uuid) =
+            recipe_versions
+                .filter(id.eq(msg.id))
+                .select((id, recipe_id, data, created_at, edited_by))
+                .first(&mut conn)?;
+
+        let recipe: RecipeResponse = serde_json::from_value(row.2)
+            .expect("Failed to deserialize recipe JSON for version");
+
+        Ok(RecipeVersionResponse {
+            id: row.0,
+            recipe_id: row.1,
+            recipe,
+            created_at: chrono::DateTime::<chrono::Utc>::from_utc(row.3, chrono::Utc),
+            edited_by: row.4,
+        })
+    }
+}
+
+impl Message for RestoreRecipeVersion {
+    type Result = Result<RecipeResponse, Error>;
+}
+
+impl Handler<RestoreRecipeVersion> for DbExecutor {
+    type Result = Result<RecipeResponse>;
+
+    fn handle(&mut self, msg: RestoreRecipeVersion, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::recipes::dsl::*;
+        use crate::schema::recipe_versions::dsl as versions_dsl;
+
+        let mut conn = self.0.get()?;
+
+        // Fetch version JSON
+        let row: (Uuid, Uuid, serde_json::Value, chrono::NaiveDateTime, Uuid) =
+            versions_dsl::recipe_versions
+                .filter(versions_dsl::id.eq(msg.version_id))
+                .select((versions_dsl::id, versions_dsl::recipe_id, versions_dsl::data, versions_dsl::created_at, versions_dsl::edited_by))
+                .first(&mut conn)?;
+
+        let version_recipe: Recipe = serde_json::from_value(row.2)
+            .expect("Failed to deserialize recipe JSON for restoration");
+
+        // Update main recipe
+        let restored_recipe: Recipe = diesel::update(recipes.find(row.1))
+            .set((
+                title.eq(&version_recipe.title),
+                description.eq(&version_recipe.description),
+                image_url.eq(&version_recipe.image_url),
+                servings.eq(version_recipe.servings),
+                prep_time_minutes.eq(version_recipe.prep_time_minutes),
+                cook_time_minutes.eq(version_recipe.cook_time_minutes),
+                author.eq(&version_recipe.author),
+                author_id.eq(version_recipe.author_id),
+                is_private.eq(version_recipe.is_private),
+            ))
+            .get_result(&mut conn)?;
+
+        // You could optionally restore tags, steps, ingredients here if needed
+
+        // Return restored recipe
+        Ok(RecipeResponse::from_parts(
+            restored_recipe,
+            fetch_tags_for_recipe(&mut conn, row.1)?,
+            fetch_ingredient_groups_for_recipe(&mut conn, row.1)?,
+            fetch_step_groups_for_recipe(&mut conn, row.1)?,
+        ))
     }
 }

@@ -1,6 +1,6 @@
-﻿import { defineStore } from "pinia";
-import { login, getCurrentUser, logout } from "@/api/auth";
-import type { User } from "@/models/User";
+﻿import {defineStore} from "pinia";
+import {getCurrentUser, login, logout} from "@/api/auth";
+import type {User} from "@/models/User";
 
 export const useAuthStore = defineStore("auth", {
     state: () => ({
@@ -15,16 +15,17 @@ export const useAuthStore = defineStore("auth", {
     },
 
     actions: {
-        async loadUser() {
+        async loadUser(): Promise<User | null> {
             this.loading = true;
             try {
-                const res = await getCurrentUser();
+                let res = await getCurrentUser()
                 this.user = res.user;
             } catch {
                 this.user = null;
             } finally {
                 this.loading = false;
             }
+            return this.user;
         },
 
         async login(email: string, password: string) {

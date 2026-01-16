@@ -1,3 +1,5 @@
+import type {Tag} from "@/models/Tag.ts";
+
 export interface Recipe {
     id: string;
     title: string;
@@ -12,11 +14,6 @@ export interface Recipe {
     tags: Tag[];
     ingredient_groups: IngredientGroup[];
     step_groups: StepGroup[];
-}
-
-export interface Tag {
-    id: string;
-    name: string;
 }
 export interface IngredientGroup {
     id: string;

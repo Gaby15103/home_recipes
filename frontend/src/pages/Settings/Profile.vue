@@ -65,12 +65,6 @@ async function submit() {
   }
 }
 
-const breadcrumbItems: BreadcrumbItem[] = [
-  {
-    title: 'Profile settings',
-    href: '/admin/user/edit',
-  },
-];
 </script>
 
 <template>

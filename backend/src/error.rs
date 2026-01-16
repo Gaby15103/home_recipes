@@ -1,14 +1,14 @@
-﻿use actix_web::{error::ResponseError,  http::StatusCode, HttpResponse};
-use actix::MailboxError;
+﻿use actix::MailboxError;
+use actix_web::error::QueryPayloadError;
+use actix_web::{HttpResponse, error::ResponseError, http::StatusCode};
 use diesel::{
-    r2d2::{ PoolError},
-    result::{DatabaseErrorKind, Error as DieselError },
+    r2d2::PoolError,
+    result::{DatabaseErrorKind, Error as DieselError},
 };
 use jwt::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
 use libreauth::pass::ErrorCode as PassErrorCode;
 use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::convert::From;
-use actix_web::error::QueryPayloadError;
 use validator::ValidationErrors;
 
 #[derive(Fail, Debug)]
@@ -16,19 +16,19 @@ pub enum Error {
     // 401
     #[fail(display = "Unauthorized: {}", _0)]
     Unauthorized(JsonValue),
-    
+
     // 403
     #[fail(display = "Forbidden: {}", _0)]
     Forbidden(JsonValue),
-    
+
     // 404
     #[fail(display = "Not Found: {}", _0)]
     NotFound(JsonValue),
-    
+
     // 422
     #[fail(display = "Unprocessable Entity: {}", _0)]
     UnprocessableEntity(JsonValue),
-    
+
     // 500
     #[fail(display = "Internal Server Error")]
     InternalServerError,
@@ -63,7 +63,9 @@ impl From<QueryPayloadError> for Error {
 }
 
 impl From<MailboxError> for Error {
-    fn from(err: MailboxError) -> Self {Error::InternalServerError}
+    fn from(err: MailboxError) -> Self {
+        Error::InternalServerError
+    }
 }
 
 impl From<JwtError> for Error {
@@ -139,5 +141,37 @@ impl From<libreauth::pass::Error> for Error {
         Error::UnprocessableEntity(json!({
             "error": format!("Password hash error: {}", err),
         }))
+    }
+}
+
+#[derive(Debug)]
+pub enum DbError {
+    NotFound,
+    Forbidden,
+    Diesel(diesel::result::Error),
+    Pool(r2d2::Error),
+}
+impl From<diesel::result::Error> for DbError {
+    fn from(err: diesel::result::Error) -> Self {
+        match err {
+            diesel::result::Error::NotFound => DbError::NotFound,
+            e => DbError::Diesel(e),
+        }
+    }
+}
+
+impl From<r2d2::Error> for DbError {
+    fn from(err: r2d2::Error) -> Self {
+        DbError::Pool(err)
+    }
+}
+
+impl From<DbError> for Error {
+    fn from(e: DbError) -> Self {
+        match e {
+            DbError::NotFound => Error::NotFound(json!({"error": "Record not found"})),
+            DbError::Forbidden => Error::Forbidden(json!({"error": "Forbidden"})),
+            DbError::Diesel(_) | DbError::Pool(_) => Error::InternalServerError,
+        }
     }
 }

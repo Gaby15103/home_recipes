@@ -9,6 +9,11 @@ mod step_group;
 mod step;
 mod recipe_tag;
 mod session;
+mod favorite;
+mod recipe_analytic;
+mod recipe_comment;
+mod recipe_rating;
+mod recipe_version;
 
 pub use self::{
     user::*,
@@ -22,4 +27,9 @@ pub use self::{
     step_group::*,
     step::*,
     session::*,
+    favorite::*,
+    recipe_analytic::*,
+    recipe_comment::*,
+    recipe_rating::*,
+    recipe_version::*,
 };

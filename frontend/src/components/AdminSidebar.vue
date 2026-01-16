@@ -15,11 +15,12 @@ import { type NavItem } from '@/types';
 import {Book, Folder, LayoutGrid} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import NavLink from "@/components/NavLink.vue";
+import { ROUTES } from "@/router/routes";
 
 const mainNavItems: NavItem[] = [
   {
     title: 'Dashboard',
-    href: "/admin/dashboard",
+    href: ROUTES.ADMIN.DASHBOARD,
     icon: LayoutGrid,
   },
   {
@@ -29,15 +30,15 @@ const mainNavItems: NavItem[] = [
     subNavItems: [
       {
         title: 'Dashboard',
-        href: "/admin/recipe",
+        href: ROUTES.ADMIN.RECIPE.BASE,
       },
       {
         title: 'List',
-        href: "/admin/recipe/list",
+        href: ROUTES.ADMIN.RECIPE.LIST,
       },
       {
         title: 'Create',
-        href: "/admin/recipe/create",
+        href: ROUTES.ADMIN.RECIPE.CREATE,
       },
     ]
   }
@@ -46,7 +47,7 @@ const mainNavItems: NavItem[] = [
 const footerNavItems: NavItem[] = [
   {
     title: 'Github Repo',
-    href: 'https://github.com/Gaby15103/home_recipes',
+    href: ROUTES.GITHUB_REPO,
     icon: Folder,
   }
 ];

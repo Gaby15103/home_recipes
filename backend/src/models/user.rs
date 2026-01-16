@@ -38,6 +38,10 @@ pub struct User {
     pub last_login_at: Option<DateTime<Utc>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+
+    pub two_factor_secret: Option<String>,
+    pub two_factor_recovery_codes: Option<serde_json::Value>,
+    pub two_factor_confirmed_at: Option<chrono::NaiveDateTime>,
 }
 
 // Insertable for creating new users

@@ -1,5 +1,6 @@
 ﻿// models/RecipeCreate.ts
 import {IngredientUnit} from "./Recipe"
+import type {InputTag} from "@/models/Tag.ts";
 
 export type StepCreateUI = StepCreate & {
     _uid: string
@@ -37,10 +38,6 @@ export interface IngredientCreate {
     note: string|null;
     position: number;
 }
-
-export type InputTag =
-    | { type: 'existing'; id: string }
-    | { type: 'new'; name: string }
 
 
 export interface RecipeCreate {

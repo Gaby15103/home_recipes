@@ -1,10 +1,7 @@
 ﻿<script setup lang="ts">
-import {computed} from "vue"
 import {RouterLink} from "vue-router"
-
 import ModeToggle from "@/components/ModeToggle.vue"
 import NavLink from "@/components/NavLink.vue"
-
 import {Button} from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -18,20 +15,21 @@ import {
   NavigationMenuItem,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu"
-
 import {useAuthStore} from "@/stores/auth.ts";
-import {useSidebarStore} from "@/stores/sidebar.ts"
 import router from "@/router";
+import {storeToRefs} from "pinia";
+import { ROUTES } from "@/router/routes";
 
-const authStore = useAuthStore()
-const sidebarStore = useSidebarStore()
+const authStore = useAuthStore();
+const { user, loading } = storeToRefs(authStore);
 
-const user = computed(() => authStore.user || null)
+console.log(user)
+
 
 async function logout() {
   try {
     await authStore.logout()
-    await router.push("/home")
+    await router.push(ROUTES.HOME)
   } catch (e: any) {
     console.log(e.message)
   }
@@ -42,7 +40,7 @@ async function logout() {
   <header
       class="sticky top-0 z-50 border-b
            bg-background/80 backdrop-blur
-           supports-[backdrop-filter]:bg-background/60"
+           supports-backdrop-filter:bg-background/60"
   >
     <div class="flex h-16 items-center justify-between px-6">
       <!-- Left -->
@@ -58,10 +56,17 @@ async function logout() {
           <NavigationMenuList class="gap-2">
             <NavigationMenuItem>
               <NavLink
-                  to="/recipes"
+                  :to="ROUTES.RECIPES"
                   class="text-sm font-medium text-muted-foreground hover:text-foreground transition"
               >
                 Recipes
+              </NavLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavLink
+                  to="/recipes"
+                  class="text-sm font-medium text-muted-foreground hover:text-foreground transition"
+              >
               </NavLink>
             </NavigationMenuItem>
           </NavigationMenuList>
@@ -92,13 +97,13 @@ async function logout() {
 
           <DropdownMenuContent align="end" class="w-44">
             <DropdownMenuItem as-child>
-              <RouterLink to="/">
+              <RouterLink :to="ROUTES.HOME">
                 Profile
               </RouterLink>
             </DropdownMenuItem>
 
             <DropdownMenuItem>
-            <RouterLink to="/admin/dashboard">
+            <RouterLink :to="ROUTES.ADMIN.DASHBOARD">
               Admin Dashboard
             </RouterLink>
             </DropdownMenuItem>

@@ -1,11 +1,10 @@
-import {createApp} from "vue";
+import { createApp } from "vue";
 import App from "./App.vue";
 import "./style.css";
 
 import router from "./router";
-import {createPinia} from "pinia";
-import {useAuthStore} from "@/stores/auth";
-import {getCurrentUser} from "@/api/auth.ts";
+import { createPinia } from "pinia";
+import { useAuthStore } from "@/stores/auth";
 
 const app = createApp(App);
 
@@ -14,13 +13,10 @@ app.config.globalProperties.$apiUrl = import.meta.env.VITE_STATIC_URL;
 app.use(router);
 app.use(createPinia());
 
-app.mount("#app");
-
 const authStore = useAuthStore();
 
-try {
-    const res = await getCurrentUser();
-    authStore.setUser(res.user)
-} catch {
-    authStore.clearUser();
-}
+// load current user BEFORE mounting
+await authStore.loadUser();
+console.log(authStore.user)
+
+app.mount("#app");

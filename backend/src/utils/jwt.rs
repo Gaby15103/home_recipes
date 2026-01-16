@@ -2,7 +2,6 @@
 use jwt::{decode, encode, Header, TokenData, Validation, DecodingKey, EncodingKey};
 use std::env;
 use uuid::Uuid;
-use crate::app::users::UserResponse;
 use crate::models::User;
 use crate::prelude::*;
 

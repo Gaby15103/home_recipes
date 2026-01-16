@@ -1,8 +1,10 @@
 ﻿use serde::{Serialize, Deserialize};
 use uuid::Uuid;
-
+use crate::app::recipes::{In};
 use crate::dto::{tag::TagResponse, ingredient_group::{IngredientGroupInput, IngredientGroupResponse}, step::StepGroupInput, StepGroupResponse, InputTag, IngredientGroupUpdate, StepGroupUpdate};
 use crate::models::{IngredientGroup, Recipe, StepGroup, Tag};
+use crate::utils::auth::Auth;
+use actix_multipart::form::{json::Json as MpJson, tempfile::TempFile, MultipartForm};
 
 #[derive(Debug, Validate, Deserialize, Serialize)]
 pub struct CreateRecipeInput {
@@ -19,7 +21,7 @@ pub struct CreateRecipeInput {
     pub step_groups: Vec<StepGroupInput>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RecipeResponse {
     pub id: Uuid,
     pub title: String,
@@ -52,6 +54,55 @@ pub struct UpdateRecipeInput {
     pub ingredient_groups: Vec<IngredientGroupUpdate>,
     pub step_groups: Vec<StepGroupUpdate>,
 }
+
+pub struct CreateRecipe {
+    pub auth: Auth,
+    pub new_recipe: CreateRecipeInput,
+    pub main_image: TempFile,
+    pub step_images: Vec<TempFile>,
+    pub step_images_meta: Vec<StepImageMeta>,
+}
+
+pub struct UpdateRecipe {
+    pub auth: Auth,
+    pub update_recipe: UpdateRecipeInput,
+    pub main_image: Option<TempFile>,
+    pub step_images: Vec<TempFile>,
+    pub step_images_meta: Vec<StepImageMeta>,
+}
+
+
+pub struct GetRecipeById {
+    pub id: Uuid,
+}
+
+#[derive(Debug, MultipartForm)]
+pub struct CreateRecipeForm {
+    pub recipe: MpJson<In<CreateRecipeInput>>,
+    pub main_image: TempFile,
+    pub step_images: Vec<TempFile>,
+    pub step_images_meta: MpJson<Vec<StepImageMeta>>,
+}
+
+#[derive(Debug, MultipartForm)]
+pub struct UpdateRecipeForm {
+    pub recipe: MpJson<In<UpdateRecipeInput>>,
+    pub main_image: Option<TempFile>,
+    pub step_images: Vec<TempFile>,
+    pub step_images_meta: MpJson<Vec<StepImageMeta>>,
+}
+
+#[derive(Debug, serde_derive::Deserialize, serde_derive::Serialize)]
+pub struct StepImageMeta {
+    pub group_position: usize,
+    pub step_position: usize,
+    pub index: usize,
+}
+
+pub struct DeleteRecipe {
+    pub recipe_id: Uuid,
+}
+
 
 impl RecipeResponse {
     pub fn from_parts(

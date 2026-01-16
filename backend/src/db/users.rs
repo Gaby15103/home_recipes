@@ -4,11 +4,11 @@ use diesel::prelude::*;
 use libreauth::pass::HashBuilder;
 
 use super::DbExecutor;
-use crate::app::users::{DeleteSession, LoginUser, RegisterUser, UpdateUserOuter, UserResponse, UserResponseOuter};
+use crate::app::users::{DeleteSession};
 use crate::db::roles::fetch_roles_for_user;
+use crate::dto::{LoginUser, RegisterUser, UpdateUserOuter, UserResponse, UserResponseOuter};
 use crate::models::{NewSession, NewUser, Session, User, UserChange};
 use crate::prelude::*;
-use crate::schema::sessions::dsl::sessions;
 use crate::utils::{HASHER, PWD_SCHEME_VERSION};
 
 impl Message for RegisterUser {

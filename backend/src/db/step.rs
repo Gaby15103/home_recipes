@@ -1,12 +1,10 @@
 ﻿use std::path::{Path, PathBuf};
 use actix_multipart::form::tempfile::TempFile;
-use diesel::associations::HasTable;
-use crate::dto::{StepGroupInput, StepGroupResponse, StepGroupUpdate, StepResponse};
+use crate::dto::{StepGroupInput, StepGroupResponse, StepGroupUpdate, StepImageMeta, StepResponse};
 use crate::models::{Step, StepGroup};
 use crate::prelude::*;
 use diesel::prelude::*;
 use uuid::Uuid;
-use crate::app::recipes::StepImageMeta;
 use crate::schema::{step_groups, steps};
 
 pub fn create_step_groups(

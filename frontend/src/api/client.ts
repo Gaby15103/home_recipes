@@ -1,14 +1,11 @@
-﻿import axios from "axios";
-import type { AxiosRequestConfig } from "axios";
+﻿import axios, {type AxiosRequestConfig } from "axios";
 
 export const API_URL = import.meta.env.VITE_API_URL;
 
 const apiClient = axios.create({
     baseURL: API_URL,
     withCredentials: true,
-    headers: {
-        "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
 });
 
 export async function api<T>(url: string, options: AxiosRequestConfig = {}): Promise<T> {
@@ -17,7 +14,6 @@ export async function api<T>(url: string, options: AxiosRequestConfig = {}): Pro
             url,
             ...options,
         });
-
         return response.data;
     } catch (error: any) {
         let msg = "Unknown error";

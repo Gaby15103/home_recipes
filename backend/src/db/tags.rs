@@ -2,8 +2,8 @@
 use diesel::prelude::*;
 use uuid::Uuid;
 use super::DbExecutor;
-use crate::app::tags::{CreateTagOuter, GetAllTags, UpdateTagOuter};
-use crate::dto::{InputTag, TagResponse};
+use crate::app::tags::{GetAllTags};
+use crate::dto::{CreateTagOuter, InputTag, TagResponse, UpdateTagOuter};
 use crate::models::{NewTag, Tag, TagChange};
 use crate::prelude::*;
 use crate::schema::{recipe_tags, tags};

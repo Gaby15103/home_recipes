@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth.ts";
 import { RouterLink, useRouter } from "vue-router";
 import ModeToggle from "@/components/ModeToggle.vue";
 import { Button } from "@/components/ui/button";
+import {ROUTES} from "@/router/routes.ts";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -24,7 +25,7 @@ async function logout() {
   <header class="h-16 border-b bg-background/80 backdrop-blur sticky top-0 z-50 flex items-center justify-between px-6">
     <!-- Left -->
     <div class="flex items-center gap-6">
-      <RouterLink to="/admin/dashboard" class="text-lg font-bold">
+      <RouterLink :to="ROUTES.ADMIN.DASHBOARD" class="text-lg font-bold">
         Admin Dashboard
       </RouterLink>
     </div>

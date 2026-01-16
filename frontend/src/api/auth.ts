@@ -1,81 +1,46 @@
 ﻿import { api } from "./client";
-import type {EditUser, LoginRequest, LoginResponse, RegisterRequest} from "@/models/Auth";
-import type {User} from "@/models/User.ts";
+import { AuthRoutes, UserRoutes } from "./routes";
+import type { LoginRequest, LoginResponse, RegisterRequest } from "@/models/Auth";
+import type { User } from "@/models/User";
 
+// -------- AUTH --------
 export function login(email: string, password: string) {
-    const payload: LoginRequest = {
-        user: { email, password },
-    };
-
-    return api<LoginResponse>("/user/login", {
-        method: "POST",
-        data: payload, // Axios uses `data` instead of `body`
-    });
+    const payload: LoginRequest = { user: { email, password } };
+    return api<LoginResponse>(AuthRoutes.login(), { method: "POST", data: payload });
 }
 
 export function registerUser(
-    username: string,
-    email: string,
-    password: string,
-    first_name: string,
-    last_name: string
+    username: string, email: string, password: string, first_name: string, last_name: string
 ) {
-    const payload: RegisterRequest = {
-        user: { username, email, password, first_name, last_name },
-    };
-
-    return api<LoginResponse>("/user/register", {
-        method: "POST",
-        data: payload,
-    });
-}
-
-export function getCurrentUser() {
-    return api<LoginResponse>("/user", {
-        method: "GET",
-    });
+    const payload: RegisterRequest = { user: { username, email, password, first_name, last_name } };
+    return api<LoginResponse>(AuthRoutes.register(), { method: "POST", data: payload });
 }
 
 export function logout() {
-    return api("/user/logout", {
-        method: "POST"
-    });
+    return api(AuthRoutes.logout(), { method: "POST" });
 }
-export function editUser(user: User, password: string|null = null){
-    const payload: EditUser = {
-        user: {
-            username: user.username,
-            email: user.email,
-            password: password,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            avatar_url: user.avatar_url,
-            preferences: user.preferences,
-        }
-    }
-    return api("/user/edit",{
-        method: "PATCH",
-        data: payload,
-    })
+
+// -------- USER --------
+export function getCurrentUser() {
+    return api<{ user: User }>(UserRoutes.me(), { method: "GET" });
 }
-export function editPassword(
-    current_password: string,
-    password: string,
-    password_confirmation: string
-) {
-    return api("/user/password", {
-        method: "PATCH",
-        data: {
-            current_password,
-            password,
-            password_confirmation,
-        },
-    });
+
+export function updateCurrentUser(user: Partial<User>) {
+    return api<{ user: User }>(UserRoutes.updateMe(), { method: "PUT", data: user });
+}
+
+export function editUser(user: User, password: string | null = null) {
+    const payload = { user: { ...user, password } };
+    return api<{ user: User }>(UserRoutes.updateMe(), { method: "PATCH", data: payload });
 }
 
 export function deleteUser(password: string) {
-    return api("/user", {
-        method: "DELETE",
-        data: { password },
-    })
+    return api(UserRoutes.me(), { method: "DELETE", data: { password } });
+}
+
+export function editPassword(current_password: string, password: string, password_confirmation: string) {
+    return api(UserRoutes.updateMe(), {
+        method: "PATCH",
+        data: { current_password, password, password_confirmation },
+    });
 }

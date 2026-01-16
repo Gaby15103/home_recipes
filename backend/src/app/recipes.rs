@@ -7,57 +7,15 @@ use crate::utils::auth::{authenticate, Auth};
 use crate::dto::*;
 use actix_multipart::form::{json::Json as MpJson, tempfile::TempFile, MultipartForm};
 use uuid::Uuid;
-
-#[derive(Debug, MultipartForm)]
-pub struct CreateRecipeForm {
-    pub recipe: MpJson<In<CreateRecipeInput>>,
-    pub main_image: TempFile,
-    pub step_images: Vec<TempFile>,
-    pub step_images_meta: MpJson<Vec<StepImageMeta>>,
-}
-
-#[derive(Debug, MultipartForm)]
-pub struct UpdateRecipeForm {
-    pub recipe: MpJson<In<UpdateRecipeInput>>,
-    pub main_image: Option<TempFile>,
-    pub step_images: Vec<TempFile>,
-    pub step_images_meta: MpJson<Vec<StepImageMeta>>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct StepImageMeta {
-    pub group_position: usize,
-    pub step_position: usize,
-    pub index: usize,
-}
-
+use crate::error::DbError;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
     recipe: U,
 }
 
-pub struct CreateRecipe {
-    pub auth: Auth,
-    pub new_recipe: CreateRecipeInput,
-    pub main_image: TempFile,
-    pub step_images: Vec<TempFile>,
-    pub step_images_meta: Vec<StepImageMeta>,
-}
 
-pub struct UpdateRecipe {
-    pub auth: Auth,
-    pub update_recipe: UpdateRecipeInput,
-    pub main_image: Option<TempFile>,
-    pub step_images: Vec<TempFile>,
-    pub step_images_meta: Vec<StepImageMeta>,
-}
-
-
-pub struct GetRecipeById {
-    pub id: Uuid,
-}
-pub async fn get_by_id(
+pub async fn get(
     state: web::Data<AppState>,
     path: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
@@ -151,7 +109,7 @@ pub struct GetAllRecipes {
 }
 
 
-pub async fn get_all(
+pub async fn list(
     state: Data<AppState>,
     query: web::Query<GetFilter>,
     req: HttpRequest,
@@ -235,4 +193,273 @@ pub async fn get_by_page(
     Ok(HttpResponse::Ok().json(recipes))
 }
 
+pub async fn delete(
+    state: web::Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+    let recipe_id = path.into_inner();
+
+    let recipe = state.db
+        .send(GetRecipeById { id: recipe_id })
+        .await??;
+
+    let is_admin = auth.roles.iter().any(|r|
+        r.name == "ADMIN" || r.name == "MODERATOR"
+    );
+
+    if !is_admin{
+        return Err(Error::Forbidden(json!({
+            "error": "You are not allowed to delete this recipe"
+        })));
+    }
+
+    match state.db.send(DeleteRecipe { recipe_id }).await? {
+        Ok(()) => Ok(HttpResponse::NoContent().finish()),
+
+        Err(DbError::NotFound) => Err(Error::NotFound(json!({
+        "error": "Recipe not found"
+    }))),
+
+        Err(DbError::Forbidden) => Err(Error::Forbidden(json!({
+        "error": "Forbidden"
+    }))),
+
+        Err(DbError::Diesel(_)) | Err(DbError::Pool(_)) => {
+            Err(Error::InternalServerError)
+        },
+    }
+
+}
+
+pub async fn analytics(
+    state: Data<AppState>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+
+    let count = state.db
+        .send(GetRecipeAnalytics { recipe_id })
+        .await?
+        ?;
+
+    Ok(HttpResponse::Ok().json(count))
+}
+
+pub async fn track_view(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    let auth = authenticate(&state, &req).await.ok();
+
+    state.db
+        .send(RegisterRecipeView {
+            recipe_id,
+            user_id: auth.map(|a| a.user.id),
+        })
+        .await?
+        ?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
+
+pub async fn favorite(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+    let recipe_id = path.into_inner();
+
+    let favorited = state.db
+        .send(ToggleFavorite {
+            user_id: auth.user.id,
+            recipe_id,
+        })
+        .await?
+        ?;
+
+    Ok(HttpResponse::Ok().json(favorited))
+}
+
+
+pub async fn get_favorites(
+    state: web::Data<AppState>,
+    req: HttpRequest,
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+
+    let recipes = state
+        .db
+        .send(GetFavoriteRecipes {
+            user_id: auth.user.id,
+        })
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(recipes))
+}
+
+
+
+pub async fn rate(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+    body: web::Json<i32>,
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+    let recipe_id = path.into_inner();
+
+    state.db
+        .send(SetRecipeRating {
+            recipe_id,
+            user_id: auth.user.id,
+            rating: body.into_inner(),
+        })
+        .await?
+        ?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
+pub async fn get_rating(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    let auth = authenticate(&state, &req).await.ok();
+
+    let rating = state.db
+        .send(GetRecipeRating {
+            recipe_id,
+            user_id: auth.map(|a| a.user.id),
+        })
+        .await?
+        ?;
+
+    Ok(HttpResponse::Ok().json(rating))
+}
+
+pub async fn unrate(
+    state: web::Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+    let recipe_id = path.into_inner();
+
+    state
+        .db
+        .send(UnsetRecipeRating {
+            recipe_id,
+            user_id: auth.user.id,
+        })
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
+pub async fn add_comment(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+    body: web::Json<CreateComment>,
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+
+    let mut cmd = body.into_inner();
+    cmd.recipe_id = path.into_inner();
+    cmd.user_id = auth.user.id;
+
+    let comment = state.db.send(cmd).await??;
+    Ok(HttpResponse::Created().json(comment))
+}
+
+pub async fn get_comments(
+    state: web::Data<AppState>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+
+    let comments = state
+        .db
+        .send(GetRecipeComments { recipe_id })
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    Ok(HttpResponse::Ok().json(comments))
+}
+
+pub async fn delete_comment(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    authenticate(&state, &req).await?;
+
+    state.db
+        .send(DeleteComment {
+            comment_id: path.into_inner(),
+        })
+        .await?
+        ?;
+
+    Ok(HttpResponse::NoContent().finish())
+}
+
+pub async fn get_versions(
+    state: Data<AppState>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+
+    let versions = state.db
+        .send(GetRecipeVersions { recipe_id })
+        .await?
+        ?;
+
+    Ok(HttpResponse::Ok().json(versions))
+}
+
+pub async fn get_version(
+    state: Data<AppState>,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let id = path.into_inner();
+
+    let version = state.db
+        .send(GetRecipeVersion { id })
+        .await?
+        ?;
+
+    Ok(HttpResponse::Ok().json(version))
+}
+
+pub async fn restore_version(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: web::Path<(Uuid, Uuid)>, // (recipe_id, version_id)
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
+
+    let (recipe_id, version_id) = path.into_inner();
+
+    let recipe = state.db
+        .send(RestoreRecipeVersion {
+            recipe_id,
+            version_id,
+            user_id: auth.user.id,
+        })
+        .await??
+        ;
+
+    Ok(HttpResponse::Ok().json(recipe))
+}
 

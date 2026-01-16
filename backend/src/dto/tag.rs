@@ -1,8 +1,9 @@
 ﻿use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use crate::models::Tag;
+use crate::utils::auth::Auth;
 
-#[derive(Debug, Validate, Serialize)]
+#[derive(Debug, Validate, Serialize, Deserialize, Clone)]
 pub struct TagResponse {
     pub id: Uuid,
     pub name: String,
@@ -13,6 +14,30 @@ pub struct TagResponse {
 pub enum InputTag {
     Existing { id: Uuid },
     New { name: String },
+}
+
+#[derive(Debug, Validate, serde_derive::Deserialize)]
+pub struct CreateTag {
+    #[validate(length(min = 1, max = 32))]
+    pub name: String,
+}
+
+#[derive(Debug)]
+pub struct CreateTagOuter {
+    pub auth: Auth,
+    pub new_tag: CreateTag,
+}
+
+#[derive(Debug, Validate, serde_derive::Deserialize)]
+pub struct UpdateTag {
+    pub id: Uuid,
+    #[validate(length(min = 1, max = 32))]
+    pub name: String,
+}
+#[derive(Debug)]
+pub struct UpdateTagOuter {
+    pub auth: Auth,
+    pub update_tag: UpdateTag,
 }
 
 impl From<Tag> for TagResponse {

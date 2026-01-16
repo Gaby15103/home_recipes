@@ -5,6 +5,7 @@ mod recipes;
 pub mod ingredients;
 pub mod step;
 pub mod roles;
+mod two_factor;
 
 use crate::prelude::*;
 use actix::prelude::{Actor, SyncContext};

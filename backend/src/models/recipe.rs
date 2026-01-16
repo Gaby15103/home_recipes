@@ -7,7 +7,7 @@ use crate::schema::{recipes};
 // -----------------------------
 // Recipe DB Model
 // -----------------------------
-#[derive(Queryable, Insertable, Identifiable, Debug)]
+#[derive(Queryable, Insertable, Identifiable, Debug, Deserialize)]
 #[diesel(table_name = recipes)]
 pub struct Recipe {
     pub id: Uuid,

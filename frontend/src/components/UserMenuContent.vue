@@ -11,6 +11,7 @@ import { LogOut, Settings } from 'lucide-vue-next';
 import { useAuthStore } from "@/stores/auth.ts";
 import NavLink from "@/components/NavLink.vue";
 import {Button} from "@/components/ui/button";
+import { ROUTES } from "@/router/routes";
 
 const authStore = useAuthStore();
 interface Props {
@@ -33,7 +34,7 @@ defineProps<Props>();
   <DropdownMenuSeparator/>
   <DropdownMenuGroup>
     <DropdownMenuItem :as-child="true">
-      <NavLink class="block w-full cursor-pointer" to="/admin/user/edit/profile">
+      <NavLink class="block w-full cursor-pointer" :to="ROUTES.ADMIN.USER.BASE">
         <Settings  class="mr-2 h-4 w-4" />
         Settings
       </NavLink>

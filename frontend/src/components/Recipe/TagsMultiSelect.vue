@@ -1,15 +1,13 @@
 ﻿<script setup lang="ts">
 import {ref, computed, onMounted, watch} from 'vue'
 import { Check, ChevronsUpDown, X, Plus } from 'lucide-vue-next'
-import type { Tag } from '@/models/Recipe'
-import type { InputTag } from '@/models/RecipeCreate'
-import { getAllTags } from '@/api/tag'
-
+import { getTags } from '@/api/tag'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
+import type {InputTag, Tag} from "@/models/Tag.ts";
 
 const props = defineProps<{ modelValue: InputTag[] }>()
 const emit = defineEmits(['update:modelValue'])
@@ -19,7 +17,7 @@ const allTags = ref<Tag[]>([])
 const searchQuery = ref('')
 
 onMounted(async () => {
-  allTags.value = await getAllTags()
+  allTags.value = await getTags()
   syncImportedTags()
 })
 
@@ -47,7 +45,7 @@ function syncImportedTags() {
 
 const getTagName = (item: InputTag) => {
   if (item.type === 'new') return item.name
-  return allTags.value.find(t => t.id === item.id)?.name || 'Loading...'
+  return allTags.value.find((t: { id: any }) => t.id === item.id)?.name || 'Loading...'
 }
 
 // Logic to check if the current search term is unique

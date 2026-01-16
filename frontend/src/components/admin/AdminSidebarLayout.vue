@@ -25,9 +25,7 @@ withDefaults(defineProps<Props>(), {
 
       <!-- Scrollable slot content -->
       <div class="flex-1 min-h-0 overflow-y-auto px-6 py-4 scrollbar-hide">
-        <div class="max-w-6xl mx-auto space-y-6">
-          <slot />
-        </div>
+        <slot />
       </div>
     </AppContent>
   </AppShell>

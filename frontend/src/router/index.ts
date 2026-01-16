@@ -1,120 +1,122 @@
-﻿import { createRouter, createWebHistory } from "vue-router";
+﻿import {createRouter, createWebHistory} from "vue-router";
+import {ROUTES} from "./routes";
+import {useAuthStore} from "@/stores/auth.ts";
+
+// Pages
 import Home from "@/pages/Home.vue";
 import Login from "@/pages/Login.vue";
 import Register from "@/pages/Register.vue";
 import Recipes from "@/pages/Recipes.vue";
+import Recipe from "@/pages/Recipe.vue";
+
+// Admin Pages
+import AdminDashBoard from "@/pages/Admin/AdminDashBoard.vue";
+import RecipeDashboard from "@/pages/Admin/Recipes/RecipeDashboard.vue";
 import List from "@/pages/Admin/Recipes/List.vue";
 import Create from "@/pages/Admin/Recipes/Create.vue";
 import Edit from "@/pages/Admin/Recipes/Edit.vue";
 import Categories from "@/pages/Admin/Recipes/Categories.vue";
-import Recipe from "@/pages/Recipe.vue";
-import { useAuthStore } from "@/stores/auth.ts";
-import AdminDashBoard from "@/pages/Admin/AdminDashBoard.vue";
+
+// User Settings Pages
 import Profile from "@/pages/Settings/Profile.vue";
 import Password from "@/pages/Settings/Password.vue";
 import TwoFactor from "@/pages/Settings/TwoFactor.vue";
 import Appearance from "@/pages/Settings/Appearance.vue";
-import RecipeDashboard from "@/pages/Admin/Recipes/RecipeDashboard.vue";
 
 const routes = [
+
+    {path: ROUTES.HOME, component: Home},
+    {path: ROUTES.LOGIN, component: Login},
+    {path: ROUTES.REGISTER, component: Register},
+    {path: ROUTES.RECIPES, component: Recipes},
+    {path: "/recipe/:id", component: Recipe},
+
     {
-        path: "/admin",
-        meta: {
-            requiresAuth: true,
-            roles: ["ADMIN", "MODERATOR"],
-            layout: "AdminLayout",
-            breadcrumb: [{ title: "Admin", href: "/admin/dashboard" }],
-        },
-        redirect: "/admin/dashboard",
+        path: ROUTES.ADMIN.BASE,
+        meta: {requiresAuth: true, roles: ["ADMIN", "MODERATOR"], layout: "AdminLayout"},
+        redirect: ROUTES.ADMIN.DASHBOARD,
         children: [
+            // Dashboard
             {
                 path: "dashboard",
                 component: AdminDashBoard,
                 meta: {
                     breadcrumb: [
-                        { title: "Admin", href: "/admin/dashboard" },
-                        { title: "Dashboard" },
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Dashboard"},
                     ],
                 },
             },
+
+            // Recipe Management
             {
                 path: "recipe",
                 component: RecipeDashboard,
                 meta: {
                     breadcrumb: [
-                        { title: "Admin", href: "/admin/recipe" },
-                        { title: "Recipe" },
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Recipe"},
                     ],
                 },
             },
-
             {
                 path: "recipe/list",
                 component: List,
                 meta: {
                     breadcrumb: [
-                        { title: "Admin", href: "/admin/dashboard" },
-                        { title: "Recipe", href: "/admin/recipe" },
-                        { title: "Recipe List" },
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "List"},
                     ],
                 },
             },
-
             {
                 path: "recipe/create",
                 component: Create,
                 meta: {
                     breadcrumb: [
-                        { title: "Admin", href: "/admin/dashboard" },
-                        { title: "Recipe", href: "/admin/recipe" },
-                        { title: "Create" },
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "Create"},
                     ],
                 },
             },
-
             {
                 path: "recipe/edit/:id",
                 component: Edit,
                 meta: {
                     breadcrumb: [
-                        { title: "Admin", href: "/admin/dashboard" },
-                        { title: "Recipe", href: "/admin/recipe" },
-                        { title: "Edit" },
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "Edit"},
                     ],
                 },
             },
-
             {
                 path: "recipe/categories",
                 component: Categories,
                 meta: {
                     breadcrumb: [
-                        { title: "Admin", href: "/admin/dashboard" },
-                        { title: "Categories" },
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Categories"},
                     ],
                 },
             },
 
-            // -------------------------
-            // User Settings (inside admin layout)
-            // -------------------------
+            // User Settings
             {
                 path: "user",
-                meta: {
-                    requiresAuth: true,
-                    roles: ["ADMIN", "MODERATOR"],
-                    layout: "AdminLayout",
-                },
-                redirect: "/admin/user/edit/profile",
+                meta: {requiresAuth: true, roles: ["ADMIN", "MODERATOR"]},
+                redirect: ROUTES.ADMIN.USER.PROFILE,
                 children: [
                     {
                         path: "edit/profile",
                         component: Profile,
                         meta: {
                             breadcrumb: [
-                                { title: "Admin", href: "/admin/dashboard" },
-                                { title: "User Settings", href: "/admin/user/edit/profile" },
-                                { title: "Profile" },
+                                {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "Profile"},
                             ],
                         },
                     },
@@ -123,9 +125,9 @@ const routes = [
                         component: Password,
                         meta: {
                             breadcrumb: [
-                                { title: "Admin", href: "/admin/dashboard" },
-                                { title: "User Settings", href: "/admin/user/edit/profile" },
-                                { title: "Password" },
+                                {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "Password"},
                             ],
                         },
                     },
@@ -134,9 +136,9 @@ const routes = [
                         component: TwoFactor,
                         meta: {
                             breadcrumb: [
-                                { title: "Admin", href: "/admin/dashboard" },
-                                { title: "User Settings", href: "/admin/user/edit/profile" },
-                                { title: "Two-Factor" },
+                                {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "Two-Factor"},
                             ],
                         },
                     },
@@ -145,9 +147,9 @@ const routes = [
                         component: Appearance,
                         meta: {
                             breadcrumb: [
-                                { title: "Admin", href: "/admin/dashboard" },
-                                { title: "User Settings", href: "/admin/user/edit/profile" },
-                                { title: "Appearance" },
+                                {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "Appearance"},
                             ],
                         },
                     },
@@ -155,12 +157,6 @@ const routes = [
             },
         ],
     },
-
-    { path: "/", component: Home },
-    { path: "/login", component: Login },
-    { path: "/register", component: Register },
-    { path: "/recipes", component: Recipes },
-    { path: "/recipe/:id", component: Recipe },
 ];
 
 const router = createRouter({
@@ -168,18 +164,11 @@ const router = createRouter({
     routes,
     scrollBehavior(to, from, savedPosition) {
         if (savedPosition) return savedPosition;
-
         if (to.hash) {
             const el = document.querySelector(to.hash);
-            if (el) {
-                return {
-                    el: to.hash,
-                    behavior: "smooth",
-                };
-            }
+            if (el) return {el: to.hash, behavior: "smooth"};
         }
-
-        return { top: 0 };
+        return {top: 0};
     },
 });
 
@@ -187,11 +176,11 @@ router.beforeEach(async (to, from) => {
     const authStore = useAuthStore();
 
     if (to.meta.requiresAuth) {
-        if (!authStore.user) {
+        if (!authStore.user && !authStore.loading) {
             try {
                 await authStore.loadUser();
             } catch {
-                return "/login";
+                return ROUTES.LOGIN;
             }
         }
 
