@@ -1,6 +1,6 @@
 ﻿use super::AppState;
 use crate::db::roles::fetch_roles_for_user;
-use crate::dto::{LoginResponse, LoginUser, RegisterUser, UpdateUser, UpdateUserOuter, UserResponse};
+use crate::dto::{ConfirmEmail, ConfirmEmailQuery, LoginResponse, LoginUser, RegisterResponse, RegisterUser, UpdateUser, UpdateUserOuter, UserResponse};
 use crate::models::{Role, User};
 use crate::prelude::*;
 use crate::utils::{
@@ -8,10 +8,11 @@ use crate::utils::{
     jwt::CanGenerateJwt,
 };
 use actix_web::cookie::{Cookie, SameSite};
-use actix_web::{HttpRequest, HttpResponse, ResponseError, web::Data, web::Json};
+use actix_web::{HttpRequest, HttpResponse, ResponseError, web::Data, web::Json, web};
 use std::convert::From;
 use uuid::Uuid;
 use validator::Validate;
+use crate::utils::email_service::send_email_confirmation;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -28,14 +29,42 @@ pub async fn register(
     register_user.validate()?;
 
     // Send to DbExecutor actor
-    let res = state
+    let res: RegisterResponse = state
         .db
         .send(register_user)
         .await
         .map_err(|_| Error::InternalServerError)??;
 
-    Ok(HttpResponse::Ok().json(res))
+    send_email_confirmation(res.user.user, &*res.email_verification_tokens.token.to_string())
+        .map_err(|_| Error::InternalServerError)?;
+
+    Ok(HttpResponse::Ok().finish())
 }
+
+pub async fn confirm_email_api(
+    query: web::Query<ConfirmEmailQuery>,
+    state: Data<AppState>,
+) -> Result<HttpResponse, Error> {
+    let token = query.token.clone();
+
+    let res = state.db.send(ConfirmEmail { token }).await;
+
+    match res {
+        Ok(Ok(_)) => Ok(HttpResponse::Ok().json(serde_json::json!({
+            "success": true,
+            "message": "Email confirmed successfully! Please log in."
+        }))),
+        Ok(Err(err)) => Ok(HttpResponse::BadRequest().json(serde_json::json!({
+            "success": false,
+            "message": err.to_string()
+        }))),
+        Err(_) => Ok(HttpResponse::InternalServerError().json(serde_json::json!({
+            "success": false,
+            "message": "Internal server error"
+        }))),
+    }
+}
+
 pub async fn login(
     (form, state): (Json<In<LoginUser>>, Data<AppState>),
 ) -> Result<HttpResponse, Error> {

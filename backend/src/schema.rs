@@ -1,6 +1,15 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    email_verification_tokens (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        token -> Uuid,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     favorites (user_id, recipe_id) {
         user_id -> Uuid,
         recipe_id -> Uuid,
@@ -179,6 +188,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(favorites -> recipes (recipe_id));
 diesel::joinable!(favorites -> users (user_id));
 diesel::joinable!(ingredient_groups -> recipes (recipe_id));
@@ -202,6 +212,7 @@ diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(user_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    email_verification_tokens,
     favorites,
     ingredient_groups,
     ingredients,

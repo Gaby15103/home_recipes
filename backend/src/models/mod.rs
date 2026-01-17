@@ -14,6 +14,7 @@ mod recipe_analytic;
 mod recipe_comment;
 mod recipe_rating;
 mod recipe_version;
+mod email_verification_token;
 
 pub use self::{
     user::*,
@@ -32,4 +33,5 @@ pub use self::{
     recipe_comment::*,
     recipe_rating::*,
     recipe_version::*,
+    email_verification_token::*,
 };

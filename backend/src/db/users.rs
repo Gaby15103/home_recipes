@@ -1,24 +1,28 @@
-﻿use actix::prelude::*;
+﻿use super::DbExecutor;
+use crate::app::users::DeleteSession;
+use crate::db::roles::fetch_roles_for_user;
+use crate::dto::{ConfirmEmail, EmailVerificationTokenResponse, LoginUser, RegisterResponse, RegisterUser, UpdateUserOuter, UserResponse, UserResponseOuter};
+use crate::models::{
+    EmailVerificationToken, NewEmailVerificationToken, NewSession, NewUser, Session, User,
+    UserChange,
+};
+use crate::prelude::*;
+use crate::utils::{HASHER, PWD_SCHEME_VERSION};
+use actix::prelude::*;
 use chrono::{Duration, Utc};
 use diesel::prelude::*;
 use libreauth::pass::HashBuilder;
 use uuid::Uuid;
-use super::DbExecutor;
-use crate::app::users::{DeleteSession};
-use crate::db::roles::fetch_roles_for_user;
-use crate::dto::{LoginUser, RegisterUser, UpdateUserOuter, UserResponse, UserResponseOuter};
-use crate::models::{NewSession, NewUser, Session, User, UserChange};
-use crate::prelude::*;
-use crate::utils::{HASHER, PWD_SCHEME_VERSION};
 
 impl Message for RegisterUser {
-    type Result = Result<UserResponse>;
+    type Result = Result<RegisterResponse>;
 }
 
 impl Handler<RegisterUser> for DbExecutor {
-    type Result = Result<UserResponse>;
+    type Result = Result<RegisterResponse>;
 
     fn handle(&mut self, msg: RegisterUser, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::email_verification_tokens::dsl::*;
         use crate::schema::users::dsl::*;
 
         let mut conn = self.0.get()?; // PooledConnection
@@ -37,11 +41,65 @@ impl Handler<RegisterUser> for DbExecutor {
             .values(&new_user)
             .get_result(&mut conn)?;
 
+        let verification_token = Uuid::new_v4();
+        let new_token = NewEmailVerificationToken {
+            user_id: inserted_user.id,
+            token: verification_token,
+            created_at: Utc::now(),
+        };
+
+        let inserted_token: EmailVerificationToken = diesel::insert_into(email_verification_tokens)
+            .values(&new_token)
+            .get_result(&mut conn)?;
+
         let roles = Vec::new();
 
-        Ok(UserResponse::from_user_and_roles(&inserted_user, roles))
+        Ok(RegisterResponse {
+            user: UserResponse::from_user_and_roles(&inserted_user, roles),
+            email_verification_tokens: EmailVerificationTokenResponse::from_email_verification_token(inserted_token),
+        })
     }
 }
+
+
+
+impl Message for ConfirmEmail {
+    type Result = Result<(), Error>;
+}
+
+impl Handler<ConfirmEmail> for DbExecutor {
+    type Result = Result<(), Error>;
+
+    fn handle(&mut self, msg: ConfirmEmail, _: &mut Self::Context) -> Self::Result {
+        use crate::schema::email_verification_tokens::dsl::{
+            email_verification_tokens,
+            id as token_id_col,
+            token as token_col,
+        };
+        use crate::schema::users::dsl::{users, id as user_id_col, email_verified};
+
+        let mut conn = self.0.get()?;
+
+        let token_uuid = uuid::Uuid::parse_str(&msg.token).map_err(|_| Error::InternalServerError)?;
+
+        // Get the token record
+        let record: EmailVerificationToken = email_verification_tokens
+            .filter(token_col.eq(token_uuid))
+            .first(&mut conn)?;
+
+        // Mark the user as verified
+        diesel::update(users.filter(user_id_col.eq(record.user_id)))
+            .set(email_verified.eq(true))
+            .execute(&mut conn)?;
+
+        // Delete the token
+        diesel::delete(email_verification_tokens.filter(token_id_col.eq(record.id)))
+            .execute(&mut conn)?;
+
+        Ok(())
+    }
+}
+
 
 impl Message for LoginUser {
     type Result = Result<UserResponseOuter>;
@@ -63,6 +121,10 @@ impl Handler<LoginUser> for DbExecutor {
             return Err(Error::Unauthorized(json!({"error": "Wrong password"})));
         }
 
+        if !stored_user.email_verified.unwrap() {
+            return Err(Error::BadRequest("Email not verified".into()));
+        }
+
         if checker.needs_update(Some(PWD_SCHEME_VERSION)) {
             let new_hash = HASHER.hash(&msg.password)?;
             diesel::update(users.find(stored_user.id))
@@ -70,9 +132,8 @@ impl Handler<LoginUser> for DbExecutor {
                 .execute(&mut conn)?;
         }
 
-        let two_factor_required =
-            stored_user.two_factor_secret.is_some()
-                && stored_user.two_factor_confirmed_at.is_some();
+        let two_factor_required = stored_user.two_factor_secret.is_some()
+            && stored_user.two_factor_confirmed_at.is_some();
 
         if two_factor_required {
             let token = Uuid::new_v4(); // this is the temporary login token
@@ -125,8 +186,7 @@ impl Handler<DeleteSession> for DbExecutor {
 
         let mut conn = self.0.get()?;
 
-        diesel::delete(sessions.filter(id.eq(msg.session_id)))
-            .execute(&mut conn)?;
+        diesel::delete(sessions.filter(id.eq(msg.session_id))).execute(&mut conn)?;
 
         Ok(())
     }

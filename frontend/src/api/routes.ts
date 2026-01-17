@@ -3,6 +3,7 @@
 export const AuthRoutes = {
     login: () => `${API_ROOT}/auth/login`,
     register: () => `${API_ROOT}/auth/register`,
+    confirmEmail: () => `${API_ROOT}/auth/confirm_email`,
     logout: () => `${API_ROOT}/auth/logout`,
 };
 

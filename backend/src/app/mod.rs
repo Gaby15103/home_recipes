@@ -151,6 +151,7 @@ fn auth_routes() -> actix_web::Scope {
         .route("/register", web::post().to(users::register))
         .route("/login", web::post().to(users::login))
         .route("/logout", web::post().to(users::logout))
+        .route("/confirm_email",web::post().to(users::confirm_email_api))
 }
 
 /* ----------------------------- USERS ----------------------------- */

@@ -23,6 +23,7 @@ import Password from "@/pages/Settings/Password.vue";
 import TwoFactor from "@/pages/Settings/TwoFactor.vue";
 import Appearance from "@/pages/Settings/Appearance.vue";
 import TwoFactorChallenge from "@/pages/auth/TwoFactorChallenge.vue";
+import ConfirmEmail from "@/pages/auth/ConfirmEmail.vue";
 
 const routes = [
 
@@ -30,6 +31,7 @@ const routes = [
     {path: ROUTES.LOGIN, component: Login},
     {path: ROUTES.TWO_FACTOR, component: TwoFactorChallenge},
     {path: ROUTES.REGISTER, component: Register},
+    {path: ROUTES.EMAIL_CONFIRMATION, component: ConfirmEmail },
     {path: ROUTES.RECIPES, component: Recipes},
     {path: "/recipe/:id", component: Recipe},
 

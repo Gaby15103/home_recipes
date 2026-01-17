@@ -1,7 +1,8 @@
 ﻿use crate::models::{Role, User};
 use crate::utils::auth::Auth;
 use uuid::Uuid;
-
+use crate::dto::EmailVerificationTokenResponse;
+use crate::schema::email_verification_tokens::dsl::email_verification_tokens;
 // Client Messages ↓
 
 #[derive(Debug, Validate, Deserialize)]
@@ -91,6 +92,20 @@ pub struct LoginResponse {
 #[derive(Debug, Serialize)]
 pub struct UserResponse {
     pub user: UserResponseInner,
+}
+
+pub struct RegisterResponse {
+    pub user: UserResponse,
+    pub email_verification_tokens: EmailVerificationTokenResponse
+}
+
+pub struct ConfirmEmail {
+    pub token: String,
+}
+
+#[derive(Deserialize)]
+pub struct ConfirmEmailQuery {
+    pub token: String,
 }
 #[derive(Debug, Serialize)]
 pub struct UserResponseOuter {

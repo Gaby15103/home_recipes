@@ -34,5 +34,3 @@ export interface EditUser {
         preferences: UserPreferences;
     }
 }
-
-export type RegisterResponse = LoginResponse;

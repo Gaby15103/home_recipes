@@ -10,6 +10,7 @@ mod recipe_comment;
 mod recipe_rating;
 mod recipe_version;
 mod two_factor;
+mod email_verification_token;
 
 pub use self::{
     recipe::*,
@@ -24,4 +25,5 @@ pub use self::{
     recipe_version::*,
     recipe_analityc::*,
     two_factor::*,
+    email_verification_token::*,
 };

@@ -1,6 +1,6 @@
 ﻿import { api } from "./client";
 import { AuthRoutes, UserRoutes } from "./routes";
-import type { LoginRequest, LoginResponse, RegisterRequest } from "@/models/Auth";
+import type {LoginRequest, LoginResponse, RegisterRequest} from "@/models/Auth";
 import type { User } from "@/models/User";
 
 // -------- AUTH --------
@@ -13,7 +13,16 @@ export function registerUser(
     username: string, email: string, password: string, first_name: string, last_name: string
 ) {
     const payload: RegisterRequest = { user: { username, email, password, first_name, last_name } };
-    return api<LoginResponse>(AuthRoutes.register(), { method: "POST", data: payload });
+    return api(AuthRoutes.register(), { method: "POST", data: payload });
+}
+export function confirmEmail(token: string) {
+    return api<{ success: boolean; message: string }>(
+        AuthRoutes.confirmEmail(), // <-- make sure this exists in your routes.ts
+        {
+            method: "POST",
+            data: { token },
+        }
+    );
 }
 
 export function logout() {

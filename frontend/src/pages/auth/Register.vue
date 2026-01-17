@@ -27,7 +27,7 @@ const {handleSubmit} = useForm({
 const submit = handleSubmit(async (values) => {
   error.value = ""
   try {
-    const res = await registerUser(
+    await registerUser(
         values.username,
         values.email,
         values.password,
