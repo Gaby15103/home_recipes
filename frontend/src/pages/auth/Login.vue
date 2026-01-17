@@ -9,11 +9,13 @@ import {
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field'
-import {loginSchema} from "@/validators/auth"
+import {loginSchema} from "@/validators/auth.ts"
 import {useForm, Field as VeeField} from 'vee-validate'
-import {useAuthStore} from "@/stores/auth"
+import {useAuthStore} from "@/stores/auth.ts"
 import {useRouter} from "vue-router"
 import {toTypedSchema} from "@vee-validate/zod";
+import {ROUTES} from "@/router/routes.ts";
+import {login} from "@/api";
 
 const router = useRouter()
 const error = ref("")
@@ -30,13 +32,30 @@ const {handleSubmit} = useForm({
 
 const submit = handleSubmit(async (values) => {
   error.value = ""
+
   try {
-    await authStore.login(values.email, values.password)
-    await router.push("/home")
+
+    const res = await login(values.email, values.password);
+
+    if (res.two_factor_required) {
+      if (!res.two_factor_token){
+        error.value = "2FA required but token not returned by the server."
+        return
+      }
+      authStore.setPendingTwoFactor(res.two_factor_token)
+      await router.push(ROUTES.TWO_FACTOR)
+      return
+    }
+    if (!res.user)
+      return
+
+    authStore.setUser(res.user.user)
+    await router.push(ROUTES.HOME)
   } catch (e: any) {
     error.value = e.message || "Login failed"
   }
 })
+
 </script>
 
 <template>

@@ -8,8 +8,11 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-    user: User;
+    user?:  {user: User}
+    two_factor_required: boolean
+    two_factor_token?: string
 }
+
 
 export interface RegisterRequest {
     user: {

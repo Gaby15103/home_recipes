@@ -4,8 +4,8 @@ import {useAuthStore} from "@/stores/auth.ts";
 
 // Pages
 import Home from "@/pages/Home.vue";
-import Login from "@/pages/Login.vue";
-import Register from "@/pages/Register.vue";
+import Login from "@/pages/auth/Login.vue";
+import Register from "@/pages/auth/Register.vue";
 import Recipes from "@/pages/Recipes.vue";
 import Recipe from "@/pages/Recipe.vue";
 
@@ -22,11 +22,13 @@ import Profile from "@/pages/Settings/Profile.vue";
 import Password from "@/pages/Settings/Password.vue";
 import TwoFactor from "@/pages/Settings/TwoFactor.vue";
 import Appearance from "@/pages/Settings/Appearance.vue";
+import TwoFactorChallenge from "@/pages/auth/TwoFactorChallenge.vue";
 
 const routes = [
 
     {path: ROUTES.HOME, component: Home},
     {path: ROUTES.LOGIN, component: Login},
+    {path: ROUTES.TWO_FACTOR, component: TwoFactorChallenge},
     {path: ROUTES.REGISTER, component: Register},
     {path: ROUTES.RECIPES, component: Recipes},
     {path: "/recipe/:id", component: Recipe},

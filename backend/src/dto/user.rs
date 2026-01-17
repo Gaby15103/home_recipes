@@ -78,6 +78,14 @@ pub struct UpdateUserOuter {
     pub update_user: UpdateUser,
 }
 
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+    pub two_factor_required: bool,
+    pub two_factor_token: Option<Uuid>,
+    pub user: Option<UserResponse>,
+}
+
+
 // JSON response objects ↓
 
 #[derive(Debug, Serialize)]
@@ -86,8 +94,10 @@ pub struct UserResponse {
 }
 #[derive(Debug, Serialize)]
 pub struct UserResponseOuter {
-    pub user: UserResponse,
+    pub user: Option<UserResponse>,
     pub session_id: Uuid,
+    pub two_factor_required: bool,
+    pub two_factor_token: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize)]

@@ -6,8 +6,8 @@ import {Alert, AlertTitle} from "@/components/ui/alert"
 import {Field, FieldError, FieldGroup, FieldLabel} from "@/components/ui/field"
 import {useForm, Field as VeeField} from "vee-validate"
 import {toTypedSchema} from "@vee-validate/zod"
-import {registerSchema} from "@/validators/auth"
-import {registerUser} from "@/api/auth"
+import {registerSchema} from "@/validators/auth.ts"
+import {registerUser} from "@/api/auth.ts"
 import {useRouter} from "vue-router"
 
 const router = useRouter()

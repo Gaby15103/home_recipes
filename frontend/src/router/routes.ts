@@ -25,5 +25,6 @@
             APPEARANCE: "/admin/user/edit/appearance",
         },
     },
+    TWO_FACTOR: "/two_factor",
     GITHUB_REPO: "https://github.com/Gaby15103/home_recipes"
 };

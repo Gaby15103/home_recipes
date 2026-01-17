@@ -1,5 +1,6 @@
-﻿use uuid::Uuid;
-use crate::models::User;
+﻿use crate::models::User;
+use uuid::Uuid;
+use crate::dto::UserResponse;
 
 #[derive(Serialize)]
 pub struct QrCodeResponse {
@@ -42,6 +43,22 @@ pub struct UpdateUserTwoFactorDisable {
     pub user_id: Uuid,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+pub struct VerifyTwoFactorRequest {
+    pub token: Uuid,
+
+    #[validate(length(min = 6, max = 6))]
+    pub code: Option<String>,
+
+    pub recovery_code: Option<String>,
+}
+
+pub struct VerifyTwoFactor(pub VerifyTwoFactorRequest);
+
+pub struct VerifyTwoFactorResult {
+    pub user: UserResponse,
+    pub session_id: Uuid,
+}
 
 impl User {
     pub fn is_two_factor_enabled(&self) -> bool {

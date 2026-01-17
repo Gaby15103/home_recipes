@@ -13,6 +13,10 @@ use validator::ValidationErrors;
 
 #[derive(Fail, Debug)]
 pub enum Error {
+    // 400
+    #[fail(display = "Bad Request: {}", _0)]
+    BadRequest(JsonValue),
+
     // 401
     #[fail(display = "Unauthorized: {}", _0)]
     Unauthorized(JsonValue),
@@ -32,6 +36,7 @@ pub enum Error {
     // 500
     #[fail(display = "Internal Server Error")]
     InternalServerError,
+
 }
 
 // the ResponseError trait lets us convert errors to http responses with appropriate data
@@ -48,6 +53,9 @@ impl ResponseError for Error {
             }
             Error::InternalServerError => {
                 HttpResponse::InternalServerError().json("Internal Server Error")
+            },
+            Error::BadRequest(_) => {
+                HttpResponse::build(StatusCode::BAD_REQUEST).json("Bad request")
             }
         }
     }

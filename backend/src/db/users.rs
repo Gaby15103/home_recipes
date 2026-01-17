@@ -2,7 +2,7 @@
 use chrono::{Duration, Utc};
 use diesel::prelude::*;
 use libreauth::pass::HashBuilder;
-
+use uuid::Uuid;
 use super::DbExecutor;
 use crate::app::users::{DeleteSession};
 use crate::db::roles::fetch_roles_for_user;
@@ -70,6 +70,29 @@ impl Handler<LoginUser> for DbExecutor {
                 .execute(&mut conn)?;
         }
 
+        let two_factor_required =
+            stored_user.two_factor_secret.is_some()
+                && stored_user.two_factor_confirmed_at.is_some();
+
+        if two_factor_required {
+            let token = Uuid::new_v4(); // this is the temporary login token
+            let expires = Utc::now() + Duration::minutes(10);
+
+            diesel::update(users.find(stored_user.id))
+                .set((
+                    two_factor_token.eq(token),
+                    two_factor_token_expires_at.eq(expires),
+                ))
+                .execute(&mut conn)?;
+
+            return Ok(UserResponseOuter {
+                two_factor_required: true,
+                two_factor_token: Option::from(token),
+                user: None,
+                session_id: Uuid::nil(),
+            });
+        }
+
         let roles = fetch_roles_for_user(&mut conn, stored_user.id)?;
 
         let expires_at = Utc::now() + Duration::days(30);
@@ -82,8 +105,10 @@ impl Handler<LoginUser> for DbExecutor {
             .get_result(&mut conn)?;
 
         Ok(UserResponseOuter {
-            user: UserResponse::from_user_and_roles(&stored_user, roles),
+            user: Option::from(UserResponse::from_user_and_roles(&stored_user, roles)),
             session_id: session.id,
+            two_factor_required,
+            two_factor_token: None,
         })
     }
 }

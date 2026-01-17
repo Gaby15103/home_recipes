@@ -1,10 +1,13 @@
 ﻿use actix_web::{HttpRequest, HttpResponse, web};
+use actix_web::cookie::{Cookie, SameSite};
+use actix_web::web::Json;
 use base32::encode as base32_encode;
 use qrcode::QrCode;
 use rand::distr::Alphanumeric;
 use rand::Rng;
 use serde::Serialize;
 use serde_json::Value;
+use validator::Validate;
 use super::AppState;
 use crate::dto::*;
 use crate::prelude::*;
@@ -185,3 +188,28 @@ pub async fn status(
     Ok(HttpResponse::Ok().json(status))
 }
 
+
+pub async fn verify(
+    state: web::Data<AppState>,
+    form: Json<VerifyTwoFactorRequest>,
+) -> Result<HttpResponse, Error> {
+    let payload = form.into_inner();
+    payload.validate()?;
+
+    let res = state
+        .db
+        .send(VerifyTwoFactor(payload))
+        .await
+        .map_err(|_| Error::InternalServerError)??;
+
+    let cookie = Cookie::build("session_id", res.session_id.to_string())
+        .path("/")
+        .http_only(true)
+        .same_site(SameSite::Lax)
+        .secure(false)
+        .finish();
+
+    Ok(HttpResponse::Ok()
+        .cookie(cookie)
+        .json(res.user))
+}

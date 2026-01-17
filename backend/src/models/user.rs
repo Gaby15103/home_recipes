@@ -4,7 +4,6 @@ use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::schema::{users};
-
 // -----------------------------
 // Preferences DTO
 // -----------------------------
@@ -42,6 +41,8 @@ pub struct User {
     pub two_factor_secret: Option<String>,
     pub two_factor_recovery_codes: Option<serde_json::Value>,
     pub two_factor_confirmed_at: Option<chrono::NaiveDateTime>,
+    pub two_factor_token: Option<Uuid>,
+    pub two_factor_token_expires_at: Option<DateTime<Utc>>,
 }
 
 // Insertable for creating new users

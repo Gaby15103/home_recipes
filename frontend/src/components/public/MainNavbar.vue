@@ -23,9 +23,6 @@ import { ROUTES } from "@/router/routes";
 const authStore = useAuthStore();
 const { user, loading } = storeToRefs(authStore);
 
-console.log(user)
-
-
 async function logout() {
   try {
     await authStore.logout()
@@ -46,7 +43,7 @@ async function logout() {
       <!-- Left -->
       <div class="flex items-center gap-8">
         <RouterLink
-            to="/"
+            :to="ROUTES.HOME"
             class="text-lg font-semibold tracking-tight"
         >
           Home Recipes

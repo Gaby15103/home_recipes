@@ -54,4 +54,5 @@ export const TwoFactorRoutes = {
     enable: () => `${API_ROOT}/two-factor/enable`,          // POST
     disable: () => `${API_ROOT}/two-factor/disable`,        // POST
     status: () => `${API_ROOT}/two-factor/status`,          // GET
+    verify: () => `${API_ROOT}/two-factor/verify`,          // GET
 };

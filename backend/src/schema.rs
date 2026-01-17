@@ -174,6 +174,8 @@ diesel::table! {
         two_factor_secret -> Nullable<Text>,
         two_factor_recovery_codes -> Nullable<Jsonb>,
         two_factor_confirmed_at -> Nullable<Timestamp>,
+        two_factor_token -> Nullable<Uuid>,
+        two_factor_token_expires_at -> Nullable<Timestamptz>,
     }
 }
 

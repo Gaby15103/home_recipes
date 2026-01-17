@@ -1,17 +1,17 @@
-﻿use actix_web::{HttpRequest, HttpResponse, ResponseError, web::Data, web::Json};
-use std::convert::From;
-use actix_web::cookie::{Cookie, SameSite};
-use uuid::Uuid;
-use validator::Validate;
+﻿use super::AppState;
 use crate::db::roles::fetch_roles_for_user;
-use crate::dto::{LoginUser, RegisterUser, UpdateUser, UpdateUserOuter, UserResponse};
-use super::AppState;
+use crate::dto::{LoginResponse, LoginUser, RegisterUser, UpdateUser, UpdateUserOuter, UserResponse};
 use crate::models::{Role, User};
 use crate::prelude::*;
 use crate::utils::{
     auth::{Auth, authenticate},
     jwt::CanGenerateJwt,
 };
+use actix_web::cookie::{Cookie, SameSite};
+use actix_web::{HttpRequest, HttpResponse, ResponseError, web::Data, web::Json};
+use std::convert::From;
+use uuid::Uuid;
+use validator::Validate;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -50,25 +50,29 @@ pub async fn login(
         .await
         .map_err(|_| Error::InternalServerError)??;
 
-    let cookie = Cookie::build("session_id", res.session_id.to_string())
-        .path("/")
-        .http_only(true)
-        .same_site(SameSite::Lax)
-        .secure(false)
-        .finish();
+    let mut response = HttpResponse::Ok();
 
-    Ok(
-        HttpResponse::Ok()
-            .cookie(cookie)
-            .json(res.user),
-    )
+    if !res.two_factor_required {
+        let cookie = Cookie::build("session_id", res.session_id.to_string())
+            .path("/")
+            .http_only(true)
+            .same_site(SameSite::Lax)
+            .secure(false)
+            .finish();
+        response.cookie(cookie);
+    }
+
+    Ok(response.json(
+        LoginResponse{
+            two_factor_required: res.two_factor_required,
+            two_factor_token: res.two_factor_token,
+            user: Option::from(res.user)
+        }
+    ))
 }
 pub async fn get_current(state: Data<AppState>, req: HttpRequest) -> Result<HttpResponse, Error> {
     let auth = authenticate(&state, &req).await?;
-    Ok(
-        HttpResponse::Ok()
-            .json(UserResponse::from_auth(auth))
-    )
+    Ok(HttpResponse::Ok().json(UserResponse::from_auth(auth)))
 }
 
 pub struct DeleteSession {
@@ -92,8 +96,7 @@ pub async fn logout(state: Data<AppState>, req: HttpRequest) -> Result<HttpRespo
                 .max_age(time::Duration::seconds(0))
                 .finish(),
         )
-        .finish()
-    )
+        .finish())
 }
 
 pub async fn update(

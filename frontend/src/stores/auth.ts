@@ -1,11 +1,16 @@
 ﻿import {defineStore} from "pinia";
 import {getCurrentUser, login, logout} from "@/api/auth";
 import type {User} from "@/models/User";
+import {useRouter} from "vue-router";
+import {ROUTES} from "@/router/routes.ts";
+const router = useRouter()
 
 export const useAuthStore = defineStore("auth", {
     state: () => ({
         user: null as User | null,
         loading: false,
+        twoFactorPending: false,
+        twoFactorToken: null as string | null,
     }),
 
     getters: {
@@ -32,7 +37,8 @@ export const useAuthStore = defineStore("auth", {
             this.loading = true;
             try {
                 const res = await login(email, password);
-                this.user = res.user;
+                if (res.user)
+                    this.user = res.user;
             } finally {
                 this.loading = false;
             }
@@ -42,6 +48,7 @@ export const useAuthStore = defineStore("auth", {
             this.loading = true;
             try {
                 await logout();
+                await router.push(ROUTES.HOME);
             } finally {
                 this.user = null;
                 this.loading = false;
@@ -54,6 +61,16 @@ export const useAuthStore = defineStore("auth", {
 
         clearUser() {
             this.user = null;
+        },
+
+        setPendingTwoFactor(token: string) {
+            this.twoFactorPending = true
+            this.twoFactorToken = token
+        },
+
+        clearTwoFactor() {
+            this.twoFactorPending = false
+            this.twoFactorToken = null
         },
     },
 });

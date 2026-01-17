@@ -215,6 +215,7 @@ pub fn two_factor_routes() -> actix_web::Scope {
         .route("/enable", web::post().to(two_factor::enable))
         .route("/disable", web::post().to(two_factor::disable))
         .route("/status", web::get().to(two_factor::status))
+        .route("/verify", web::post().to(two_factor::verify))
 }
 
 /* ----------------------------- DEBUG ----------------------------- */

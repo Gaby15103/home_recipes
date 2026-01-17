@@ -1,5 +1,6 @@
 ﻿import { api } from './client';
 import { TwoFactorRoutes } from './routes';
+import type {User} from "@/models/User.ts";
 
 export interface QrCodeResponse {
     svg: string;
@@ -18,6 +19,17 @@ export interface TwoFactorStatusResponse {
     enabled: boolean;
     requires_confirmation: boolean;
 }
+
+export interface VerifyTwoFactorRequest {
+    token: string
+    code?: string
+    recovery_code?: string
+}
+export interface VerifyTwoFactorResponse {
+    user: User
+}
+
+
 
 export async function getQrCode(): Promise<QrCodeResponse> {
     return api<QrCodeResponse>(TwoFactorRoutes.qrCode(), {
@@ -53,5 +65,11 @@ export async function disableTwoFactor(): Promise<void> {
 export async function getTwoFactorStatus(): Promise<TwoFactorStatusResponse> {
     return api<TwoFactorStatusResponse>(TwoFactorRoutes.status(), {
         method: 'GET',
+    });
+}
+export async function verifyTwoFactor(payload: VerifyTwoFactorRequest): Promise<VerifyTwoFactorResponse> {
+    return api<VerifyTwoFactorResponse>(TwoFactorRoutes.verify(), {
+        method: 'POST',
+        data: payload,
     });
 }
