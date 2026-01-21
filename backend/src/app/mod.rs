@@ -3,8 +3,10 @@ use actix::prelude::{Addr, SyncArbiter};
 use actix_cors::Cors;
 use actix_web::{error, http::header::{CONTENT_TYPE}, middleware::Logger, web, web::Data, App, HttpRequest, HttpResponse, HttpServer};
 use std::env;
+use std::sync::Arc;
 use actix_files::Files;
 use actix_multipart::form::MultipartFormConfig;
+use redis::Client;
 
 mod profiles;
 pub mod users;
@@ -16,6 +18,7 @@ pub mod two_factor;
 /// Represents the shared application state, including the database executor.
 pub struct AppState {
     pub db: Addr<DbExecutor>,
+    pub redis: Arc<Client>
 }
 
 /// A simple index route returning a "Hello world!" message.
@@ -81,11 +84,15 @@ pub async fn start() -> std::io::Result<()> {
 
     let bind_address = env::var("BIND_ADDRESS").expect("BIND_ADDRESS is not set");
 
+    let redis_url = std::env::var("REDIS_URL").unwrap_or("redis://127.0.0.1:6379".to_string());
+    let redis_client = Arc::new(Client::open(redis_url).expect("Cannot connect to Redis"));
+
     println!("You can access the server at {}", bind_address); // <- print BEFORE running
 
     HttpServer::new(move || {
         let state = AppState {
             db: database_address.clone(),
+            redis: redis_client.clone(),
         };
         let cors = Cors::default()
             .allowed_origin("http://localhost:5173") // your frontend URL

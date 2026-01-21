@@ -11,6 +11,7 @@ const success = ref(false);
 const message = ref("");
 
 onMounted(async () => {
+  console.log("helle i'm on hte page : " + token)
   if (!token) {
     loading.value = false;
     success.value = false;

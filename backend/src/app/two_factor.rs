@@ -1,62 +1,45 @@
-﻿use actix_web::{HttpRequest, HttpResponse, web};
+﻿use crate::validator::Validate;
+use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web::cookie::{Cookie, SameSite};
 use actix_web::web::Json;
-use base32::encode as base32_encode;
 use qrcode::QrCode;
 use rand::distr::Alphanumeric;
 use rand::Rng;
-use serde::Serialize;
 use serde_json::Value;
-use validator::Validate;
 use super::AppState;
 use crate::dto::*;
 use crate::prelude::*;
 use crate::utils::auth::{Auth, authenticate};
+use crate::utils::two_factor::generate_new_secret;
 
 pub async fn secret_key(
     state: web::Data<AppState>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
-    let auth: Auth = authenticate(&state, &req).await?;
+) -> Result<HttpResponse, Error> {
+    let auth = authenticate(&state, &req).await?;
     let user = &auth.user;
 
-    let secret = match &user.two_factor_secret {
-        Some(s) if !s.is_empty() => s.clone(),
-        _ => {
-            let secret_bytes: [u8; 20] = {
-                let mut arr = [0u8; 20];
-                rand::rng().fill(&mut arr);
-                arr
-            };
+    let secret = user
+        .two_factor_secret
+        .clone()
+        .unwrap_or_else(|| generate_new_secret());
 
-            let secret = base32_encode(base32::Alphabet::RFC4648 { padding: false }, &secret_bytes);
+    state
+        .db
+        .send(UpdateUserTwoFactorSecret {
+            user_id: user.id,
+            secret: secret.clone(),
+        })
+        .await??;
 
-            // Persist in DB
-            let db_result = state
-                .db
-                .send(UpdateUserTwoFactorSecret {
-                    user_id: user.id,
-                    secret: secret.clone(),
-                })
-                .await;
-
-            db_result
-                .map_err(|e| {
-                    actix_web::error::ErrorInternalServerError(format!("Mailbox error: {}", e))
-                })?
-                .unwrap();
-
-            secret
-        }
-    };
-
-    Ok(HttpResponse::Ok().json(SecretKeyResponse { secret_key: secret }))
+    Ok(HttpResponse::Ok().finish()) // no need to return the secret
 }
+
 
 pub async fn qr_code(
     state: web::Data<AppState>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, Error> {
     let auth: Auth = authenticate(&state, &req).await?;
     let user = &auth.user;
 
@@ -82,66 +65,54 @@ pub async fn qr_code(
 pub async fn recovery_codes(
     state: web::Data<AppState>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, Error> {
+    // Authenticate user
     let auth: Auth = authenticate(&state, &req).await?;
     let user = &auth.user;
 
-    let codes: Value = match &user.two_factor_recovery_codes {
-        Some(codes) => codes.clone(),
-        None => {
-            // Generate 8 new codes
-            let new_codes: Vec<String> = (0..8)
-                .map(|_| {
-                    rand::thread_rng()
-                        .sample_iter(&Alphanumeric)
-                        .take(8)
-                        .map(char::from)
-                        .collect()
-                })
-                .collect();
+    let codes: Value = if let Some(existing) = &user.two_factor_recovery_codes {
+        existing.clone()
+    } else {
+        let new_codes: Vec<String> = (0..8)
+            .map(|_| {
+                rand::rng()
+                    .sample_iter(&Alphanumeric)
+                    .take(8)
+                    .map(char::from)
+                    .collect()
+            })
+            .collect();
 
-            let json_codes = serde_json::to_value(new_codes.clone())
-                .map_err(|e| actix_web::error::ErrorInternalServerError(e))?;
+        let json_codes = serde_json::to_value(new_codes.clone())
+            .map_err(|_| Error::InternalServerError)?;
+        state
+            .db
+            .send(UpdateUserRecoveryCodes {
+                user_id: user.id,
+                codes: json_codes.clone(),
+            })
+            .await??;
 
-            // Persist new codes in DB
-            let db_result = state
-                .db
-                .send(UpdateUserRecoveryCodes {
-                    user_id: user.id,
-                    codes: json_codes.clone(),
-                })
-                .await;
-
-            db_result
-                .map_err(|e| actix_web::error::ErrorInternalServerError(format!("Mailbox error: {}", e)))?
-                .map_err(|e| actix_web::error::ErrorInternalServerError(format!("DB error: {:?}", e)))?;
-
-            json_codes
-        }
+        json_codes
     };
 
     Ok(HttpResponse::Ok().json(codes))
 }
 
+
 pub async fn enable(
     state: web::Data<AppState>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, Error> {
     let auth: Auth = authenticate(&state, &req).await?;
 
-    let db_result = state
+    state
         .db
         .send(UpdateUserTwoFactorEnabled {
             user_id: auth.user.id,
             enabled: true,
         })
-        .await;
-
-    db_result
-        .map_err(|e| {
-            actix_web::error::ErrorInternalServerError(format!("Mailbox error: {}", e))
-        })?
-        .unwrap();
+        .await??;
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -149,29 +120,24 @@ pub async fn enable(
 pub async fn disable(
     state: web::Data<AppState>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, Error> {
     let auth: Auth = authenticate(&state, &req).await?;
 
-    let db_result = state
+    state
         .db
         .send(UpdateUserTwoFactorDisable {
             user_id: auth.user.id,
         })
-        .await;
-
-    db_result
-        .map_err(|e| {
-            actix_web::error::ErrorInternalServerError(format!("Mailbox error: {}", e))
-        })?
-        .unwrap();
+        .await??;
 
     Ok(HttpResponse::Ok().finish())
 }
 
+
 pub async fn status(
     state: web::Data<AppState>,
     req: HttpRequest,
-) -> Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse, Error> {
     let auth: Auth = authenticate(&state, &req).await?;
     let user = &auth.user;
 

@@ -25,18 +25,13 @@ pub async fn register(
 ) -> Result<HttpResponse, Error> {
     let register_user = form.into_inner().user;
 
-    // Validate input
     register_user.validate()?;
 
-    // Send to DbExecutor actor
-    let res: RegisterResponse = state
+    state
         .db
         .send(register_user)
         .await
         .map_err(|_| Error::InternalServerError)??;
-
-    send_email_confirmation(res.user.user, &*res.email_verification_tokens.token.to_string())
-        .map_err(|_| Error::InternalServerError)?;
 
     Ok(HttpResponse::Ok().finish())
 }

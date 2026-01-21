@@ -28,7 +28,9 @@ impl Handler<GetSessionAuth> for DbExecutor {
             .first(&mut conn)?;
         
         if session.expires_at < Utc::now() {
-            return Err(Error::Unauthorized(json!({"error": "Session expired"})));
+            return Err(Error::Unauthorized(serde_json::json!({
+                "error": "Session expired"
+            })) );
         }
         
         let user: User = users

@@ -13,6 +13,7 @@ use chrono::{Duration, Utc};
 use diesel::prelude::*;
 use libreauth::pass::HashBuilder;
 use uuid::Uuid;
+use crate::utils::email_service::send_email_confirmation;
 
 impl Message for RegisterUser {
     type Result = Result<RegisterResponse>;
@@ -24,39 +25,54 @@ impl Handler<RegisterUser> for DbExecutor {
     fn handle(&mut self, msg: RegisterUser, _: &mut Self::Context) -> Self::Result {
         use crate::schema::email_verification_tokens::dsl::*;
         use crate::schema::users::dsl::*;
+        use diesel::Connection;
 
         let mut conn = self.0.get()?; // PooledConnection
 
-        let new_user = NewUser {
-            email: msg.email,
-            username: msg.username,
-            password_hash: HASHER.hash(&msg.password)?,
-            first_name: msg.first_name,
-            last_name: msg.last_name,
-            avatar_url: Some("/assets/users/default.png".parse().unwrap()),
-            preferences: serde_json::json!({}),
-        };
+        conn.transaction::<RegisterResponse, Error, _>(|conn| {
+            // 1️⃣ Create new user
+            let new_user = NewUser {
+                email: msg.email,
+                username: msg.username,
+                password_hash: HASHER.hash(&msg.password)
+                    .map_err(|e| Error::InternalServerError)?,
+                first_name: msg.first_name,
+                last_name: msg.last_name,
+                avatar_url: Some("/assets/users/default.png".parse().unwrap()),
+                preferences: serde_json::json!({}),
+            };
 
-        let inserted_user: User = diesel::insert_into(users)
-            .values(&new_user)
-            .get_result(&mut conn)?;
+            let inserted_user: User = diesel::insert_into(users)
+                .values(&new_user)
+                .get_result(conn)
+                .map_err(Error::from)?;
 
-        let verification_token = Uuid::new_v4();
-        let new_token = NewEmailVerificationToken {
-            user_id: inserted_user.id,
-            token: verification_token,
-            created_at: Utc::now(),
-        };
+            // 2️⃣ Create email verification token
+            let verification_token = Uuid::new_v4();
+            let new_token = NewEmailVerificationToken {
+                user_id: inserted_user.id,
+                token: verification_token,
+                created_at: Utc::now(),
+            };
 
-        let inserted_token: EmailVerificationToken = diesel::insert_into(email_verification_tokens)
-            .values(&new_token)
-            .get_result(&mut conn)?;
+            let inserted_token: EmailVerificationToken = diesel::insert_into(email_verification_tokens)
+                .values(&new_token)
+                .get_result(conn)
+                .map_err(Error::from)?;
 
-        let roles = Vec::new();
+            let roles = Vec::new();
+            let response = RegisterResponse {
+                user: UserResponse::from_user_and_roles(&inserted_user, roles),
+                email_verification_tokens: EmailVerificationTokenResponse::from_email_verification_token(inserted_token),
+            };
 
-        Ok(RegisterResponse {
-            user: UserResponse::from_user_and_roles(&inserted_user, roles),
-            email_verification_tokens: EmailVerificationTokenResponse::from_email_verification_token(inserted_token),
+            // 3️⃣ Send email and propagate error to rollback
+            send_email_confirmation(
+                response.user.user.clone(),
+                &response.email_verification_tokens.token.to_string()
+            )?;
+
+            Ok(response)
         })
     }
 }
@@ -102,11 +118,11 @@ impl Handler<ConfirmEmail> for DbExecutor {
 
 
 impl Message for LoginUser {
-    type Result = Result<UserResponseOuter>;
+    type Result = Result<UserResponseOuter, Error>;
 }
 
 impl Handler<LoginUser> for DbExecutor {
-    type Result = Result<UserResponseOuter>;
+    type Result = Result<UserResponseOuter, Error>;
 
     fn handle(&mut self, msg: LoginUser, _: &mut Self::Context) -> Self::Result {
         use crate::schema::sessions::dsl::sessions;
@@ -114,15 +130,21 @@ impl Handler<LoginUser> for DbExecutor {
 
         let mut conn = self.0.get()?; // pooled connection
 
-        let stored_user: User = users.filter(email.eq(&msg.email)).first(&mut conn)?;
-        let checker = HashBuilder::from_phc(stored_user.password_hash.trim())?;
+        let stored_user: User = users
+            .filter(email.eq(&msg.email))
+            .first(&mut conn)?;
 
+        let checker = HashBuilder::from_phc(stored_user.password_hash.trim())?;
         if !checker.is_valid(&msg.password) {
-            return Err(Error::Unauthorized(json!({"error": "Wrong password"})));
+            return Err(Error::Forbidden(json!({
+                "error": "Wrong password."
+            })));
         }
 
-        if !stored_user.email_verified.unwrap() {
-            return Err(Error::BadRequest("Email not verified".into()));
+        if !stored_user.email_verified.unwrap_or(false) {
+            return Err(Error::Forbidden(json!({
+                "error": "Email not verified."
+            })));
         }
 
         if checker.needs_update(Some(PWD_SCHEME_VERSION)) {
@@ -136,7 +158,7 @@ impl Handler<LoginUser> for DbExecutor {
             && stored_user.two_factor_confirmed_at.is_some();
 
         if two_factor_required {
-            let token = Uuid::new_v4(); // this is the temporary login token
+            let token = Uuid::new_v4();
             let expires = Utc::now() + Duration::minutes(10);
 
             diesel::update(users.find(stored_user.id))
@@ -148,7 +170,7 @@ impl Handler<LoginUser> for DbExecutor {
 
             return Ok(UserResponseOuter {
                 two_factor_required: true,
-                two_factor_token: Option::from(token),
+                two_factor_token: Some(token),
                 user: None,
                 session_id: Uuid::nil(),
             });
@@ -166,13 +188,14 @@ impl Handler<LoginUser> for DbExecutor {
             .get_result(&mut conn)?;
 
         Ok(UserResponseOuter {
-            user: Option::from(UserResponse::from_user_and_roles(&stored_user, roles)),
+            user: Some(UserResponse::from_user_and_roles(&stored_user, roles)),
             session_id: session.id,
             two_factor_required,
             two_factor_token: None,
         })
     }
 }
+
 
 impl Message for DeleteSession {
     type Result = Result<()>;

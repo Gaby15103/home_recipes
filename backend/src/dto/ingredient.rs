@@ -4,6 +4,7 @@ use bigdecimal::BigDecimal;
 use crate::dto::TagResponse;
 use crate::models::{Ingredient, RecipeIngredient, Tag};
 use crate::utils::unit::IngredientUnit;
+use validator::Validate;
 
 #[derive(Debug, Validate, Deserialize,Serialize)]
 pub struct IngredientInput {

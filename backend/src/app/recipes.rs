@@ -1,19 +1,20 @@
-﻿use actix_web::{HttpResponse, web::{Data, Json}, HttpRequest, web};
+﻿use actix_web::{
+    HttpRequest, HttpResponse, web,
+    web::{Data},
+};
 use validator::Validate;
 
 use super::AppState;
-use crate::prelude::*;
-use crate::utils::auth::{authenticate, Auth};
 use crate::dto::*;
-use actix_multipart::form::{json::Json as MpJson, tempfile::TempFile, MultipartForm};
+use crate::prelude::*;
+use crate::utils::auth::{authenticate};
+use actix_multipart::form::{MultipartForm};
 use uuid::Uuid;
-use crate::error::DbError;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
     recipe: U,
 }
-
 
 pub async fn get(
     state: web::Data<AppState>,
@@ -84,7 +85,7 @@ pub async fn update(
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GetFilter{
+pub struct GetFilter {
     pub scope: Option<String>,
 
     pub search: Option<String>,
@@ -108,21 +109,20 @@ pub struct GetAllRecipes {
     pub include_private: bool,
 }
 
-
 pub async fn list(
     state: Data<AppState>,
     query: web::Query<GetFilter>,
     req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
-
     let is_admin_scope = matches!(query.scope.as_deref(), Some("true"));
 
     let include_private = if is_admin_scope {
         let auth = authenticate(&state, &req).await?;
 
-        let allowed = auth.roles.iter().any(|r|
-            r.name == "ADMIN" || r.name == "MODERATOR"
-        );
+        let allowed = auth
+            .roles
+            .iter()
+            .any(|r| r.name == "ADMIN" || r.name == "MODERATOR");
 
         if !allowed {
             return Ok(HttpResponse::Unauthorized().finish());
@@ -170,7 +170,10 @@ pub async fn get_by_page(
 
     let include_private = if query.include_private {
         let auth = authenticate(&state, &req).await?;
-        let allowed = auth.roles.iter().any(|r| r.name == "ADMIN" || r.name == "MODERATOR");
+        let allowed = auth
+            .roles
+            .iter()
+            .any(|r| r.name == "ADMIN" || r.name == "MODERATOR");
         if !allowed {
             return Ok(HttpResponse::Unauthorized().finish());
         }
@@ -201,37 +204,29 @@ pub async fn delete(
     let auth = authenticate(&state, &req).await?;
     let recipe_id = path.into_inner();
 
-    let recipe = state.db
+    state
+        .db
         .send(GetRecipeById { id: recipe_id })
         .await??;
 
-    let is_admin = auth.roles.iter().any(|r|
+    let is_admin = auth.roles.iter().any(|r| {
         r.name == "ADMIN" || r.name == "MODERATOR"
-    );
+    });
 
-    if !is_admin{
-        return Err(Error::Forbidden(json!({
+    if !is_admin {
+        return Err(Error::Forbidden(serde_json::json!({
             "error": "You are not allowed to delete this recipe"
         })));
     }
 
-    match state.db.send(DeleteRecipe { recipe_id }).await? {
-        Ok(()) => Ok(HttpResponse::NoContent().finish()),
+    state
+        .db
+        .send(DeleteRecipe { recipe_id })
+        .await??;
 
-        Err(DbError::NotFound) => Err(Error::NotFound(json!({
-        "error": "Recipe not found"
-    }))),
-
-        Err(DbError::Forbidden) => Err(Error::Forbidden(json!({
-        "error": "Forbidden"
-    }))),
-
-        Err(DbError::Diesel(_)) | Err(DbError::Pool(_)) => {
-            Err(Error::InternalServerError)
-        },
-    }
-
+    Ok(HttpResponse::NoContent().finish())
 }
+
 
 pub async fn analytics(
     state: Data<AppState>,
@@ -239,10 +234,7 @@ pub async fn analytics(
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
 
-    let count = state.db
-        .send(GetRecipeAnalytics { recipe_id })
-        .await?
-        ?;
+    let count = state.db.send(GetRecipeAnalytics { recipe_id }).await??;
 
     Ok(HttpResponse::Ok().json(count))
 }
@@ -255,17 +247,16 @@ pub async fn track_view(
     let recipe_id = path.into_inner();
     let auth = authenticate(&state, &req).await.ok();
 
-    state.db
+    state
+        .db
         .send(RegisterRecipeView {
             recipe_id,
             user_id: auth.map(|a| a.user.id),
         })
-        .await?
-        ?;
+        .await??;
 
     Ok(HttpResponse::NoContent().finish())
 }
-
 
 pub async fn favorite(
     state: Data<AppState>,
@@ -275,17 +266,16 @@ pub async fn favorite(
     let auth = authenticate(&state, &req).await?;
     let recipe_id = path.into_inner();
 
-    let favorited = state.db
+    let favorited = state
+        .db
         .send(ToggleFavorite {
             user_id: auth.user.id,
             recipe_id,
         })
-        .await?
-        ?;
+        .await??;
 
     Ok(HttpResponse::Ok().json(favorited))
 }
-
 
 pub async fn get_favorites(
     state: web::Data<AppState>,
@@ -304,8 +294,6 @@ pub async fn get_favorites(
     Ok(HttpResponse::Ok().json(recipes))
 }
 
-
-
 pub async fn rate(
     state: Data<AppState>,
     req: HttpRequest,
@@ -315,14 +303,14 @@ pub async fn rate(
     let auth = authenticate(&state, &req).await?;
     let recipe_id = path.into_inner();
 
-    state.db
+    state
+        .db
         .send(SetRecipeRating {
             recipe_id,
             user_id: auth.user.id,
             rating: body.into_inner(),
         })
-        .await?
-        ?;
+        .await??;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -335,13 +323,13 @@ pub async fn get_rating(
     let recipe_id = path.into_inner();
     let auth = authenticate(&state, &req).await.ok();
 
-    let rating = state.db
+    let rating = state
+        .db
         .send(GetRecipeRating {
             recipe_id,
             user_id: auth.map(|a| a.user.id),
         })
-        .await?
-        ?;
+        .await??;
 
     Ok(HttpResponse::Ok().json(rating))
 }
@@ -404,12 +392,12 @@ pub async fn delete_comment(
 ) -> Result<HttpResponse, Error> {
     authenticate(&state, &req).await?;
 
-    state.db
+    state
+        .db
         .send(DeleteComment {
             comment_id: path.into_inner(),
         })
-        .await?
-        ?;
+        .await??;
 
     Ok(HttpResponse::NoContent().finish())
 }
@@ -420,10 +408,7 @@ pub async fn get_versions(
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
 
-    let versions = state.db
-        .send(GetRecipeVersions { recipe_id })
-        .await?
-        ?;
+    let versions = state.db.send(GetRecipeVersions { recipe_id }).await??;
 
     Ok(HttpResponse::Ok().json(versions))
 }
@@ -434,10 +419,7 @@ pub async fn get_version(
 ) -> Result<HttpResponse, Error> {
     let id = path.into_inner();
 
-    let version = state.db
-        .send(GetRecipeVersion { id })
-        .await?
-        ?;
+    let version = state.db.send(GetRecipeVersion { id }).await??;
 
     Ok(HttpResponse::Ok().json(version))
 }
@@ -451,15 +433,14 @@ pub async fn restore_version(
 
     let (recipe_id, version_id) = path.into_inner();
 
-    let recipe = state.db
+    let recipe = state
+        .db
         .send(RestoreRecipeVersion {
             recipe_id,
             version_id,
             user_id: auth.user.id,
         })
-        .await??
-        ;
+        .await??;
 
     Ok(HttpResponse::Ok().json(recipe))
 }
-

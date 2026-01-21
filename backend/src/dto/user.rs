@@ -2,7 +2,7 @@
 use crate::utils::auth::Auth;
 use uuid::Uuid;
 use crate::dto::EmailVerificationTokenResponse;
-use crate::schema::email_verification_tokens::dsl::email_verification_tokens;
+use validator::Validate;
 // Client Messages ↓
 
 #[derive(Debug, Validate, Deserialize)]
@@ -115,7 +115,7 @@ pub struct UserResponseOuter {
     pub two_factor_token: Option<Uuid>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct UserResponseInner {
     pub email: String,
     pub username: String,

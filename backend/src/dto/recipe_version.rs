@@ -2,6 +2,7 @@
 use uuid::Uuid;
 use crate::dto::RecipeResponse;
 use crate::models::Recipe;
+use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RecipeVersionResponse {

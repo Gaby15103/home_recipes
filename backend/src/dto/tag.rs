@@ -2,6 +2,7 @@
 use uuid::Uuid;
 use crate::models::Tag;
 use crate::utils::auth::Auth;
+use validator::Validate;
 
 #[derive(Debug, Validate, Serialize, Deserialize, Clone)]
 pub struct TagResponse {

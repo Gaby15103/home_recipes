@@ -1,0 +1,23 @@
+# Rust
+backend/target
+**/target
+
+# Git
+.git
+.gitignore
+
+# Node / frontend
+node_modules
+frontend/node_modules
+
+# Env files
+.env*
+!.env.example
+
+# OS / editor junk
+.DS_Store
+.idea
+.vscode
+
+# Docker
+docker-compose*.yaml

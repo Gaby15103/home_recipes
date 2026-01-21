@@ -3,7 +3,7 @@
     HOME: "/",
     LOGIN: "/login",
     REGISTER: "/register",
-    EMAIL_CONFIRMATION: "/email_confirmation",
+    EMAIL_CONFIRMATION: "/verify",
     RECIPES: "/recipes",
     RECIPE: (id: string | number) => `/recipe/${id}`,
 

@@ -48,8 +48,14 @@ const submit = handleSubmit(async (values) => {
         create account
       </h2>
 
-      <Alert v-if="error" variant="destructive" class="mb-3">
-        <AlertTitle>{{ error }}</AlertTitle>
+      <Alert
+          variant="destructive"
+          v-if="error"
+          class="whitespace-normal break-words !line-clamp-none"
+      >
+        <AlertTitle class="whitespace-normal break-words !line-clamp-none">
+          {{ error }}
+        </AlertTitle>
       </Alert>
 
       <form id="register-form" @submit="submit" class="space-y-2">

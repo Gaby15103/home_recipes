@@ -1,8 +1,7 @@
 ﻿use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use crate::dto::{UserResponse, UserResponseInner};
-use crate::models::{EmailVerificationToken, Role, User};
-use crate::utils::auth::Auth;
+use crate::models::{EmailVerificationToken};
+use validator::Validate;
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct VerifyEmailRequest {

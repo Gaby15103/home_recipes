@@ -1,4 +1,4 @@
 -- This file should undo anything in `up.sql`
 ALTER TABLE users
 DROP
-COLUMN two_factor_token,
+COLUMN two_factor_token;

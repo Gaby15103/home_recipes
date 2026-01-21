@@ -1,6 +1,7 @@
 ﻿use crate::models::User;
 use uuid::Uuid;
 use crate::dto::UserResponse;
+use validator::Validate;
 
 #[derive(Serialize)]
 pub struct QrCodeResponse {

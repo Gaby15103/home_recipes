@@ -1,6 +1,7 @@
 ﻿use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use crate::models::{Step, StepGroup};
+use validator::Validate;
 
 #[derive(Debug, Validate, Deserialize,Serialize)]
 pub struct StepInput {

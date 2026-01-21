@@ -65,9 +65,16 @@ const submit = handleSubmit(async (values) => {
         Login
       </h2>
 
-      <Alert variant="destructive" v-if="error">
-        <AlertTitle>{{ error }}</AlertTitle>
+      <Alert
+          variant="destructive"
+          v-if="error"
+          class="whitespace-normal break-words !line-clamp-none"
+      >
+        <AlertTitle class="whitespace-normal break-words !line-clamp-none">
+          {{ error }}
+        </AlertTitle>
       </Alert>
+
 
 
       <form id="login-form" @submit="submit" class="flex flex-col space-y-3">

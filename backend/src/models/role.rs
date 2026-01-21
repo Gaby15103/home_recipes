@@ -7,7 +7,7 @@ use diesel::prelude::*;
 // -----------------------------
 // Role DB Model
 // -----------------------------
-#[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize)]
+#[derive(Queryable, Selectable, Identifiable, Debug, Serialize, Deserialize, Clone)]
 #[diesel(table_name = roles)]
 pub struct Role {
     pub id: Uuid,

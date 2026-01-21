@@ -2,6 +2,7 @@
 use uuid::Uuid;
 use crate::dto::ingredient::{IngredientInput, IngredientResponse};
 use crate::dto::IngredientUpdate;
+use validator::Validate;
 
 #[derive(Debug, Validate, Deserialize,Serialize)]
 pub struct IngredientGroupInput {

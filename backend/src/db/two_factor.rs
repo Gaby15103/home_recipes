@@ -21,13 +21,18 @@ impl Handler<UpdateUserTwoFactorSecret> for DbExecutor {
         use crate::schema::users::dsl::*;
 
         let mut conn = self.0.get()?;
-        diesel::update(users.find(msg.user_id))
+        diesel::update(
+            users
+                .filter(id.eq(msg.user_id))
+                .filter(two_factor_secret.is_null()),
+        )
             .set(two_factor_secret.eq(Some(msg.secret)))
-            .execute(&mut conn)?;
+            .execute(&mut conn)?; // will only update if NULL
 
         Ok(())
     }
 }
+
 
 impl Message for UpdateUserRecoveryCodes {
     type Result = Result<(),DbError>;

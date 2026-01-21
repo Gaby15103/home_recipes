@@ -1,4 +1,5 @@
 ﻿use uuid::Uuid;
+use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RecipeAnalyticsResponse {

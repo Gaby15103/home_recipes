@@ -1,13 +1,19 @@
-﻿use base32::Alphabet;
+﻿use base32::{encode, Alphabet};
 use totp_lite::{totp_custom, Sha1};
 use chrono::Utc;
 use diesel::prelude::*;
+use rand::random;
 use serde_json::Value;
 use uuid::Uuid;
 
 use crate::prelude::*;
 use crate::schema::users::dsl::*;
 use crate::models::User;
+
+pub fn generate_new_secret() -> String {
+    let secret_bytes: [u8; 20] = random();
+    encode(Alphabet::RFC4648 { padding: false }, &secret_bytes)
+}
 
 /// Verify a TOTP code against the user's secret
 pub fn verify_totp(secret: &str, code: &str) -> Result<bool, Error> {

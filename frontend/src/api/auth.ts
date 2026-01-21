@@ -17,13 +17,13 @@ export function registerUser(
 }
 export function confirmEmail(token: string) {
     return api<{ success: boolean; message: string }>(
-        AuthRoutes.confirmEmail(), // <-- make sure this exists in your routes.ts
+        AuthRoutes.confirmEmail() + `?token=${encodeURIComponent(token)}`,
         {
             method: "POST",
-            data: { token },
         }
     );
 }
+
 
 export function logout() {
     return api(AuthRoutes.logout(), { method: "POST" });

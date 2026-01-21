@@ -2,7 +2,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { User } from '@/models/User';
 import { computed } from 'vue';
-import {useInitials} from "@/Composables/useInitials.ts";
+import {useInitials} from "@/composables/useInitials.ts";
 
 interface Props {
   user: User;

@@ -90,7 +90,7 @@ pub fn create_or_associate_tags(
 pub fn fetch_tags_for_recipe(
     conn: &mut PgConnection,
     recipe_id: Uuid,
-) -> Result<Vec<TagResponse>, diesel::result::Error> {
+) -> Result<Vec<TagResponse>, Error> {
     let tags_list: Vec<Tag> = tags::table
         .inner_join(recipe_tags::table)
         .filter(recipe_tags::recipe_id.eq(recipe_id))

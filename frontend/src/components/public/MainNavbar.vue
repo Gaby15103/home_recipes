@@ -99,7 +99,7 @@ async function logout() {
               </RouterLink>
             </DropdownMenuItem>
 
-            <DropdownMenuItem>
+            <DropdownMenuItem as-child v-if="authStore.hasRole('ADMIN')||authStore.hasRole('MODERATOR')">
             <RouterLink :to="ROUTES.ADMIN.DASHBOARD">
               Admin Dashboard
             </RouterLink>

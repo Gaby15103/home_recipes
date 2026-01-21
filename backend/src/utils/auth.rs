@@ -28,15 +28,21 @@ pub struct SessionAuth {
 pub async fn authenticate(state: &Data<AppState>, req: &HttpRequest) -> Result<Auth, Error> {
     let cookie = req
         .cookie("session_id")
-        .ok_or_else(|| Error::Unauthorized(json!({"error": "No session"})))?;
+        .ok_or_else(|| Error::Unauthorized(serde_json::json!({
+            "error": "No session"
+        })));
 
-    let session_id = Uuid::parse_str(cookie.value())
-        .map_err(|_| Error::Unauthorized(json!({"error": "Invalid session"})))?;
+    let session_id = Uuid::parse_str(cookie?.value())
+        .map_err(|_| Error::Unauthorized(serde_json::json!({
+            "error": "Invalid session"
+        })));
 
-    let auth_data = state.db.send(GetSessionAuth { session_id }).await??;
+    let auth_data = state.db.send(GetSessionAuth { session_id: session_id? }).await??;
 
     if auth_data.session_id == Uuid::nil() {
-        return Err(Error::Unauthorized(json!({"error": "Session not found"})));
+        return Err(Error::Unauthorized(serde_json::json!({
+            "error": "Session not found"
+        })));
     }
 
     Ok(Auth {
