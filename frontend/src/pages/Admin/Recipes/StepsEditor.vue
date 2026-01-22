@@ -7,7 +7,6 @@ import type {
   StepGroupCreate,
   StepImage
 } from "@/models/RecipeCreate"
-import { defineProps, defineEmits } from "vue"
 
 const props = defineProps<{
   modelValue: StepGroupCreate[]

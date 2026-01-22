@@ -212,22 +212,4 @@ diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(user_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    email_verification_tokens,
-    favorites,
-    ingredient_groups,
-    ingredients,
-    recipe_analytics,
-    recipe_comments,
-    recipe_ingredients,
-    recipe_ratings,
-    recipe_tags,
-    recipe_versions,
-    recipes,
-    roles,
-    sessions,
-    step_groups,
-    steps,
-    tags,
-    user_roles,
-    users,
-);
+    email_verification_tokens,favorites,ingredient_groups,ingredients,recipe_analytics,recipe_comments,recipe_ingredients,recipe_ratings,recipe_tags,recipe_versions,recipes,roles,sessions,step_groups,steps,tags,user_roles,users,);

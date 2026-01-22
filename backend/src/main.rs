@@ -19,17 +19,21 @@ mod prelude;
 mod schema;
 mod utils;
 mod dto;
+mod config;
 
 use std::env;
+use config::Config;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenvy::dotenv().ok();
-
-    if env::var("RUST_LOG").ok().is_none() {
-        unsafe { env::set_var("RUST_LOG", "conduit=debug,actix_web=info"); }
+    if std::env::var("RUST_LOG").is_err() {
+        unsafe {
+            std::env::set_var("RUST_LOG", "conduit=debug,actix_web=info");
+        }
     }
     env_logger::init();
 
-    app::start().await
+    let config = Config::from_env();
+
+    app::start(config.unwrap()).await
 }

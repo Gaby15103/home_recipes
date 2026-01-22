@@ -2,6 +2,19 @@ FROM rust:latest
 
 WORKDIR /usr/src/app
 
-RUN cargo install cargo-watch
+# System deps for Diesel + Postgres
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
+# Rust dev tools
+RUN cargo install cargo-watch
+RUN cargo install diesel_cli --no-default-features --features postgres
+
+# Entrypoint
+COPY docker/backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["cargo", "watch", "-x", "run"]

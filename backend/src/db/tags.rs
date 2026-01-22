@@ -91,14 +91,18 @@ pub fn fetch_tags_for_recipe(
     conn: &mut PgConnection,
     recipe_id: Uuid,
 ) -> Result<Vec<TagResponse>, Error> {
+    use crate::schema::{recipe_tags, tags};
+
+    // inner_join is fine; will return empty Vec if no tags exist
     let tags_list: Vec<Tag> = tags::table
-        .inner_join(recipe_tags::table)
+        .inner_join(recipe_tags::table.on(recipe_tags::tag_id.eq(tags::id)))
         .filter(recipe_tags::recipe_id.eq(recipe_id))
         .select(tags::all_columns)
         .load(conn)?;
 
     Ok(tags_list.into_iter().map(TagResponse::from).collect())
 }
+
 
 
 impl Message for UpdateTagOuter {

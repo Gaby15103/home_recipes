@@ -11,14 +11,27 @@ import {Button} from "@/components/ui/button";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Switch} from "@/components/ui/switch";
 import {Label} from '@/components/ui/label'
+import type {Recipe} from "@/models/Recipe.ts";
 
 const route = useRoute();
 const highlighted = ref<string | null>(null);
 const showStepImages = ref(true);
 
-const {recipe, loading, error, fetchRecipe} = getRecipeById(route.params.id as string);
+const recipe = ref<Recipe | null>(null);
+const loading = ref(false);
+const error = ref<string | null>(null);
 
-onMounted(fetchRecipe);
+onMounted(async () => {
+  loading.value = true;
+  try {
+    recipe.value = await getRecipeById(route.params.id as string);
+  } catch (err: any) {
+    error.value = err.message || "Failed to fetch recipe";
+  } finally {
+    loading.value = false;
+  }
+});
+
 
 watch(
     () => route.hash,

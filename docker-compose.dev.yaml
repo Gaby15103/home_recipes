@@ -1,25 +1,26 @@
 services:
   postgres:
     image: postgres:16
-    container_name: home_recipes_postgres
     env_file:
-      - .env.docker
+      - env/backend.docker.env
     ports:
-      - "5432:5432"   # optional but useful for local psql
+      - "5432:5432"
     volumes:
       - postgresDb:/var/lib/postgresql/data
     networks:
       - home-recipes-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
 
   redis:
     image: redis:7
-    container_name: home_recipes_redis
     networks:
       - home-recipes-net
 
   mailhog:
     image: mailhog/mailhog
-    container_name: home_recipes_mailhog
     ports:
       - "1025:1025"
       - "8025:8025"
@@ -27,20 +28,22 @@ services:
       - home-recipes-net
 
   backend:
-    container_name: home_recipes_backend_dev
     build:
       context: .
       dockerfile: docker/backend/Dockerfile.dev
     env_file:
-      - .env.docker
+      - env/backend.docker.env
     ports:
-      - "8080:8080"
+      - "8088:8088"
     volumes:
       - ./backend:/usr/src/app
     depends_on:
-      - postgres
-      - redis
-      - mailhog
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailhog:
+        condition: service_started
     networks:
       - home-recipes-net
 

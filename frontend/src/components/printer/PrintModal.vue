@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineExpose, defineProps } from "vue";
+import { ref } from "vue";
 import { printRecipe } from "@/utils/RecipePrinter";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";

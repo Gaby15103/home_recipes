@@ -113,6 +113,7 @@ pub fn fetch_step_groups_for_recipe(
     recipe_id: Uuid,
 ) -> Result<Vec<StepGroupResponse>, diesel::result::Error> {
 
+    // Fetch all step groups for this recipe
     let groups: Vec<StepGroup> = step_groups::table
         .filter(step_groups::recipe_id.eq(recipe_id))
         .order(step_groups::position.asc())
@@ -121,12 +122,14 @@ pub fn fetch_step_groups_for_recipe(
     let mut result = Vec::with_capacity(groups.len());
 
     for group in groups {
+        // Fetch steps for this group
         let steps_list: Vec<Step> = steps::table
             .filter(steps::step_group_id.eq(group.id))
             .order(steps::position.asc())
             .load(conn)?;
 
-        let steps = steps_list.into_iter().map(StepResponse::from).collect();
+        // Map steps to response, will be empty if no steps exist
+        let steps = steps_list.into_iter().map(StepResponse::from).collect::<Vec<_>>();
 
         result.push(StepGroupResponse {
             id: group.id,
@@ -138,6 +141,7 @@ pub fn fetch_step_groups_for_recipe(
 
     Ok(result)
 }
+
 
 
 pub fn sync_step_groups(

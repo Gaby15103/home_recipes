@@ -102,20 +102,20 @@ impl fmt::Display for IngredientUnit {
     }
 }
 impl FromStr for IngredientUnit {
-
     type Err = ();
 
     fn from_str(input: &str) -> Result<IngredientUnit, Self::Err> {
-        match input {
-            "Gram"  => Ok(IngredientUnit::Gram),
-            "Kilogram"  => Ok(IngredientUnit::Kilogram),
-            "Milliliter"  => Ok(IngredientUnit::Milliliter),
-            "Liter"  => Ok(IngredientUnit::Liter),
-            "Teaspoon"  => Ok(IngredientUnit::Teaspoon),
-            "Tablespoon"  => Ok(IngredientUnit::Tablespoon),
-            "Cup"  => Ok(IngredientUnit::Cup),
-            "Piece"  => Ok(IngredientUnit::Piece),
-            _      => Err(()),
+        match input.trim().to_lowercase().as_str() {
+            "g" | "gram" | "grams" => Ok(IngredientUnit::Gram),
+            "kg" | "kilogram" | "kilograms" => Ok(IngredientUnit::Kilogram),
+            "ml" | "milliliter" | "milliliters" => Ok(IngredientUnit::Milliliter),
+            "l" | "liter" | "liters" => Ok(IngredientUnit::Liter),
+            "tsp" | "teaspoon" | "teaspoons" => Ok(IngredientUnit::Teaspoon),
+            "tbsp" | "tablespoon" | "tablespoons" => Ok(IngredientUnit::Tablespoon),
+            "cup" | "cups" => Ok(IngredientUnit::Cup),
+            "pc" | "piece" | "pieces" => Ok(IngredientUnit::Piece),
+            "" => Ok(IngredientUnit::Piece), // fallback for empty strings
+            _ => Err(()),
         }
     }
 }

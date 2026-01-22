@@ -6,11 +6,11 @@
 -- ----------------------
 -- USERS
 -- ----------------------
-INSERT INTO users (email, username, first_name, last_name, password_hash, email_verified)
+INSERT INTO users (email, username, first_name, last_name, password_hash, avatar_url, email_verified)
 VALUES
-    ('user@example.com', 'user1', 'User', 'One', 'passwordhash', true),
-    ('admin@example.com', 'admin1', 'Admin', 'One', 'passwordhash', true),
-    ('mod@example.com', 'mod1', 'Mod', 'One', 'passwordhash', true)
+    ('user@example.com', 'user1', 'User', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw',"/assets/users/default.png", true),
+    ('admin@example.com', 'admin1', 'Admin', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw',"/assets/users/default.png", true),
+    ('mod@example.com', 'mod1', 'Mod', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw',"/assets/users/default.png", true)
 RETURNING id, username;
 
 -- ----------------------
@@ -67,7 +67,7 @@ SELECT r.id, 'Main Ingredients', 1 FROM recipes r;
 -- ----------------------
 -- Simple example: first ingredient for each recipe
 INSERT INTO recipe_ingredients (ingredient_group_id, ingredient_id, quantity, unit, position)
-SELECT ig.id, i.id, 1, 'unit', 1
+SELECT ig.id, i.id, 1, 'gram', 1
 FROM ingredient_groups ig
          JOIN ingredients i ON i.name='Flour'
 WHERE ig.title='Main Ingredients';
