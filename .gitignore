@@ -17,6 +17,7 @@ lerna-debug.log*
 # Env files (OPTIONAL)
 # Uncomment if you store secrets here
 .env
+env/*.env
 
 
 ###########################
