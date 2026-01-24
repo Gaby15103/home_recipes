@@ -6,6 +6,8 @@ WORKDIR /usr/src/app
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     pkg-config \
+    lldb \
+    gdb gdbserver lldb \
     && rm -rf /var/lib/apt/lists/*
 
 # Rust dev tools
@@ -17,4 +19,4 @@ COPY docker/backend/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["cargo", "watch", "-x", "run"]
+CMD ["cargo", "watch", "-x", "run", "--", "--nocapture"]

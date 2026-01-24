@@ -34,9 +34,14 @@ services:
     env_file:
       - env/backend.docker.env
     ports:
-      - "8088:8088"
+      - "8088:8088"   # backend
+      - "2345:2345"   # debug port for gdbserver
     volumes:
       - ./backend:/usr/src/app
+      - ./docker/backend/entrypoint.sh:/entrypoint.sh
+      - ./backend/target:/usr/src/app/target
+    command: >
+      bash -c "cargo build && gdbserver :2345 target/debug/backend"
     depends_on:
       postgres:
         condition: service_healthy

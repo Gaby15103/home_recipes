@@ -31,15 +31,16 @@ export interface Ingredient {
 }
 
 //TODO add pinch, a can, unique like 1 oignon or an other where you put with our without mesure
+// @ts-ignore
 export enum IngredientUnit {
-    Gram = "Gram",
-    Kilogram = "Kilogram",
-    Milliliter = "Milliliter",
-    Liter = "Liter",
-    Piece = "Piece",
-    Teaspoon = "Teaspoon",
-    Tablespoon = "Tablespoon",
-    Cup = "Cup",
+    Gram = "gram",
+    Kilogram = "kilogram",
+    Milliliter = "milliliter",
+    Liter = "liter",
+    Piece = "piece",
+    Teaspoon = "teaspoon",
+    Tablespoon = "tablespoon",
+    Cup = "cup",
 }
 export interface StepGroup {
     id: string;
@@ -92,4 +93,19 @@ export interface PaginatedRecipes {
     total: number
     page: number
     perPage: number
+}
+export interface RecipeComment {
+    id: string;
+    user_id: string;
+    username: string;
+    content: string;
+    created_at: string; // ISO string
+    parent_id?: string | null; // for tree comments
+    children: RecipeComment[];
+}
+
+export interface RecipeRating {
+    average: number
+    count: number
+    user_rating: number | null
 }

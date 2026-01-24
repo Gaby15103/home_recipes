@@ -8,9 +8,9 @@
 -- ----------------------
 INSERT INTO users (email, username, first_name, last_name, password_hash, avatar_url, email_verified)
 VALUES
-    ('user@example.com', 'user1', 'User', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw',"/assets/users/default.png", true),
-    ('admin@example.com', 'admin1', 'Admin', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw',"/assets/users/default.png", true),
-    ('mod@example.com', 'mod1', 'Mod', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw',"/assets/users/default.png", true)
+    ('user@example.com', 'user1', 'User', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw','/assets/users/default.png', true),
+    ('admin@example.com', 'admin1', 'Admin', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw','/assets/users/default.png', true),
+    ('mod@example.com', 'mod1', 'Mod', 'One', '$argon2$ver=2,mem=12,norm=nfkc,pmin=8,pmax=128,lanes=4,len-calc=chars,passes=3,len=128,xhmac=none$+xbxduPocxYtD71CNvNrsQ$qt6nvaN65PMqtVYAatAwEZYrEpkabKkHwISf9Yd91dsn8FKmTNlQEvzwKl314F64ikSlqZzbqBjxYLFDXbFItX5SKgddl7S3vIlDQv6gBQQVCl1tC1SWN4yzqDMKMq1o27Y8Pl5ZGR9Ak2BAH45VWeqF+UAmV8ytoPeara/ATGw','/assets/users/default.png', true)
 RETURNING id, username;
 
 -- ----------------------

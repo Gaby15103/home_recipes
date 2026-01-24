@@ -41,6 +41,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import NavLink from "@/components/NavLink.vue";
+import {ROUTES} from "@/router/routes.ts";
 
 const props = defineProps<{
   recipes: Recipe[]
@@ -247,8 +249,16 @@ const table = useVueTable({
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem @click="copyId(recipe.id)">Copy recipe ID</DropdownMenuItem>
         <DropdownMenuSeparator/>
-        <DropdownMenuItem>View recipe</DropdownMenuItem>
-        <DropdownMenuItem>Edit recipe</DropdownMenuItem>
+        <DropdownMenuItem>
+          <RouterLink :to="ROUTES.ADMIN.RECIPE.VIEW(recipe.id)">
+            View recipe
+          </RouterLink>
+          </DropdownMenuItem>
+        <DropdownMenuItem>
+          <RouterLink :to="ROUTES.ADMIN.RECIPE.EDIT(recipe.id)">
+            Edit recipe
+          </RouterLink>
+         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   </DefineTemplate>

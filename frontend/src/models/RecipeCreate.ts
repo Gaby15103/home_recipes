@@ -58,3 +58,9 @@ export interface RecipeImport extends Omit<
     RecipeCreate,
     never
 > {}
+export interface RecipeCommentCreate {
+    recipe_id: string;
+    user_id: string | null;
+    parent_id?: string | null;
+    content: string;
+}

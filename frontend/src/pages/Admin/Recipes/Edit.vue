@@ -1,50 +1,59 @@
 <script setup lang="ts">
-import {onMounted, ref, watch} from "vue"
-import {useRoute, useRouter} from "vue-router"
-import {Button} from "@/components/ui/button"
-import {Input} from "@/components/ui/input"
-import {Textarea} from "@/components/ui/textarea"
-import {Switch} from "@/components/ui/switch"
-import {Label} from "@/components/ui/label"
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
-import {Separator} from "@/components/ui/separator"
+import { onMounted, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 
 import IngredientsEditor from "@/pages/Admin/Recipes/IngredientsEditor.vue"
 import StepsEditor from "@/pages/Admin/Recipes/StepsEditor.vue"
 import TagsMultiSelect from "@/components/Recipe/TagsMultiSelect.vue"
 import JsonImporter from "@/components/json/JsonImporter.vue"
 
-import type {StepImage} from "@/models/RecipeCreate"
-import {getRecipeById, updateRecipe} from "@/api/recipe"
+import type { StepImage } from "@/models/RecipeCreate"
+import type { RecipeEdit } from "@/models/RecipeEdit"
 
+import { getRecipeById, updateRecipe } from "@/api/recipe"
+import { recipeToEdit, editToUpdatePayload } from "@/mappers/recipe.mapper"
+import {ROUTES} from "@/router/routes.ts";
 
 const apiUrl = import.meta.env.VITE_STATIC_URL
 const route = useRoute()
 const router = useRouter()
 
-const recipeId = route.params.id as string
+const recipe = ref<RecipeEdit | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
-// API composable
-const {
-  recipe,
-  loading,
-  error,
-  fetchRecipe
-} = getRecipeById(recipeId)
+/* ========= LOAD ========= */
 
-onMounted(fetchRecipe)
+onMounted(async () => {
+  loading.value = true
+  try {
+    const apiRecipe = await getRecipeById(route.params.id as string)
+    recipe.value = recipeToEdit(apiRecipe)
+  } catch (err: any) {
+    error.value = err.message ?? "Failed to fetch recipe"
+  } finally {
+    loading.value = false
+  }
+})
 
-// Images
+/* ========= IMAGES ========= */
+
 const stepImages = ref<StepImage[]>([])
-
 const mainImageFile = ref<File | null>(null)
 const mainImagePreview = ref<string | null>(null)
 
-// When recipe loads → initialize preview if image exists
-watch(recipe, (r) => {
+watch(recipe, r => {
   if (!r) return
-  if (r.image_url) {
-    mainImagePreview.value = apiUrl + r.image_url
+  if ((r as any).image_url) {
+    mainImagePreview.value = apiUrl + (r as any).image_url
   }
 })
 
@@ -59,6 +68,8 @@ function onMainImageChange(e: Event) {
   mainImagePreview.value = file ? URL.createObjectURL(file) : null
 }
 
+/* ========= SUBMIT ========= */
+
 const submitting = ref(false)
 
 async function submit() {
@@ -66,14 +77,15 @@ async function submit() {
 
   submitting.value = true
   try {
+
     const updated = await updateRecipe(
-        recipeId,
+        recipe.value.id,
         recipe.value,
         stepImages.value,
         mainImageFile.value
     )
 
-    await router.push("/recipe/" + updated.id)
+    await router.push(ROUTES.ADMIN.RECIPE.VIEW(updated.id))
   } catch (e) {
     console.error(e)
   } finally {
@@ -81,6 +93,7 @@ async function submit() {
   }
 }
 </script>
+
 
 <template>
   <div class="max-w-4xl mx-auto p-6 space-y-6">

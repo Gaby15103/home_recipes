@@ -23,7 +23,6 @@ mod config;
 
 use std::env;
 use config::Config;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     if std::env::var("RUST_LOG").is_err() {

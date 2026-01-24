@@ -8,6 +8,7 @@ import Login from "@/pages/auth/Login.vue";
 import Register from "@/pages/auth/Register.vue";
 import Recipes from "@/pages/Recipes.vue";
 import Recipe from "@/pages/Recipe.vue";
+import AdminRecipe from "@/pages/Admin/Recipes/Recipe.vue"
 
 // Admin Pages
 import AdminDashBoard from "@/pages/Admin/AdminDashBoard.vue";
@@ -88,6 +89,17 @@ const routes = [
             {
                 path: "recipe/edit/:id",
                 component: Edit,
+                meta: {
+                    breadcrumb: [
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "Edit"},
+                    ],
+                },
+            },
+            {
+                path: "recipe/:id",
+                component: AdminRecipe,
                 meta: {
                     breadcrumb: [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},

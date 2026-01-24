@@ -278,9 +278,10 @@ pub async fn favorite(
 }
 
 pub async fn get_favorites(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
+    println!("fuck you");
     let auth = authenticate(&state, &req).await?;
 
     let recipes = state
@@ -293,6 +294,7 @@ pub async fn get_favorites(
 
     Ok(HttpResponse::Ok().json(recipes))
 }
+
 
 pub async fn rate(
     state: Data<AppState>,
@@ -364,7 +366,7 @@ pub async fn add_comment(
 
     let mut cmd = body.into_inner();
     cmd.recipe_id = path.into_inner();
-    cmd.user_id = auth.user.id;
+    cmd.user_id = Option::from(auth.user.id);
 
     let comment = state.db.send(cmd).await??;
     Ok(HttpResponse::Created().json(comment))

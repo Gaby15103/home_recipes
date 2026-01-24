@@ -15,6 +15,7 @@
             BASE: "/admin/recipe",
             LIST: "/admin/recipe/list",
             CREATE: "/admin/recipe/create",
+            VIEW: (id: string | number) =>  `/admin/recipe/${id}`,
             EDIT: (id: string | number) => `/admin/recipe/edit/${id}`,
             CATEGORIES: "/admin/recipe/categories",
         },

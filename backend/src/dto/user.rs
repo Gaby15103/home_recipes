@@ -117,6 +117,7 @@ pub struct UserResponseOuter {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct UserResponseInner {
+    pub id: Uuid,
     pub email: String,
     pub username: String,
     pub first_name: String,
@@ -131,6 +132,7 @@ impl UserResponse {
     pub fn from_user_and_roles(user: &User, roles: Vec<Role>) -> Self {
         UserResponse {
             user: UserResponseInner {
+                id: user.id.clone(),
                 email: user.email.clone(),
                 username: user.username.clone(),
                 first_name: user.first_name.clone(),
@@ -146,6 +148,7 @@ impl UserResponse {
     pub fn from_auth(auth: Auth) -> Self {
         UserResponse {
             user: UserResponseInner {
+                id: auth.user.id,
                 email: auth.user.email,
                 username: auth.user.username,
                 first_name: auth.user.first_name,

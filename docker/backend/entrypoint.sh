@@ -14,6 +14,5 @@ if [ "$(diesel migration list | grep 2026_01_21_add_seeds | wc -l)" -eq 0 ]; the
   diesel migration run
 fi
 
-
-echo "?? Starting backend..."
+echo "🚀 Starting backend..."
 exec "$@"

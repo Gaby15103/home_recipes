@@ -23,7 +23,7 @@ This project does not rely on `.env` at runtime.
 ```
 - Dev (Windows):
 ```bash 
-docker-compose -f docker-compose.dev.yaml up
+docker compose -f docker-compose.dev.yaml up --build
 ```
 - Prod: 
 ```bash 
@@ -32,3 +32,7 @@ docker-compose -f docker-compose.prod.yaml up
 ### Frontend
 - Dev: `vite --mode dev`
 - Prod: `vite build --mode prod`
+
+
+to start debuggin in the container use gdb:
+gdbserver :2345 target/debug/backend

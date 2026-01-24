@@ -13,6 +13,14 @@ export async function api<T>(url: string, options: AxiosRequestConfig = {}): Pro
         const response = await apiClient.request<T>({
             url,
             ...options,
+            headers: {
+                // Keep the default Content-Type from apiClient
+                ...apiClient.defaults.headers.common,
+                // Spread the method-specific defaults if they exist
+                ...(apiClient.defaults.headers[options.method?.toLowerCase() || 'get'] as any),
+                // Spread any headers passed in the options to allow overriding
+                ...options.headers,
+            },
         });
         return response.data;
     } catch (error: any) {

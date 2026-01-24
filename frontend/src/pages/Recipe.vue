@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import {ref, onMounted, watch, nextTick, useTemplateRef} from "vue";
 import {useRoute} from "vue-router";
-import {getRecipeById} from "@/api/recipe";
+import {getRecipeById, getComments, addComment, favoriteRecipe, getFavorites, getRating} from "@/api/recipe";
 import PrintModal from "@/components/printer/PrintModal.vue";
 import {Separator} from "@/components/ui/separator";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
@@ -11,7 +11,12 @@ import {Button} from "@/components/ui/button";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Switch} from "@/components/ui/switch";
 import {Label} from '@/components/ui/label'
-import type {Recipe} from "@/models/Recipe.ts";
+import type {Recipe, RecipeComment, RecipeRating} from "@/models/Recipe.ts";
+import type {RecipeCommentCreate} from "@/models/RecipeCreate.ts";
+import {useAuthStore} from "@/stores/auth.ts";
+import CommentThread from "@/components/TextArea/CommentEditor/CommentThread.vue";
+
+const authStore = useAuthStore();
 
 const route = useRoute();
 const highlighted = ref<string | null>(null);
@@ -21,17 +26,41 @@ const recipe = ref<Recipe | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
+// Comments and rating/favorites state
+const comments = ref<RecipeComment[]>([]);
+const newComment = ref<RecipeCommentCreate>({
+  recipe_id: "",
+  content: "",
+  user_id: null,
+  parent_id: null,
+});
+const rating = ref<RecipeRating | null>(null)
+const favorited = ref(false);
+const favoriteLoading = ref(false);
+
 onMounted(async () => {
   loading.value = true;
   try {
     recipe.value = await getRecipeById(route.params.id as string);
+
+    if (recipe.value) {
+      newComment.value.recipe_id = recipe.value.id;
+      // Fetch comments
+      comments.value = await getComments(recipe.value.id);
+
+      // Fetch rating
+      rating.value = await getRating(recipe.value.id);
+
+      // Fetch favorite status
+      const favs = await getFavorites();
+      favorited.value = favs.some(f => f.id === recipe.value!.id);
+    }
   } catch (err: any) {
     error.value = err.message || "Failed to fetch recipe";
   } finally {
     loading.value = false;
   }
 });
-
 
 watch(
     () => route.hash,
@@ -60,6 +89,33 @@ function shareRecipe() {
   navigator.clipboard.writeText(window.location.href);
   alert("Recipe URL copied to clipboard!");
 }
+
+// Toggle favorite
+async function toggleFavorite() {
+  if (!recipe.value) return;
+  favoriteLoading.value = true;
+  try {
+    await favoriteRecipe(recipe.value.id);
+    favorited.value = !favorited.value;
+  } finally {
+    favoriteLoading.value = false;
+  }
+}
+
+// Post comment
+async function postComment() {
+  if (!recipe.value || !newComment.value.content.trim() || !authStore.user) return;
+  newComment.value.user_id = authStore.user.id;
+  console.log("fuck you")
+  const added = await addComment(recipe.value.id, newComment.value);
+  comments.value.push(added);
+  newComment.value = {
+    recipe_id: recipe.value.id,
+    content: "",
+    user_id: null,
+    parent_id: null,
+  };
+}
 </script>
 
 <template>
@@ -78,7 +134,7 @@ function shareRecipe() {
       <!-- Header -->
       <Card class="shadow-md">
         <CardContent class="flex flex-col md:flex-row gap-6">
-          <div class="flex-shrink-0 md:w-1/2 rounded-xl overflow-hidden border dark:border-gray-700">
+          <div class="shrink-0 md:w-1/2 rounded-xl overflow-hidden border dark:border-gray-700">
             <img
                 :src="$apiUrl + recipe.image_url"
                 :alt="recipe.title"
@@ -90,12 +146,17 @@ function shareRecipe() {
               <h1 class="text-4xl font-serif font-bold leading-tight">{{ recipe.title }}</h1>
 
               <!-- Rating -->
-              <div class="flex items-center gap-2">
+              <div v-if="rating" class="flex items-center gap-2">
                 <template v-for="i in 5" :key="i">
-                  <span class="text-yellow-400" v-html="i <= 3 ? '★' : '☆'"/>
+                  <span class="text-yellow-400">
+                    {{ i <= Math.round(rating.average) ? "★" : "☆" }}
+                  </span>
                 </template>
-                <span class="text-gray-500 dark:text-gray-400">(3)</span>
+                <span class="text-gray-500 dark:text-gray-400">
+                  ({{ rating.count }})
+                </span>
               </div>
+
 
               <!-- Times & Servings -->
               <ul class="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-300">
@@ -125,8 +186,10 @@ function shareRecipe() {
 
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-3 mt-4">
-              <Button>❤️ Add to Favorites</Button>
-              <PrintModal ref="printModal" :recipe="recipe" />
+              <Button @click="toggleFavorite" :disabled="favoriteLoading">
+                {{ favorited ? '💖 Favorited' : '🤍 Add to Favorites' }}
+              </Button>
+              <PrintModal ref="printModal" :recipe="recipe"/>
               <Button @click="openPrintModal">🖨 Print</Button>
               <Button @click="shareRecipe">🔗 Share</Button>
             </div>
@@ -164,12 +227,12 @@ function shareRecipe() {
           </template>
         </CardContent>
 
-        <Separator class="max-w-[95%] mx-auto min-h-0.5 rounded-xl" />
+        <Separator class="max-w-[95%] mx-auto min-h-0.5 rounded-xl"/>
 
         <CardHeader class="flex justify-between">
           <CardTitle class="text-2xl">Preparations</CardTitle>
           <div class="grid grid-cols-1 gap-6 justify-items-end">
-            <Label for="showStepImagesId" >Show Step Images:</Label>
+            <Label for="showStepImagesId">Show Step Images:</Label>
             <Switch if="showStepImagesId" v-model="showStepImages"/>
           </div>
         </CardHeader>
@@ -201,35 +264,27 @@ function shareRecipe() {
             </ul>
           </template>
         </CardContent>
-
-
       </Card>
 
       <Separator/>
-
-      <!-- Comments Section -->
       <Card class="shadow-md">
         <CardHeader>
           <CardTitle>Comments</CardTitle>
         </CardHeader>
         <CardContent class="space-y-4">
-          <!-- Comment form -->
           <div class="space-y-2">
-            <textarea
-                placeholder="Write a comment..."
-                class="w-full border rounded-lg p-2 text-gray-800 dark:text-gray-200 dark:bg-gray-800 border-gray-300 dark:border-gray-700"
-            ></textarea>
-            <Button class="shadcn-button shadcn-button-primary">Post Comment</Button>
+        <textarea
+            v-model="newComment.content"
+            placeholder="Comment on this recipe..."
+            class="w-full border rounded-lg p-2"
+        />
+            <Button @click="postComment">Post Comment</Button>
           </div>
-
-          <!-- Placeholder for comments -->
-          <div class="space-y-2">
-            <div v-for="i in 3" :key="i"
-                 class="p-3 border rounded-lg bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700">
-              <p class="font-semibold text-gray-800 dark:text-gray-200">User {{ i }}</p>
-              <p class="text-gray-700 dark:text-gray-300">This is a sample comment. Comments will appear here once
-                implemented.</p>
-            </div>
+          <div class="space-y-4">
+            <CommentThread
+                :comments="comments"
+                :recipe-id="recipe!.id"
+            />
           </div>
         </CardContent>
       </Card>

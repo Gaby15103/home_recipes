@@ -179,6 +179,7 @@ fn recipe_routes() -> actix_web::Scope {
         .route("", web::get().to(recipes::list))
         .route("/by_page", web::get().to(recipes::get_by_page))
         .route("", web::post().to(recipes::create))
+        .route("/favorites", web::get().to(recipes::get_favorites))
         // single recipe
         .route("/{id}", web::get().to(recipes::get))
         .route("/{id}", web::put().to(recipes::update))
@@ -188,7 +189,6 @@ fn recipe_routes() -> actix_web::Scope {
         .route("/{id}/views", web::post().to(recipes::track_view))
         // favorites
         .route("/{id}/favorite", web::post().to(recipes::favorite))
-        .route("/favorites", web::get().to(recipes::get_favorites))
         // ratings
         .route("/{id}/rating", web::post().to(recipes::rate))
         .route("/{id}/rating", web::delete().to(recipes::unrate))

@@ -6,6 +6,7 @@ use validator::Validate;
 pub struct RecipeCommentResponse {
     pub id: Uuid,
     pub user_id: Uuid,
+    pub username: String,
     pub content: String,
     pub created_at: DateTime<chrono::Utc>,
     pub edited_at: Option<DateTime<chrono::Utc>>,
@@ -14,7 +15,7 @@ pub struct RecipeCommentResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateComment {
     pub recipe_id: Uuid,
-    pub user_id: Uuid,
+    pub user_id: Option<Uuid>,
     pub parent_id: Option<Uuid>,
     pub content: String,
 }

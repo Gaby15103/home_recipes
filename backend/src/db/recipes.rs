@@ -10,13 +10,15 @@ use crate::models::{NewFavorite, NewRecipe, NewRecipeAnalytics, NewRecipeComment
 use crate::prelude::*;
 use crate::utils::image_upload::upload_recipe_image;
 use actix::prelude::*;
-use actix_web::error::ErrorNotFound;
+use actix_web::error::{ErrorInternalServerError, ErrorNotFound};
 use chrono::Utc;
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::sql_types::{Double, Nullable};
 use uuid::Uuid;
 use crate::error::DbError;
+use crate::schema::users;
+use crate::schema::users::username;
 
 impl Message for GetRecipeById {
     type Result = Result<RecipeResponse>;
@@ -531,32 +533,39 @@ impl Handler<SetRecipeRating> for DbExecutor {
 }
 
 impl Message for GetRecipeRating {
-    type Result = Result<RecipeRatingResponse>;
+    type Result = Result<RecipeRatingResponse, DbError>;
 }
 
 impl Handler<GetRecipeRating> for DbExecutor {
-    type Result = Result<RecipeRatingResponse>;
+    type Result = Result<RecipeRatingResponse, DbError>;
 
     fn handle(&mut self, msg: GetRecipeRating, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipe_ratings::dsl::*;
+        use diesel::dsl::sql;
+        use diesel::sql_types::{Double, Nullable};
 
-        let mut conn = self.0.get()?;
+        let mut conn = self.0.get().map_err(DbError::from)?;
 
-        let (avg, count): (Option<f64>, i64) = recipe_ratings
+        let result = recipe_ratings
             .filter(recipe_id.eq(msg.recipe_id))
-            .select((
-                sql::<Nullable<Double>>("AVG(rating)"),
-                diesel::dsl::count_star(),
-            ))
-            .first(&mut conn)?;
+            .select((sql::<Nullable<Double>>("AVG(rating)::float8"), diesel::dsl::count_star()))
+            .first::<(Option<f64>, i64)>(&mut conn)
+            .optional()
+            .map_err(DbError::from)?;
 
+        let (avg, count) = result.unwrap_or((Some(0.0), 0));
+
+
+
+        // User-specific rating
         let user_rating = if let Some(uid) = msg.user_id {
             recipe_ratings
                 .filter(recipe_id.eq(msg.recipe_id))
                 .filter(user_id.eq(uid))
                 .select(rating)
-                .first(&mut conn)
-                .optional()?
+                .first::<i32>(&mut conn)
+                .optional()
+                .map_err(DbError::from)?
         } else {
             None
         };
@@ -568,6 +577,8 @@ impl Handler<GetRecipeRating> for DbExecutor {
         })
     }
 }
+
+
 
 impl Message for UnsetRecipeRating {
     type Result = Result<()>;
@@ -594,29 +605,39 @@ impl Handler<UnsetRecipeRating> for DbExecutor {
 
 
 impl Message for CreateComment {
-    type Result = Result<RecipeCommentResponse>;
+    type Result = Result<RecipeCommentResponse, DbError>;
 }
 
 impl Handler<CreateComment> for DbExecutor {
-    type Result = Result<RecipeCommentResponse>;
+    type Result = Result<RecipeCommentResponse, DbError>;
 
     fn handle(&mut self, msg: CreateComment, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipe_comments::dsl::*;
+        use crate::schema::users::dsl as users_dsl;
+        use crate::schema::users::dsl::username as username_dsl;
 
         let mut conn = self.0.get()?;
 
+        // Insert comment
         let comment = diesel::insert_into(recipe_comments)
             .values(NewRecipeComment {
                 recipe_id: msg.recipe_id,
-                user_id: msg.user_id,
+                user_id: msg.user_id.unwrap(),
                 parent_id: msg.parent_id,
                 content: msg.content,
             })
             .get_result::<RecipeComment>(&mut conn)?;
 
+        // Fetch username
+        let other_username: String = users_dsl::users
+            .filter(users_dsl::id.eq(comment.user_id))
+            .select(username_dsl)
+            .first(&mut conn)?;
+
         Ok(RecipeCommentResponse {
             id: comment.id,
             user_id: comment.user_id,
+            username: other_username,
             content: comment.content,
             created_at: comment.created_at,
             edited_at: comment.edited_at,
@@ -634,25 +655,32 @@ impl Handler<GetRecipeComments> for DbExecutor {
 
     fn handle(&mut self, msg: GetRecipeComments, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipe_comments::dsl::*;
+        use crate::schema::users::dsl as users_dsl;
 
         let mut conn = self.0.get()?;
 
-        let rows: Vec<RecipeComment> = recipe_comments
+        let rows: Vec<(RecipeComment, String)> = recipe_comments
+            .inner_join(users::table.on(users_dsl::id.eq(user_id)))
             .filter(recipe_id.eq(msg.recipe_id))
             .filter(deleted_at.is_null())
             .order(created_at.asc())
+            .select((
+                recipe_comments::all_columns(), // ← MUST be called
+                users_dsl::username,
+            ))
             .load(&mut conn)?;
 
-        // map id -> response node
         use std::collections::HashMap;
+
         let mut map: HashMap<Uuid, RecipeCommentResponse> = HashMap::new();
 
-        for c in &rows {
+        for (c, other_username) in &rows {
             map.insert(
                 c.id,
                 RecipeCommentResponse {
                     id: c.id,
                     user_id: c.user_id,
+                    username: other_username.clone(),
                     content: c.content.clone(),
                     created_at: c.created_at,
                     edited_at: c.edited_at,
@@ -663,7 +691,7 @@ impl Handler<GetRecipeComments> for DbExecutor {
 
         let mut roots = Vec::new();
 
-        for c in rows {
+        for (c, _) in rows {
             let node = map.remove(&c.id).unwrap();
 
             if let Some(pid) = c.parent_id {
@@ -674,6 +702,7 @@ impl Handler<GetRecipeComments> for DbExecutor {
                 roots.push(node);
             }
         }
+
         Ok(roots)
     }
 }
