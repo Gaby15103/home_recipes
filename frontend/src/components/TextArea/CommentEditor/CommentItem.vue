@@ -3,9 +3,7 @@ import { ref } from "vue"
 import type { RecipeComment, RecipeCommentCreate } from "@/models/Recipe"
 import CommentEditor from "./CommentEditor.vue"
 import MarkdownRenderer from "./MarkdownRenderer.vue"
-import {useAuthStore} from "@/stores/auth.ts";
 
-const authStore = useAuthStore();
 const {
   comment,
   recipeId
@@ -14,24 +12,22 @@ const {
   recipeId: string
 }>()
 
+const emit = defineEmits<{
+  (e: "reply-posted", parentId: string, reply: RecipeComment): void
+}>()
+
+
 const replying = ref(false)
 const replyContent = ref("")
 
-const submitReply = () => {
-  if (!replyContent.value.trim() || !authStore.user) return
-  // emit reply to parent component
-  comment.children.push({
-    id: crypto.randomUUID(),
-    user_id: authStore.user.id,
-    username: authStore.user.username,
-    content: replyContent.value,
-    created_at: new Date().toISOString(),
-    parent_id: comment.id,
-    children: [],
-  })
-  replyContent.value = ""
+function onReplyCreated(reply: RecipeComment) {
+  emit("reply-posted", comment.id, reply)
   replying.value = false
 }
+function onChildReplyPosted(parentId: string, reply: RecipeComment) {
+  emit("reply-posted", parentId, reply)
+}
+
 </script>
 
 <template>
@@ -53,7 +49,13 @@ const submitReply = () => {
       </button>
 
       <div v-if="replying" class="mt-2">
-        <CommentEditor v-model="replyContent" placeholder="Write a reply..." @submit="submitReply" />
+        <CommentEditor
+            :recipe-id="recipeId"
+            :parent="comment"
+            v-model="replyContent"
+            @posted="onReplyCreated"
+            @cancel="replying = false"
+        />
       </div>
     </div>
 
@@ -64,6 +66,7 @@ const submitReply = () => {
           :key="child.id"
           :comment="child"
           :recipe-id="recipeId"
+          @reply-posted="onChildReplyPosted"
       />
     </div>
   </div>

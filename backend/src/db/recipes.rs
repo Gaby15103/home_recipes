@@ -1,4 +1,5 @@
-﻿use super::DbExecutor;
+﻿use std::collections::HashMap;
+use super::DbExecutor;
 use crate::app::recipes::{GetAllRecipes, GetAllRecipesByPage, PaginatedRecipes};
 use crate::db::ingredients::{
     create_ingredient_groups, fetch_ingredient_groups_for_recipe, sync_ingredient_groups,
@@ -664,23 +665,18 @@ impl Handler<GetRecipeComments> for DbExecutor {
             .filter(recipe_id.eq(msg.recipe_id))
             .filter(deleted_at.is_null())
             .order(created_at.asc())
-            .select((
-                recipe_comments::all_columns(), // ← MUST be called
-                users_dsl::username,
-            ))
+            .select((recipe_comments::all_columns(), users_dsl::username))
             .load(&mut conn)?;
 
-        use std::collections::HashMap;
-
+        // 1️⃣ Build all nodes
         let mut map: HashMap<Uuid, RecipeCommentResponse> = HashMap::new();
-
-        for (c, other_username) in &rows {
+        for (c, uname) in &rows {
             map.insert(
                 c.id,
                 RecipeCommentResponse {
                     id: c.id,
                     user_id: c.user_id,
-                    username: other_username.clone(),
+                    username: uname.clone(),
                     content: c.content.clone(),
                     created_at: c.created_at,
                     edited_at: c.edited_at,
@@ -689,23 +685,44 @@ impl Handler<GetRecipeComments> for DbExecutor {
             );
         }
 
-        let mut roots = Vec::new();
-
-        for (c, _) in rows {
-            let node = map.remove(&c.id).unwrap();
-
+        // 2️⃣ Group children by parent_id
+        let mut children_map: HashMap<Uuid, Vec<RecipeCommentResponse>> = HashMap::new();
+        for (c, _) in &rows {
             if let Some(pid) = c.parent_id {
-                if let Some(parent) = map.get_mut(&pid) {
-                    parent.children.push(node);
+                if let Some(child) = map.get(&c.id).cloned() {
+                    children_map.entry(pid).or_default().push(child);
                 }
-            } else {
-                roots.push(node);
+            }
+        }
+
+        // 3️⃣ Recursively attach children
+        fn attach_children(
+            node: &mut RecipeCommentResponse,
+            children_map: &mut HashMap<Uuid, Vec<RecipeCommentResponse>>,
+        ) {
+            if let Some(mut kids) = children_map.remove(&node.id) {
+                for kid in &mut kids {
+                    attach_children(kid, children_map);
+                }
+                node.children = kids;
+            }
+        }
+
+        // 4️⃣ Build root nodes
+        let mut roots: Vec<RecipeCommentResponse> = Vec::new();
+        for (c, _) in &rows {
+            if c.parent_id.is_none() {
+                if let Some(mut node) = map.get(&c.id).cloned() {
+                    attach_children(&mut node, &mut children_map);
+                    roots.push(node);
+                }
             }
         }
 
         Ok(roots)
     }
 }
+
 
 
 impl Message for DeleteComment {

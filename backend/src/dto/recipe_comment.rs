@@ -2,7 +2,7 @@
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RecipeCommentResponse {
     pub id: Uuid,
     pub user_id: Uuid,

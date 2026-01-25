@@ -22,9 +22,11 @@ mod dto;
 mod config;
 
 use std::env;
+use dotenvy::dotenv;
 use config::Config;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
     if std::env::var("RUST_LOG").is_err() {
         unsafe {
             std::env::set_var("RUST_LOG", "conduit=debug,actix_web=info");

@@ -8,6 +8,21 @@ const {
   comments: RecipeComment[]
   recipeId: string
 }>()
+function onReplyPosted(parentId: string, reply: RecipeComment) {
+  const insert = (nodes: RecipeComment[]): boolean => {
+    for (const node of nodes) {
+      if (node.id === parentId) {
+        node.children.push(reply)
+        return true
+      }
+      if (insert(node.children)) return true
+    }
+    return false
+  }
+
+  insert(comments)
+}
+
 </script>
 
 <template>
@@ -17,6 +32,7 @@ const {
         :key="comment.id"
         :comment="comment"
         :recipe-id="recipeId"
+        @reply-posted="onReplyPosted"
     />
   </div>
 </template>
