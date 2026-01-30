@@ -46,7 +46,7 @@ async function logout() {
             :to="ROUTES.HOME"
             class="text-lg font-semibold tracking-tight"
         >
-          Home Recipes
+          {{$t('Title')}}
         </RouterLink>
 
         <NavigationMenu class="hidden md:flex">
