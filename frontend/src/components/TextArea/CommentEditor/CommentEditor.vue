@@ -7,6 +7,9 @@ import { useAuthStore } from "@/stores/auth.ts";
 import type { RecipeComment } from "@/models/Recipe.ts";
 import TurndownService from "turndown";
 import { marked } from "marked";
+import { useI18n } from "vue-i18n"
+
+const { t } = useI18n()
 
 const turndown = new TurndownService();
 const authStore = useAuthStore();
@@ -142,7 +145,7 @@ async function submit() {
     emit("update:modelValue", content.value);
   } catch (err) {
     console.error("Failed to post comment:", err);
-    alert("Failed to post comment");
+    alert(t("comments.editor.errors.postFailed"));
   }
 }
 
@@ -153,6 +156,15 @@ onMounted(() => {
     editableDiv.value.innerHTML = markdownToRich(content.value);
   }
 });
+
+function insertLink() {
+  const url = window.prompt(t("comments.editor.toolbar.enterUrl"));
+
+  if (!url || !url.trim()) return;
+
+  format("createLink", url);
+}
+
 </script>
 
 <template>
@@ -160,12 +172,19 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-2">
       <div class="flex items-center gap-2 relative">
-        <span class="font-semibold">Markdown Editor</span>
+        <span class="font-semibold">
+          {{ t("comments.editor.title") }}
+        </span>
         <button @click="showMarkdownHelper = true" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">ℹ️</button>
       </div>
       <button class="text-sm px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700"
               @click="mode = mode === 'markdown' ? 'rich' : 'markdown'">
-        Switch to {{ mode === "markdown" ? "Rich Text" : "Markdown" }}
+        {{
+          mode === "markdown"
+              ? t("comments.editor.switchToRich")
+              : t("comments.editor.switchToMarkdown")
+        }}
+
       </button>
     </div>
 
@@ -176,20 +195,41 @@ onMounted(() => {
     <div v-if="mode === 'markdown'">
       <textarea
           v-model="content"
-          :placeholder="parent ? 'Reply to ' + parent.username : 'Write your comment'"
+          :placeholder="
+            parent
+              ? t('comments.editor.replyPlaceholder', { username: parent.username })
+              : t('comments.editor.placeholder')
+          "
           class="w-full min-h-[120px] border rounded p-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary dark:bg-gray-800 dark:text-gray-200"
       ></textarea>
     </div>
 
     <div v-else class="space-y-2">
       <div class="flex gap-2 mb-2 flex-wrap">
-        <button @click.prevent="format('bold')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">B</button>
-        <button @click.prevent="format('italic')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">I</button>
-        <button @click.prevent="format('underline')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">U</button>
-        <button @click.prevent="format('insertOrderedList')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">OL</button>
-        <button @click.prevent="format('insertUnorderedList')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">UL</button>
-        <button @click.prevent="format('createLink', prompt('Enter URL:'))" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">Link</button>
-        <button @click.prevent="format('formatBlock','pre')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">Code</button>
+        <button @click.prevent="format('bold')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          {{ t("comments.editor.toolbar.bold") }}
+        </button>
+        <button @click.prevent="format('italic')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          {{ t("comments.editor.toolbar.italic") }}
+        </button>
+        <button @click.prevent="format('underline')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          {{ t("comments.editor.toolbar.underline") }}
+        </button>
+        <button @click.prevent="format('insertOrderedList')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          {{ t("comments.editor.toolbar.orderedList") }}
+        </button>
+        <button @click.prevent="format('insertUnorderedList')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          {{ t("comments.editor.toolbar.unorderedList") }}
+        </button>
+        <button
+            @click.prevent="insertLink"
+            class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+        >
+          {{ t("comments.editor.toolbar.link") }}
+        </button>
+        <button @click.prevent="format('formatBlock','pre')" class="px-2 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700">
+          {{ t("comments.editor.toolbar.code") }}
+        </button>
       </div>
 
       <div
@@ -203,8 +243,12 @@ onMounted(() => {
 
     <!-- Footer buttons -->
     <div class="flex justify-end gap-2 mt-2">
-      <button class="px-3 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" @click="cancel">Cancel</button>
-      <button class="px-3 py-1 bg-primary text-white rounded hover:bg-primary/90" @click="submit">Comment</button>
+      <button class="px-3 py-1 border rounded hover:bg-gray-200 dark:hover:bg-gray-700" @click="cancel">
+        {{ t("comments.editor.cancel") }}
+      </button>
+      <button class="px-3 py-1 bg-primary text-white rounded hover:bg-primary/90" @click="submit">
+        {{ t("comments.editor.submit") }}
+      </button>
     </div>
   </div>
 </template>

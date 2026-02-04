@@ -1,0 +1,142 @@
+{
+  "Title": "Home Recipes",
+  "home":"Home",
+  "Recipes":"Recipes",
+  "Login": "Connection",
+  "Register": "Register",
+  "Logout": "Disconnect",
+  "Profile": "Profile",
+  "Admin Dashboard": "Admin Dashboard",
+  "theme": {
+    "toggle": "Change theme",
+    "light": "Clear",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "auth": {
+    "login": {
+      "title": "Login",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Login",
+      "noAccount": "No account?",
+      "register": "Register",
+      "error": {
+        "failed": "Login failed",
+        "missing2fa": "2FA required but token not returned by the server."
+      }
+    },
+
+    "register": {
+      "title": "Create account",
+      "username": "Username",
+      "email": "Email",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "password": "Password",
+      "submit": "Register",
+      "already": "Already registered?",
+      "login": "Login",
+      "error": {
+        "failed": "Registration failed"
+      }
+    },
+
+    "confirmEmail": {
+      "title": "Email Confirmation",
+      "loading": "Confirming your email, please wait...",
+      "invalidLink": "Invalid confirmation link.",
+      "error": "An error occurred while confirming your email.",
+      "goLogin": "Go to Login"
+    },
+
+    "twoFactor": {
+      "authCodeTitle": "Authentication Code",
+      "authCodeDescription": "Enter the authentication code provided by your authenticator application.",
+      "recoveryTitle": "Recovery Code",
+      "recoveryDescription": "Please confirm access to your account by entering one of your emergency recovery codes.",
+      "toggleRecovery": "login using a recovery code",
+      "toggleAuth": "login using an authentication code",
+      "continue": "Continue",
+      "recoveryPlaceholder": "Enter recovery code",
+      "invalidCode": "Invalid authentication code",
+      "missingToken": "Missing two-factor token",
+      "or": "or you can"
+    }
+  },
+  "Home": {
+    "Title": "\uD83C\uDF73 Home Recipes",
+    "Text": "Browse delicious homemade recipes and manage your own cookbook."
+  },
+  "RecipeList": {
+    "Title": "All Recipes"
+  },
+  "recipe": {
+    "errors": {
+      "fetch": "Failed to fetch recipe"
+    },
+
+    "meta": {
+      "prep": "Prep",
+      "cook": "Cook",
+      "servings": "Servings",
+      "minutes": "min"
+    },
+
+    "tags": "Tags",
+
+    "actions": {
+      "favorite": "Add to Favorites",
+      "favorited": "Favorited",
+      "print": "Print",
+      "share": "Share",
+      "copied": "Recipe URL copied to clipboard!"
+    },
+
+    "ingredients": {
+      "title": "Ingredients"
+    },
+
+    "steps": {
+      "title": "Preparations",
+      "showImages": "Show Step Images"
+    },
+
+    "comments": {
+      "title": "Comments",
+      "placeholder": "Comment on this recipe...",
+      "post": "Post Comment"
+    }
+  },
+  "comments": {
+    "editor": {
+      "title": "Markdown Editor",
+      "switchToRich": "Switch to Rich Text",
+      "switchToMarkdown": "Switch to Markdown",
+
+      "placeholder": "Write your comment",
+      "replyPlaceholder": "Reply to {username}",
+
+      "cancel": "Cancel",
+      "submit": "Comment",
+
+      "errors": {
+        "postFailed": "Failed to post comment"
+      },
+
+      "toolbar": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "orderedList": "Ordered list",
+        "unorderedList": "Unordered list",
+        "link": "Link",
+        "code": "Code block",
+        "enterUrl": "Enter URL"
+      }
+    },
+    "Item": {
+      "Reply": "Reply"
+    }
+  }
+}

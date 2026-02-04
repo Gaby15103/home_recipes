@@ -1,9 +1,10 @@
 ﻿<script setup lang="ts">
 import { ref } from "vue"
-import type { RecipeComment, RecipeCommentCreate } from "@/models/Recipe"
+import type { RecipeComment } from "@/models/Recipe"
 import CommentEditor from "./CommentEditor.vue"
 import MarkdownRenderer from "./MarkdownRenderer.vue"
-
+import { useI18n } from "vue-i18n"
+const { t } = useI18n()
 const {
   comment,
   recipeId
@@ -45,7 +46,7 @@ function onChildReplyPosted(parentId: string, reply: RecipeComment) {
           @click="replying = !replying"
           class="text-sm text-blue-500 hover:underline mt-2"
       >
-        Reply
+        {{ t("comments.Item.Reply") }}
       </button>
 
       <div v-if="replying" class="mt-2">

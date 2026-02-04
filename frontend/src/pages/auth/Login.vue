@@ -20,7 +20,8 @@ import {login} from "@/api";
 const router = useRouter()
 const error = ref("")
 const authStore = useAuthStore()
-
+import { useI18n } from "vue-i18n"
+const { t } = useI18n()
 
 const {handleSubmit} = useForm({
   validationSchema: toTypedSchema(loginSchema),
@@ -39,7 +40,7 @@ const submit = handleSubmit(async (values) => {
 
     if (res.two_factor_required) {
       if (!res.two_factor_token){
-        error.value = "2FA required but token not returned by the server."
+        error.value = t("auth.login.error.missing2fa")
         return
       }
       authStore.setPendingTwoFactor(res.two_factor_token)
@@ -52,7 +53,7 @@ const submit = handleSubmit(async (values) => {
     authStore.setUser(res.user.user)
     await router.push(ROUTES.HOME)
   } catch (e: any) {
-    error.value = e.message || "Login failed"
+    error.value = e.message || t("auth.login.error.failed")
   }
 })
 
@@ -62,7 +63,7 @@ const submit = handleSubmit(async (values) => {
   <div class="min-h-screen flex items-center justify-center">
     <div class="w-full max-w-sm space-y-6 p-6 rounded-lg border bg-card shadow">
       <h2 class="text-2xl font-semibold text-center">
-        Login
+        {{ t('auth.login.title') }}
       </h2>
 
       <Alert
@@ -81,7 +82,7 @@ const submit = handleSubmit(async (values) => {
         <FieldGroup>
           <vee-field v-slot="{ field, errors }" name="email">
             <Field :data-invalid="!!errors.email">
-              <FieldLabel>Email</FieldLabel>
+              <FieldLabel>{{ t('auth.login.email') }}</FieldLabel>
               <Input
                   v-bind="field"
                   type="email"
@@ -95,7 +96,7 @@ const submit = handleSubmit(async (values) => {
 
           <vee-field v-slot="{ field, errors }" name="password">
             <Field :data-invalid="!!errors.length">
-              <FieldLabel>Password</FieldLabel>
+              <FieldLabel>{{ t('auth.login.password') }}</FieldLabel>
               <Input
                   v-bind="field"
                   type="password"
@@ -108,15 +109,17 @@ const submit = handleSubmit(async (values) => {
           </vee-field>
 
           <Button type="submit" form="login-form" class="w-full mt-4">
-            Login
+            {{ t('auth.login.submit') }}
           </Button>
         </FieldGroup>
 
       </form>
 
       <p class="text-sm text-center text-muted-foreground">
-        No account?
-        <RouterLink class="underline" to="/register">Register</RouterLink>
+        {{ t('auth.login.noAccount') }}
+        <RouterLink class="underline" to="/register">
+          {{ t('auth.login.register') }}
+        </RouterLink>
       </p>
     </div>
   </div>

@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth.ts";
 import { RouterLink, useRouter } from "vue-router";
-import ModeToggle from "@/components/ModeToggle.vue";
+import ModeToggle from "@/components/MainNavbar/ModeToggle.vue";
 import { Button } from "@/components/ui/button";
 import {ROUTES} from "@/router/routes.ts";
 

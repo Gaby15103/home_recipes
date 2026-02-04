@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import {RouterLink} from "vue-router"
-import ModeToggle from "@/components/ModeToggle.vue"
+import ModeToggle from "@/components/MainNavbar/ModeToggle.vue"
 import NavLink from "@/components/NavLink.vue"
 import {Button} from "@/components/ui/button"
 import {
@@ -18,11 +18,13 @@ import {
 import {useAuthStore} from "@/stores/auth.ts";
 import router from "@/router";
 import {storeToRefs} from "pinia";
-import { ROUTES } from "@/router/routes";
+import { ROUTES } from "@/router/routes.ts";
+import LanguageChanger from "@/components/MainNavbar/LanguageChanger.vue";
+import {useI18n} from "vue-i18n";
 
 const authStore = useAuthStore();
 const { user, loading } = storeToRefs(authStore);
-
+const { t, locale, availableLocales } = useI18n()
 async function logout() {
   try {
     await authStore.logout()
@@ -46,17 +48,17 @@ async function logout() {
             :to="ROUTES.HOME"
             class="text-lg font-semibold tracking-tight"
         >
-          {{$t('Title')}}
+          {{t('Title')}}
         </RouterLink>
 
-        <NavigationMenu class="hidden md:flex">
+        <NavigationMenu class="hidden md:flex" :dir="locale === 'fr' ? 'ltr' : 'ltr'">
           <NavigationMenuList class="gap-2">
             <NavigationMenuItem>
               <NavLink
                   :to="ROUTES.RECIPES"
                   class="text-sm font-medium text-muted-foreground hover:text-foreground transition"
               >
-                Recipes
+                {{t('Recipes')}}
               </NavLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
@@ -73,6 +75,7 @@ async function logout() {
       <!-- Right -->
       <div class="flex items-center gap-3">
         <ModeToggle/>
+        <LanguageChanger/>
 
         <!-- Logged in -->
         <DropdownMenu v-if="user">
@@ -95,13 +98,13 @@ async function logout() {
           <DropdownMenuContent align="end" class="w-44">
             <DropdownMenuItem as-child>
               <RouterLink :to="ROUTES.HOME">
-                Profile
+                {{t('Profile')}}
               </RouterLink>
             </DropdownMenuItem>
 
             <DropdownMenuItem as-child v-if="authStore.hasRole('ADMIN')||authStore.hasRole('MODERATOR')">
             <RouterLink :to="ROUTES.ADMIN.DASHBOARD">
-              Admin Dashboard
+              {{t('Admin Dashboard')}}
             </RouterLink>
             </DropdownMenuItem>
 
@@ -109,7 +112,7 @@ async function logout() {
                 class="text-destructive focus:text-destructive"
                 @click="logout"
             >
-              Logout
+              {{t('Logout')}}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -117,10 +120,10 @@ async function logout() {
         <!-- Logged out -->
         <div v-else class="flex items-center gap-2">
           <RouterLink to="/login">
-            <Button variant="outline">Login</Button>
+            <Button variant="outline">{{t('Login')}}</Button>
           </RouterLink>
           <RouterLink to="/register">
-            <Button>Register</Button>
+            <Button>{{t('Register')}}</Button>
           </RouterLink>
         </div>
       </div>

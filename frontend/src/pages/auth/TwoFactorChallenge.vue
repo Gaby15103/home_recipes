@@ -15,7 +15,8 @@ import AuthLayout from '@/components/layout/AuthLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { verifyTwoFactor } from '@/api'
 import { ROUTES } from '@/router/routes'
-
+import { useI18n } from "vue-i18n"
+const { t } = useI18n()
 interface AuthConfigContent {
   title: string
   description: string
@@ -38,23 +39,22 @@ onMounted(() => {
   }
 })
 
-const authConfigContent = computed<AuthConfigContent>(() => {
+const authConfigContent = computed(() => {
   if (showRecoveryInput.value) {
     return {
-      title: 'Recovery Code',
-      description:
-          'Please confirm access to your account by entering one of your emergency recovery codes.',
-      toggleText: 'login using an authentication code',
+      title: t('auth.twoFactor.recoveryTitle'),
+      description: t('auth.twoFactor.recoveryDescription'),
+      toggleText: t('auth.twoFactor.toggleAuth'),
     }
   }
 
   return {
-    title: 'Authentication Code',
-    description:
-        'Enter the authentication code provided by your authenticator application.',
-    toggleText: 'login using a recovery code',
+    title: t('auth.twoFactor.authCodeTitle'),
+    description: t('auth.twoFactor.authCodeDescription'),
+    toggleText: t('auth.twoFactor.toggleRecovery'),
   }
 })
+
 
 const toggleRecoveryMode = () => {
   showRecoveryInput.value = !showRecoveryInput.value
@@ -136,7 +136,7 @@ const submit = async () => {
               :disabled="processing || code.length !== 6"
               @click="submit"
           >
-            Continue
+            {{ t('auth.twoFactor.continue') }}
           </Button>
 
           <div class="text-center text-sm text-muted-foreground">
@@ -158,7 +158,7 @@ const submit = async () => {
           <Input
               v-model="recoveryCode"
               type="text"
-              placeholder="Enter recovery code"
+              :placeholder="t('auth.twoFactor.recoveryPlaceholder')"
               :disabled="processing"
               autofocus
               required
@@ -171,7 +171,7 @@ const submit = async () => {
               :disabled="processing || !recoveryCode"
               @click="submit"
           >
-            Continue
+            {{ t('auth.twoFactor.continue') }}
           </Button>
 
           <div class="text-center text-sm text-muted-foreground">

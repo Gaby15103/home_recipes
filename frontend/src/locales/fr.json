@@ -1,0 +1,142 @@
+{
+  "Title": "Recettes maison",
+  "home": "Accueil",
+  "Recipes": "Recettes",
+  "Login": "Connexion",
+  "Register": "S'inscrire",
+  "Logout": "Déconnexion",
+  "Profile": "Profil",
+  "Admin Dashboard": "Tableau d'administration",
+  "theme": {
+    "toggle": "Changer le thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "auth": {
+    "login": {
+      "title": "Connexion",
+      "email": "Courriel",
+      "password": "Mot de passe",
+      "submit": "Se connecter",
+      "noAccount": "Pas de compte ?",
+      "register": "S'inscrire",
+      "error": {
+        "failed": "Échec de la connexion",
+        "missing2fa": "2FA requis mais aucun jeton retourné par le serveur."
+      }
+    },
+
+    "register": {
+      "title": "Créer un compte",
+      "username": "Nom d'utilisateur",
+      "email": "Courriel",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "password": "Mot de passe",
+      "submit": "S'inscrire",
+      "already": "Déjà inscrit ?",
+      "login": "Connexion",
+      "error": {
+        "failed": "Échec de l'inscription"
+      }
+    },
+
+    "confirmEmail": {
+      "title": "Confirmation du courriel",
+      "loading": "Confirmation du courriel en cours...",
+      "invalidLink": "Lien de confirmation invalide.",
+      "error": "Une erreur est survenue lors de la confirmation du courriel.",
+      "goLogin": "Aller à la connexion"
+    },
+
+    "twoFactor": {
+      "authCodeTitle": "Code d'authentification",
+      "authCodeDescription": "Entrez le code fourni par votre application d'authentification.",
+      "recoveryTitle": "Code de récupération",
+      "recoveryDescription": "Confirmez l'accès à votre compte avec un code de récupération.",
+      "toggleRecovery": "Se connecter avec un code de récupération",
+      "toggleAuth": "Se connecter avec un code d'authentification",
+      "continue": "Continuer",
+      "recoveryPlaceholder": "Entrer un code de récupération",
+      "invalidCode": "Code d'authentification invalide",
+      "missingToken": "Jeton 2FA manquant",
+      "or": "ou vous pouvez"
+    }
+  },
+  "Home": {
+    "Title": "\uD83C\uDF73 Recettes maison",
+    "Text": "Parcourez de délicieuses recettes maison et gérez votre propre livre de recettes."
+  },
+  "RecipeList": {
+    "Title": "Toutes Les Recettes"
+  },
+  "recipe": {
+    "errors": {
+      "fetch": "Impossible de charger la recette"
+    },
+
+    "meta": {
+      "prep": "Préparation",
+      "cook": "Cuisson",
+      "servings": "Portions",
+      "minutes": "min"
+    },
+
+    "tags": "Étiquettes",
+
+    "actions": {
+      "favorite": "Ajouter aux favoris",
+      "favorited": "Dans les favoris",
+      "print": "Imprimer",
+      "share": "Partager",
+      "copied": "Lien de la recette copié !"
+    },
+
+    "ingredients": {
+      "title": "Ingrédients"
+    },
+
+    "steps": {
+      "title": "Préparations",
+      "showImages": "Afficher les images des étapes"
+    },
+
+    "comments": {
+      "title": "Commentaires",
+      "placeholder": "Commenter cette recette...",
+      "post": "Publier le commentaire"
+    }
+  },
+  "comments": {
+    "editor": {
+      "title": "Éditeur Markdown",
+      "switchToRich": "Passer en texte enrichi",
+      "switchToMarkdown": "Passer en Markdown",
+
+      "placeholder": "Écrire un commentaire",
+      "replyPlaceholder": "Répondre à {username}",
+
+      "cancel": "Annuler",
+      "submit": "Publier",
+
+      "errors": {
+        "postFailed": "Impossible de publier le commentaire"
+      },
+
+      "toolbar": {
+        "bold": "Gras",
+        "italic": "Italique",
+        "underline": "Souligné",
+        "orderedList": "Liste ordonnée",
+        "unorderedList": "Liste à puces",
+        "link": "Lien",
+        "code": "Bloc de code",
+        "enterUrl": "Entrer l’URL"
+      }
+    },
+    "Item": {
+      "Reply": "Répondre"
+    }
+  }
+}

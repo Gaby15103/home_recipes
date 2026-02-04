@@ -1,5 +1,5 @@
 ﻿<script setup>
-import MainNavbar from "../public/MainNavbar.vue";
+import MainNavbar from "../MainNavbar/MainNavbar.vue";
 
 </script>
 

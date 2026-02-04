@@ -15,7 +15,8 @@ import type {Recipe, RecipeComment, RecipeRating} from "@/models/Recipe.ts";
 import type {RecipeCommentCreate} from "@/models/RecipeCreate.ts";
 import {useAuthStore} from "@/stores/auth.ts";
 import CommentThread from "@/components/TextArea/CommentEditor/CommentThread.vue";
-
+import { useI18n } from "vue-i18n"
+const { t } = useI18n()
 const authStore = useAuthStore();
 
 const route = useRoute();
@@ -56,7 +57,7 @@ onMounted(async () => {
       favorited.value = favs.some(f => f.id === recipe.value!.id);
     }
   } catch (err: any) {
-    error.value = err.message || "Failed to fetch recipe";
+    error.value = err.message || t("recipe.errors.fetch");
   } finally {
     loading.value = false;
   }
@@ -87,7 +88,7 @@ function openPrintModal() {
 
 function shareRecipe() {
   navigator.clipboard.writeText(window.location.href);
-  alert("Recipe URL copied to clipboard!");
+  alert(t("recipe.actions.copied"))
 }
 
 // Toggle favorite
@@ -160,9 +161,21 @@ async function postComment() {
 
               <!-- Times & Servings -->
               <ul class="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-300">
-                <li>Prep: {{ recipe.prep_time_minutes }} min</li>
-                <li>Cook: {{ recipe.cook_time_minutes }} min</li>
-                <li>Servings: {{ recipe.servings }}</li>
+                <li>
+                  {{ t("recipe.meta.prep") }}:
+                  {{ recipe.prep_time_minutes }} {{ t("recipe.meta.minutes") }}
+                </li>
+
+                <li>
+                  {{ t("recipe.meta.cook") }}:
+                  {{ recipe.cook_time_minutes }} {{ t("recipe.meta.minutes") }}
+                </li>
+
+                <li>
+                  {{ t("recipe.meta.servings") }}:
+                  {{ recipe.servings }}
+                </li>
+
               </ul>
 
               <!-- Description -->
@@ -170,7 +183,9 @@ async function postComment() {
 
               <!-- Tags -->
               <div v-if="recipe.tags?.length" class="mt-2">
-                <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-1">Tags:</h3>
+                <h3 class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
+                  {{ t("recipe.tags") }}:
+                </h3>
                 <div class="flex flex-wrap gap-2">
                   <Badge
                       v-for="tag in recipe.tags"
@@ -187,11 +202,18 @@ async function postComment() {
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-3 mt-4">
               <Button @click="toggleFavorite" :disabled="favoriteLoading">
-                {{ favorited ? '💖 Favorited' : '🤍 Add to Favorites' }}
+                {{ favorited
+                  ? `💖 ${t("recipe.actions.favorited")}`
+                  : `🤍 ${t("recipe.actions.favorite")}`
+                }}
               </Button>
               <PrintModal ref="printModal" :recipe="recipe"/>
-              <Button @click="openPrintModal">🖨 Print</Button>
-              <Button @click="shareRecipe">🔗 Share</Button>
+              <Button @click="openPrintModal">
+                🖨 {{ t("recipe.actions.print") }}
+              </Button>
+              <Button @click="shareRecipe">
+                🔗 {{ t("recipe.actions.share") }}
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -200,7 +222,9 @@ async function postComment() {
       <!-- Ingredients Section -->
       <Card class="shadow-md">
         <CardHeader>
-          <CardTitle class="text-2xl">Ingredients</CardTitle>
+          <CardTitle class="text-2xl">
+            {{ t("recipe.ingredients.title") }}
+          </CardTitle>
         </CardHeader>
         <CardContent class="space-y-10 mb-10">
           <template v-for="group in recipe.ingredient_groups" :key="group.position">
@@ -230,9 +254,13 @@ async function postComment() {
         <Separator class="max-w-[95%] mx-auto min-h-0.5 rounded-xl"/>
 
         <CardHeader class="flex justify-between">
-          <CardTitle class="text-2xl">Preparations</CardTitle>
+          <CardTitle class="text-2xl">
+            {{ t("recipe.steps.title") }}
+          </CardTitle>
           <div class="grid grid-cols-1 gap-6 justify-items-end">
-            <Label for="showStepImagesId">Show Step Images:</Label>
+            <Label for="showStepImagesId">
+              {{ t("recipe.steps.showImages") }}
+            </Label>
             <Switch if="showStepImagesId" v-model="showStepImages"/>
           </div>
         </CardHeader>
@@ -269,16 +297,20 @@ async function postComment() {
       <Separator/>
       <Card class="shadow-md">
         <CardHeader>
-          <CardTitle>Comments</CardTitle>
+          <CardTitle>
+            {{ t("recipe.comments.title") }}
+          </CardTitle>
         </CardHeader>
         <CardContent class="space-y-4">
           <div class="space-y-2">
         <textarea
             v-model="newComment.content"
-            placeholder="Comment on this recipe..."
+            :placeholder="t('recipe.comments.placeholder')"
             class="w-full border rounded-lg p-2"
         />
-            <Button @click="postComment">Post Comment</Button>
+            <Button @click="postComment">
+              {{ t("recipe.comments.post") }}
+            </Button>
           </div>
           <div class="space-y-4">
             <CommentThread

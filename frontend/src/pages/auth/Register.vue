@@ -9,7 +9,8 @@ import {toTypedSchema} from "@vee-validate/zod"
 import {registerSchema} from "@/validators/auth.ts"
 import {registerUser} from "@/api/auth.ts"
 import {useRouter} from "vue-router"
-
+import { useI18n } from "vue-i18n"
+const { t } = useI18n()
 const router = useRouter()
 const error = ref("")
 
@@ -36,7 +37,7 @@ const submit = handleSubmit(async (values) => {
     )
     await router.push("/login")
   } catch (e: any) {
-    error.value = e.message || "Registration failed"
+    error.value = e.message || t('auth.register.error.failed')
   }
 })
 </script>
@@ -45,7 +46,7 @@ const submit = handleSubmit(async (values) => {
   <div class="min-h-screen flex items-center justify-center">
     <div class="w-full max-w-sm rounded-lg border bg-card p-5 shadow">
       <h2 class="mb-4 text-center text-xl font-semibold">
-        create account
+        {{ t('auth.register.title') }}
       </h2>
 
       <Alert
@@ -62,7 +63,7 @@ const submit = handleSubmit(async (values) => {
         <FieldGroup>
           <vee-field name="username" v-slot="{ field, errors }">
             <Field :data-invalid="!!errors.length">
-              <FieldLabel class="text-sm">Username</FieldLabel>
+              <FieldLabel class="text-sm">{{ t('auth.register.username') }}</FieldLabel>
               <Input
                   v-bind="field"
                   type="text"
@@ -77,7 +78,7 @@ const submit = handleSubmit(async (values) => {
           <!-- Email -->
           <vee-field name="email" v-slot="{ field, errors }">
             <Field :data-invalid="!!errors.email">
-              <FieldLabel class="text-sm">Email</FieldLabel>
+              <FieldLabel class="text-sm">{{ t('auth.confirmEmail.title') }}</FieldLabel>
               <Input
                   v-bind="field"
                   type="email"
@@ -93,7 +94,9 @@ const submit = handleSubmit(async (values) => {
           <div class="grid grid-cols-2 gap-3">
             <vee-field name="first_name" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
-                <FieldLabel class="text-sm">First name</FieldLabel>
+                <FieldLabel class="text-sm">
+                  {{ t('auth.register.firstName') }}
+                </FieldLabel>
                 <Input
                     v-bind="field"
                     type="text"
@@ -107,7 +110,9 @@ const submit = handleSubmit(async (values) => {
 
             <vee-field name="last_name" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
-                <FieldLabel class="text-sm">Last name</FieldLabel>
+                <FieldLabel class="text-sm">
+                  {{ t('auth.register.lastName') }}
+                </FieldLabel>
                 <Input
                     v-bind="field"
                     type="text"
@@ -123,7 +128,9 @@ const submit = handleSubmit(async (values) => {
           <!-- Password -->
           <vee-field name="password" v-slot="{ field, errors }">
             <Field :data-invalid="!!errors.length">
-              <FieldLabel class="text-sm">Password</FieldLabel>
+              <FieldLabel class="text-sm">
+                {{ t('auth.register.password') }}
+              </FieldLabel>
               <Input
                   v-bind="field"
                   type="password"
@@ -136,14 +143,16 @@ const submit = handleSubmit(async (values) => {
           </vee-field>
 
           <Button form="register-form" type="submit" class="mt-3 w-full">
-            Register
+            {{ t('auth.register.submit') }}
           </Button>
         </FieldGroup>
       </form>
 
       <p class="mt-3 text-center text-xs text-muted-foreground">
-        Already registered?
-        <RouterLink to="/login" class="underline">Login</RouterLink>
+        {{ t('auth.register.already') }}
+        <RouterLink to="/login" class="underline">
+          {{ t('auth.register.login') }}
+        </RouterLink>
       </p>
     </div>
   </div>

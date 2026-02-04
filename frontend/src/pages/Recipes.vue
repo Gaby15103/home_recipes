@@ -3,7 +3,9 @@ import { ref, onMounted } from "vue";
 import type { Recipe } from "@/models/Recipe.ts";
 import { getAllRecipes } from "@/api/recipe";
 import {RouterLink} from "vue-router";
-
+import {Spinner} from "@/components/ui/spinner";
+import { useI18n } from "vue-i18n"
+const { t } = useI18n()
 // State for recipes
 const recipes = ref<Recipe[]>([]);
 const loading = ref(true);
@@ -22,7 +24,7 @@ onMounted(async () => {
 
 <template>
   <div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold mb-6">All Recipes</h1>
+    <h1 class="text-3xl font-bold mb-6">{{ t('RecipeList.Title') }}</h1>
 
     <div v-if="loading" class="flex justify-center items-center h-32">
       <Spinner />

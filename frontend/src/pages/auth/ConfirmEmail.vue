@@ -2,7 +2,8 @@
 import { onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { confirmEmail } from "@/api";
-
+import { useI18n } from "vue-i18n"
+const { t } = useI18n()
 const route = useRoute();
 const token = route.query.token as string;
 
@@ -11,11 +12,10 @@ const success = ref(false);
 const message = ref("");
 
 onMounted(async () => {
-  console.log("helle i'm on hte page : " + token)
   if (!token) {
     loading.value = false;
     success.value = false;
-    message.value = "Invalid confirmation link.";
+    message.value = t('auth.confirmEmail.invalidLink');
     return;
   }
 
@@ -27,7 +27,7 @@ onMounted(async () => {
   } catch (err: any) {
     loading.value = false;
     success.value = false;
-    message.value = err?.response?.data?.message || "An error occurred while confirming your email.";
+    message.value = err?.response?.data?.message || t('auth.confirmEmail.error');
   }
 });
 </script>
@@ -35,10 +35,10 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full text-center">
-      <h2 class="text-3xl font-extrabold text-gray-900 mb-6">Email Confirmation</h2>
+      <h2 class="text-3xl font-extrabold text-gray-900 mb-6">{{ t('auth.confirmEmail.title') }}</h2>
 
       <div v-if="loading" class="text-gray-500">
-        Confirming your email, please wait...
+        {{ t('auth.confirmEmail.loading') }}
       </div>
 
       <div v-else>
@@ -50,7 +50,7 @@ onMounted(async () => {
         </div>
 
         <router-link v-if="success" to="/login" class="inline-block mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-500">
-          Go to Login
+          {{ t('auth.confirmEmail.goLogin') }}
         </router-link>
       </div>
     </div>
