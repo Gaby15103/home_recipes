@@ -13,7 +13,6 @@ pub struct Step {
     pub id: Uuid,
     pub step_group_id: Uuid,
     pub position: i32,
-    pub instruction: String,
     pub image_url: Option<String>,
     pub duration_minutes: Option<i32>
 }
@@ -23,7 +22,6 @@ pub struct Step {
 pub struct NewStep {
     pub step_group_id: Uuid,
     pub position: i32,
-    pub instruction: String,
     pub image_url: Option<String>,
     pub duration_minutes: i32
 }
@@ -33,7 +31,35 @@ pub struct NewStep {
 pub struct StepChange {
     pub step_group_id: Uuid,
     pub position: i32,
-    pub instruction: String,
     pub image_url: Option<String>,
     pub duration_minutes: i32
+}
+
+use crate::schema::{step_translations};
+
+// -----------------------------
+// StepTranslation DB Model
+// -----------------------------
+#[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
+#[diesel(table_name = step_translations)]
+#[diesel(belongs_to(Step))]
+pub struct StepTranslation {
+    pub id: Uuid,
+    pub step_id: Uuid,
+    pub language_code: String,
+    pub instruction: String,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = step_translations)]
+pub struct NewStepTranslation {
+    pub step_id: Uuid,
+    pub language_code: String,
+    pub instruction: String,
+}
+
+#[derive(Debug, AsChangeset)]
+#[diesel(table_name = step_translations)]
+pub struct StepTranslationChange {
+    pub instruction: String,
 }

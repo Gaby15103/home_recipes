@@ -11,17 +11,33 @@ use crate::schema::{ingredients};
 #[diesel(table_name = ingredients)]
 pub struct Ingredient {
     pub id: Uuid,
+}
+
+use crate::schema::{ingredient_translations};
+
+// -----------------------------
+// IngredientTranslation
+// -----------------------------
+#[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
+#[diesel(table_name = ingredient_translations)]
+#[diesel(belongs_to(Ingredient))]
+pub struct IngredientTranslation {
+    pub id: Uuid,
+    pub ingredient_id: Uuid,
+    pub language_code: String,
     pub name: String,
 }
 
 #[derive(Insertable)]
-#[diesel(table_name = ingredients)]
-pub struct NewIngredient {
+#[diesel(table_name = ingredient_translations)]
+pub struct NewIngredientTranslation {
+    pub ingredient_id: Uuid,
+    pub language_code: String,
     pub name: String,
 }
 
 #[derive(Debug, AsChangeset)]
-#[diesel(table_name = ingredients)]
-pub struct IngredientChange {
+#[diesel(table_name = ingredient_translations)]
+pub struct IngredientTranslationChange {
     pub name: String,
 }

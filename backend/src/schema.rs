@@ -18,18 +18,49 @@ diesel::table! {
 }
 
 diesel::table! {
+    ingredient_group_translations (id) {
+        id -> Uuid,
+        ingredient_group_id -> Uuid,
+        language_code -> Text,
+        title -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     ingredient_groups (id) {
         id -> Uuid,
         recipe_id -> Uuid,
-        title -> Text,
         position -> Int4,
+    }
+}
+
+diesel::table! {
+    ingredient_translations (id) {
+        id -> Uuid,
+        ingredient_id -> Uuid,
+        language_code -> Text,
+        name -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
 diesel::table! {
     ingredients (id) {
         id -> Uuid,
+    }
+}
+
+diesel::table! {
+    languages (code) {
+        #[max_length = 10]
+        code -> Varchar,
         name -> Text,
+        native_name -> Text,
+        is_active -> Bool,
+        is_default -> Bool,
     }
 }
 
@@ -56,13 +87,23 @@ diesel::table! {
 }
 
 diesel::table! {
+    recipe_ingredient_translations (id) {
+        id -> Uuid,
+        recipe_ingredient_id -> Uuid,
+        language_code -> Text,
+        note -> Nullable<Text>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     recipe_ingredients (id) {
         id -> Uuid,
         ingredient_group_id -> Uuid,
         ingredient_id -> Uuid,
         quantity -> Numeric,
         unit -> Text,
-        note -> Nullable<Text>,
         position -> Int4,
     }
 }
@@ -84,6 +125,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    recipe_translations (id) {
+        id -> Uuid,
+        recipe_id -> Uuid,
+        language_code -> Text,
+        title -> Text,
+        description -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     recipe_versions (id) {
         id -> Uuid,
         recipe_id -> Uuid,
@@ -96,8 +149,6 @@ diesel::table! {
 diesel::table! {
     recipes (id) {
         id -> Uuid,
-        title -> Text,
-        description -> Nullable<Text>,
         image_url -> Text,
         servings -> Int4,
         prep_time_minutes -> Int4,
@@ -107,6 +158,7 @@ diesel::table! {
         is_private -> Bool,
         created_at -> Nullable<Timestamptz>,
         updated_at -> Nullable<Timestamptz>,
+        original_language_code -> Text,
     }
 }
 
@@ -128,11 +180,32 @@ diesel::table! {
 }
 
 diesel::table! {
+    step_group_translations (id) {
+        id -> Uuid,
+        step_group_id -> Uuid,
+        language_code -> Text,
+        title -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     step_groups (id) {
         id -> Uuid,
         recipe_id -> Uuid,
-        title -> Text,
         position -> Int4,
+    }
+}
+
+diesel::table! {
+    step_translations (id) {
+        id -> Uuid,
+        step_id -> Uuid,
+        language_code -> Text,
+        instruction -> Text,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
@@ -141,7 +214,6 @@ diesel::table! {
         id -> Uuid,
         step_group_id -> Uuid,
         position -> Int4,
-        instruction -> Text,
         image_url -> Nullable<Text>,
         duration_minutes -> Nullable<Int4>,
     }
@@ -191,22 +263,35 @@ diesel::table! {
 diesel::joinable!(email_verification_tokens -> users (user_id));
 diesel::joinable!(favorites -> recipes (recipe_id));
 diesel::joinable!(favorites -> users (user_id));
+diesel::joinable!(ingredient_group_translations -> ingredient_groups (ingredient_group_id));
+diesel::joinable!(ingredient_group_translations -> languages (language_code));
 diesel::joinable!(ingredient_groups -> recipes (recipe_id));
+diesel::joinable!(ingredient_translations -> ingredients (ingredient_id));
+diesel::joinable!(ingredient_translations -> languages (language_code));
 diesel::joinable!(recipe_analytics -> recipes (recipe_id));
 diesel::joinable!(recipe_analytics -> users (user_id));
 diesel::joinable!(recipe_comments -> recipes (recipe_id));
 diesel::joinable!(recipe_comments -> users (user_id));
+diesel::joinable!(recipe_ingredient_translations -> languages (language_code));
+diesel::joinable!(recipe_ingredient_translations -> recipe_ingredients (recipe_ingredient_id));
 diesel::joinable!(recipe_ingredients -> ingredient_groups (ingredient_group_id));
 diesel::joinable!(recipe_ingredients -> ingredients (ingredient_id));
 diesel::joinable!(recipe_ratings -> recipes (recipe_id));
 diesel::joinable!(recipe_ratings -> users (user_id));
 diesel::joinable!(recipe_tags -> recipes (recipe_id));
 diesel::joinable!(recipe_tags -> tags (tag_id));
+diesel::joinable!(recipe_translations -> languages (language_code));
+diesel::joinable!(recipe_translations -> recipes (recipe_id));
 diesel::joinable!(recipe_versions -> recipes (recipe_id));
 diesel::joinable!(recipe_versions -> users (edited_by));
+diesel::joinable!(recipes -> languages (original_language_code));
 diesel::joinable!(recipes -> users (author_id));
 diesel::joinable!(sessions -> users (user_id));
+diesel::joinable!(step_group_translations -> languages (language_code));
+diesel::joinable!(step_group_translations -> step_groups (step_group_id));
 diesel::joinable!(step_groups -> recipes (recipe_id));
+diesel::joinable!(step_translations -> languages (language_code));
+diesel::joinable!(step_translations -> steps (step_id));
 diesel::joinable!(steps -> step_groups (step_group_id));
 diesel::joinable!(user_roles -> roles (role_id));
 diesel::joinable!(user_roles -> users (user_id));
@@ -214,18 +299,25 @@ diesel::joinable!(user_roles -> users (user_id));
 diesel::allow_tables_to_appear_in_same_query!(
     email_verification_tokens,
     favorites,
+    ingredient_group_translations,
     ingredient_groups,
+    ingredient_translations,
     ingredients,
+    languages,
     recipe_analytics,
     recipe_comments,
+    recipe_ingredient_translations,
     recipe_ingredients,
     recipe_ratings,
     recipe_tags,
+    recipe_translations,
     recipe_versions,
     recipes,
     roles,
     sessions,
+    step_group_translations,
     step_groups,
+    step_translations,
     steps,
     tags,
     user_roles,

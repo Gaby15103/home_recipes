@@ -11,8 +11,6 @@ use crate::schema::{recipes};
 #[diesel(table_name = recipes)]
 pub struct Recipe {
     pub id: Uuid,
-    pub title: String,
-    pub description: Option<String>,
     pub image_url: String,
     pub servings: i32,
     pub prep_time_minutes: i32,
@@ -28,8 +26,6 @@ pub struct Recipe {
 #[derive(Insertable)]
 #[diesel(table_name = recipes)]
 pub struct NewRecipe {
-    pub title: String,
-    pub description: Option<String>,
     pub image_url: String,
     pub servings: i32,
     pub prep_time_minutes: i32,
@@ -42,8 +38,6 @@ pub struct NewRecipe {
 #[derive(Debug, AsChangeset)]
 #[diesel(table_name = recipes)]
 pub struct RecipeChange {
-    pub title: String,
-    pub description: Option<String>,
     pub image_url: String,
     pub servings: i32,
     pub prep_time_minutes: i32,
@@ -51,4 +45,36 @@ pub struct RecipeChange {
     pub author: String,
     pub author_id: Option<Uuid>,
     pub is_private: bool,
+}
+use crate::schema::{recipe_translations};
+// -----------------------------
+// RecipeTranslation DB Model
+// -----------------------------
+#[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
+#[diesel(table_name = recipe_translations)]
+#[diesel(belongs_to(Recipe))]
+pub struct RecipeTranslation {
+    pub id: Uuid,
+    pub recipe_id: Uuid,
+    pub language_code: String,
+    pub title: String,
+    pub description: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = recipe_translations)]
+pub struct NewRecipeTranslation {
+    pub recipe_id: Uuid,
+    pub language_code: String,
+    pub title: String,
+    pub description: String,
+}
+
+#[derive(Debug, AsChangeset)]
+#[diesel(table_name = recipe_translations)]
+pub struct RecipeTranslationChange {
+    pub title: String,
+    pub description: String,
 }

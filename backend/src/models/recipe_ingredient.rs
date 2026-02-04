@@ -15,7 +15,6 @@ pub struct RecipeIngredient {
     pub ingredient_id: Uuid,
     pub quantity: BigDecimal,
     pub unit: String,
-    pub note: Option<String>,
     pub position: i32,
 }
 
@@ -27,7 +26,6 @@ pub struct NewRecipeIngredient {
     pub ingredient_id: Uuid,
     pub quantity: BigDecimal,
     pub unit: String,
-    pub note: Option<String>,
     pub position: i32,
 }
 
@@ -38,6 +36,34 @@ pub struct RecipeIngredientChange {
     pub ingredient_id: Uuid,
     pub quantity: BigDecimal,
     pub unit: String,
-    pub note: Option<String>,
     pub position: i32,
+}
+
+use crate::schema::{recipe_ingredient_translations};
+
+// -----------------------------
+// RecipeIngredientTranslation DB Model
+// -----------------------------
+#[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
+#[diesel(table_name = recipe_ingredient_translations)]
+#[diesel(belongs_to(RecipeIngredient))]
+pub struct RecipeIngredientTranslation {
+    pub id: Uuid,
+    pub recipe_ingredient_id: Uuid,
+    pub language_code: String,
+    pub note: Option<String>,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = recipe_ingredient_translations)]
+pub struct NewRecipeIngredientTranslation {
+    pub recipe_ingredient_id: Uuid,
+    pub language_code: String,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, AsChangeset)]
+#[diesel(table_name = recipe_ingredient_translations)]
+pub struct RecipeIngredientTranslationChange {
+    pub note: Option<String>,
 }
