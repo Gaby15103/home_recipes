@@ -138,5 +138,147 @@
     "Item": {
       "Reply": "Répondre"
     }
+  },
+  "Admin": {
+    "common": {
+      "cancel": "Annuler",
+      "save": "Sauvegarder",
+      "create": "Créer",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "actions": "Actions",
+      "loading": "Chargement..."
+    },
+
+    "dashboard": {
+      "stats": {
+        "totalRecipes": "Recettes totales",
+        "public": "Publiques",
+        "private": "Privées",
+        "tags": "Étiquettes"
+      },
+      "quickActions": "Actions rapides",
+      "createRecipe": "Créer une recette",
+      "manageCategories": "Gérer les catégories",
+      "manageTags": "Gérer les étiquettes",
+      "recentRecipes": "Recettes récentes",
+      "viewAll": "Voir tout"
+    },
+
+    "recipe": {
+      "createTitle": "Créer une recette",
+      "editTitle": "Modifier la recette",
+      "basicInfo": "Informations de base",
+      "details": "Détails",
+      "recipeSection": "Recette",
+      "tags": "Étiquettes",
+
+      "fields": {
+        "title": "Titre",
+        "description": "Description",
+        "servings": "Portions",
+        "prepTime": "Temps de préparation (min)",
+        "cookTime": "Temps de cuisson (min)",
+        "image": "Image de la recette",
+        "private": "Recette privée"
+      },
+
+      "placeholders": {
+        "title": "Gâteau au chocolat",
+        "description": "Courte description (optionnel)"
+      },
+
+      "list": {
+        "title": "Toutes les recettes",
+        "servings": "Portions",
+        "prep": "Préparation",
+        "cook": "Cuisson"
+      },
+
+      "view": {
+        "author": "Auteur",
+        "visibility": "Visibilité",
+        "public": "Publique",
+        "private": "Privée",
+        "ingredients": "Ingrédients",
+        "steps": "Étapes de préparation"
+      },
+
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette recette ?"
+    },
+
+    "ingredients": {
+      "title": "Ingrédients",
+      "addGroup": "Ajouter un groupe",
+      "groupTitle": "Titre du groupe",
+      "addIngredient": "Ajouter ingrédient",
+      "name": "Nom",
+      "quantity": "Quantité",
+      "note": "Note (optionnel)",
+      "remove": "Retirer",
+      "note_placeholder": "Ajoutez des informations supplémentaires pour cet ingrédient"
+    },
+
+    "steps": {
+      "title": "Étapes",
+      "addGroup": "Ajouter un groupe",
+      "groupTitle": "Titre du groupe",
+      "addStep": "Ajouter une étape",
+      "instruction": "Instruction",
+      "remove": "Retirer",
+      "remove_image": "Retirer l'image",
+      "duration": "Durée (minutes)",
+      "choose_image":"Choisir une image",
+      "no_image_selected": "Aucune image sélectionnée"
+    },
+    "units": {
+      "placeholder": "Unité"
+    },
+
+    "table": {
+      "title": "Titre",
+      "author": "Auteur",
+      "cookTime": "Temps de cuisson",
+      "tags": "Étiquettes",
+      "filter": "Filtrer les recettes...",
+      "columns": "Colonnes",
+      "noRecipes": "Aucune recette trouvée",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "selected": "sélectionné(s)",
+      "copyId": "Copier l'identifiant",
+      "viewRecipe": "Voir la recette",
+      "editRecipe": "Modifier la recette",
+      "of": "sur",
+      "recipe_selected": "recette(s) selectionner."
+    },
+    "tags": {
+      "select": "Sélectionner des étiquettes...",
+      "selected": "{count} étiquette sélectionnée | {count} étiquettes sélectionnées",
+      "search_or_create": "Rechercher ou créer une étiquette...",
+      "none_found": "Aucune étiquette trouvée.",
+      "suggestions": "Suggestions",
+      "new_tag": "Nouvelle étiquette",
+      "create": "Créer « {name} »",
+      "loading": "Chargement..."
+    },
+    "filters": {
+      "search": "Rechercher par nom ou description",
+      "ingredient": "Ingrédient",
+      "reset": "Réinitialiser les filtres",
+      "advanced": "Filtres avancés",
+
+      "prep_min": "Temps de préparation min",
+      "prep_max": "Temps de préparation max",
+
+      "cook_min": "Temps de cuisson min",
+      "cook_max": "Temps de cuisson max",
+
+      "steps_min": "Nombre d'étapes min",
+      "steps_max": "Nombre d'étapes max",
+
+      "date_from": "Date de début",
+      "date_to": "Date de fin"
+    }
   }
 }

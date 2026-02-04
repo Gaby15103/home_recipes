@@ -6,7 +6,11 @@ import {
 } from "@/components/ui/collapsible"
 import type { RecipeFilter } from "@/models/Recipe.ts"
 import { computed } from "vue"
-
+import {useI18n} from "vue-i18n";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import TagsMultiSelect from "@/components/Recipe/TagsMultiSelect.vue";
+const { t } = useI18n()
 const props = defineProps<{
   modelValue: RecipeFilter
 }>()
@@ -43,35 +47,61 @@ function reset() {
   <div class="flex gap-4 mb-4">
     <Input
         v-model="filters.search"
-        placeholder="Search name or description"
+        :placeholder="t('Admin.filters.search')"
     />
 
     <Input
         v-model="filters.ingredient"
-        placeholder="Ingredient"
+        :placeholder="t('Admin.filters.ingredient')"
     />
     <Button variant="ghost" @click="reset">
-      Reset filters
+      {{ t('Admin.filters.reset') }}
     </Button>
   </div>
 
   <Collapsible class="border rounded-lg p-4">
     <CollapsibleTrigger class="flex justify-between w-full">
-      <span class="font-medium">Advanced filters</span>
+      <span class="font-medium">
+        {{ t('Admin.filters.advanced') }}
+      </span>
       <ChevronDown class="h-4 w-4" />
     </CollapsibleTrigger>
 
     <CollapsibleContent class="mt-4 space-y-4">
       <div class="grid grid-cols-2 gap-4">
-        <Input type="number" v-model.number="filters.minPrep" placeholder="Min prep" />
-        <Input type="number" v-model.number="filters.maxPrep" placeholder="Max prep" />
-        <Input type="number" v-model.number="filters.minCook" placeholder="Min cook" />
-        <Input type="number" v-model.number="filters.maxCook" placeholder="Max cook" />
+        <Input
+            type="number"
+            v-model.number="filters.minPrep"
+            :placeholder="t('Admin.filters.prep_min')"
+        />
+        <Input
+            type="number"
+            v-model.number="filters.maxPrep"
+            :placeholder="t('Admin.filters.prep_max')"
+        />
+        <Input
+            type="number"
+            v-model.number="filters.minCook"
+            :placeholder="t('Admin.filters.cook_min')"
+        />
+        <Input
+            type="number"
+            v-model.number="filters.maxCook"
+            :placeholder="t('Admin.filters.cook_max')"
+        />
       </div>
 
       <div class="grid grid-cols-2 gap-4">
-        <Input type="number" v-model.number="filters.minSteps" placeholder="Min steps" />
-        <Input type="number" v-model.number="filters.maxSteps" placeholder="Max steps" />
+        <Input
+            type="number"
+            v-model.number="filters.minSteps"
+            :placeholder="t('Admin.filters.steps_min')"
+        />
+        <Input
+            type="number"
+            v-model.number="filters.maxSteps"
+            :placeholder="t('Admin.filters.steps_max')"
+        />
       </div>
 
       <div class="grid grid-cols-2 gap-4">
@@ -79,7 +109,7 @@ function reset() {
         <Input type="date" v-model="filters.dateTo" />
       </div>
 
-      <TagsSelect v-model="filters.tags" />
+      <TagsMultiSelect v-model="filters.tags" />
     </CollapsibleContent>
   </Collapsible>
 </template>

@@ -21,7 +21,8 @@ import type { RecipeEdit } from "@/models/RecipeEdit"
 import { getRecipeById, updateRecipe } from "@/api/recipe"
 import { recipeToEdit, editToUpdatePayload } from "@/mappers/recipe.mapper"
 import {ROUTES} from "@/router/routes.ts";
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 const apiUrl = import.meta.env.VITE_STATIC_URL
 const route = useRoute()
 const router = useRouter()
@@ -97,37 +98,41 @@ async function submit() {
 
 <template>
   <div class="max-w-4xl mx-auto p-6 space-y-6">
-    <h1 class="text-3xl font-bold">Edit Recipe</h1>
+    <h1 class="text-3xl font-bold">{{ t('Admin.recipe.editTitle') }}</h1>
     <div v-if="recipe" class="max-w-4xl mx-auto p-6 space-y-6">
       <JsonImporter v-model="recipe"/>
       <!-- Basic info -->
       <Card>
         <CardHeader>
-          <CardTitle>Basic information</CardTitle>
+          <CardTitle>{{ t('Admin.recipe.basicInfo') }}</CardTitle>
         </CardHeader>
 
         <CardContent class="space-y-4">
           <div class="space-y-2">
-            <Label for="title">Title</Label>
-            <Input id="title" v-model="recipe.title" placeholder="Chocolate cake"/>
+            <Label for="title">{{ t('Admin.recipe.fields.title') }}</Label>
+            <Input id="title" v-model="recipe.title" :placeholder="t('Admin.recipe.placeholders.title')"/>
           </div>
 
           <div class="space-y-2">
-            <Label for="description">Description</Label>
+            <Label for="description">
+              {{ t('Admin.recipe.fields.description') }}
+            </Label>
             <Textarea
                 id="description"
                 v-model="recipe.description"
-                placeholder="Short description (optional)"
+                :placeholder="t('Admin.recipe.placeholders.description')"
             />
           </div>
 
           <div class="space-y-2">
-            <Label>Recipe image</Label>
+            <Label>
+              {{ t('Admin.recipe.fields.image') }}
+            </Label>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input type="file" accept="image/*" @change="onMainImageChange"/>
               <div class="ml-auto">
-                <Label>Private recipe</Label>
+                <Label>{{ t('Admin.recipe.fields.private') }}</Label>
                 <Switch v-model:checked="recipe.is_private"/>
               </div>
             </div>
@@ -144,29 +149,37 @@ async function submit() {
       <!-- Numbers -->
       <Card>
         <CardHeader>
-          <CardTitle>Details</CardTitle>
+          <CardTitle>
+            {{ t('Admin.recipe.details') }}
+          </CardTitle>
         </CardHeader>
 
         <CardContent class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="space-y-2">
-            <Label>Servings</Label>
+            <Label>
+              {{ t('Admin.recipe.fields.servings') }}
+            </Label>
             <Input type="number" min="1" v-model.number="recipe.servings"/>
           </div>
 
           <div class="space-y-2">
-            <Label>Prep time (min)</Label>
+            <Label>
+              {{ t('Admin.recipe.fields.prepTime') }}
+            </Label>
             <Input type="number" min="0" v-model.number="recipe.prep_time_minutes"/>
           </div>
 
           <div class="space-y-2">
-            <Label>Cook time (min)</Label>
+            <Label>
+              {{ t('Admin.recipe.fields.cookTime') }}
+            </Label>
             <Input type="number" min="0" v-model.number="recipe.cook_time_minutes"/>
           </div>
         </CardContent>
       </Card>
       <Card>
         <CardHeader>
-          Tags
+          {{ t('Admin.recipe.tags') }}
         </CardHeader>
         <CardContent class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <TagsMultiSelect v-model:model-value="recipe.tags"/>
@@ -175,7 +188,9 @@ async function submit() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recipe</CardTitle>
+          <CardTitle>
+            {{ t('Admin.recipe.recipeSection') }}
+          </CardTitle>
         </CardHeader>
 
         <CardContent class="grid grid-cols-1 ">
@@ -194,9 +209,11 @@ async function submit() {
 
       <!-- Actions -->
       <div class="flex justify-end gap-3">
-        <Button variant="outline">Cancel</Button>
+        <Button variant="outline">
+          {{ t('Admin.common.cancel') }}
+        </Button>
         <Button :disabled="submitting" @click="submit">
-          Save changes
+          {{ t('Admin.common.save') }}
         </Button>
       </div>
     </div>

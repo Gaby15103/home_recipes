@@ -7,7 +7,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { IngredientUnit } from "@/models/Recipe"
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 const props = defineProps<{
   modelValue: IngredientUnit
 }>()
@@ -25,7 +26,7 @@ const units = Object.values(IngredientUnit)
       @update:model-value="emit('update:modelValue', $event)"
   >
     <SelectTrigger class="w-full">
-      <SelectValue placeholder="Unit" />
+      <SelectValue :placeholder="t('admin.unite.placeholder')" />
     </SelectTrigger>
 
     <SelectContent>

@@ -8,6 +8,7 @@ import UserInfo from "@/components/UserInfo.vue";
 import { useAuthStore } from "@/stores/auth.ts";
 import {ref} from "vue";
 import {Input} from "@/components/ui/input";
+import LanguageChanger from "@/components/MainNavbar/LanguageChanger.vue";
 
 const authStore = useAuthStore();
 
@@ -59,6 +60,7 @@ const notificationsCount = ref(2) // mock for now
           {{ notificationsCount }}
         </span>
       </Button>
+      <LanguageChanger/>
 
       <!-- User menu (placeholder for now) -->
       <Button variant="ghost" class="flex items-center gap-2">

@@ -7,7 +7,8 @@ import type {
   StepGroupCreate,
   StepImage
 } from "@/models/RecipeCreate"
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 const props = defineProps<{
   modelValue: StepGroupCreate[]
   images: StepImage[]
@@ -137,13 +138,34 @@ function getImage(group: StepGroupCreate, step: StepCreate) {
           i.step_position === step.position
   )
 }
+
+const fileRefs = new Map<string, HTMLInputElement>()
+
+function key(g: number, s: number) {
+  return `${g}-${s}`
+}
+
+function setFileRef(
+    el: HTMLInputElement | null,
+    g: number,
+    s: number
+) {
+  if (!el) return
+  fileRefs.set(key(g, s), el)
+}
+
+function openFile(g: number, s: number) {
+  fileRefs.get(key(g, s))?.click()
+}
+
+
 </script>
 
 <template>
   <div class="space-y-6 mb-8">
     <div class="flex justify-between items-center">
-      <h2 class="text-xl font-semibold">Steps</h2>
-      <Button size="sm" @click="addGroup">Add group</Button>
+      <h2 class="text-xl font-semibold">{{ t('Admin.steps.title') }}</h2>
+      <Button size="sm" @click="addGroup">{{ t('Admin.steps.addGroup') }}</Button>
     </div>
 
     <div
@@ -152,8 +174,8 @@ function getImage(group: StepGroupCreate, step: StepCreate) {
         class="border rounded p-4 space-y-3"
     >
       <div class="grid grid-cols-2 gap-4">
-        <Input v-model="group.title" placeholder="Group title" />
-        <Button variant="outline" @click="removeGroup(group)">Remove</Button>
+        <Input v-model="group.title" :placeholder="t('Admin.steps.remove')" />
+        <Button variant="outline" @click="removeGroup(group)">{{ t('Admin.steps.groupTitle') }}</Button>
       </div>
 
       <div
@@ -166,15 +188,35 @@ function getImage(group: StepGroupCreate, step: StepCreate) {
         <div class="flex gap-2 items-center">
           <Input
               type="number"
-              placeholder="Minutes"
+              :placeholder="t('Admin.steps.duration')"
               v-model.number="step.duration_minutes"
           />
 
-          <Input
-              type="file"
-              accept="image/*"
-              @change="e => onImageChange(e, group, step)"
-          />
+          <div>
+            <input
+                type="file"
+                accept="image/*"
+                class="hidden"
+                :ref="el => setFileRef(el, group.position, step.position)"
+                @change="e => onImageChange(e, group, step)"
+            />
+
+            <Button
+                size="sm"
+                variant="secondary"
+                @click="openFile(group.position, step.position)"
+            >
+              {{ t('Admin.steps.choose_image') }}
+            </Button>
+            <p class="text-sm text-muted-foreground">
+              {{
+                getImage(group, step)?.image_file?.name ??
+                t("Admin.steps.no_image_selected")
+              }}
+            </p>
+
+          </div>
+
 
           <Button
               v-if="getImage(group, step)"
@@ -182,7 +224,7 @@ function getImage(group: StepGroupCreate, step: StepCreate) {
               size="sm"
               @click="removeImage(group, step)"
           >
-            Remove image
+            {{ t('Admin.steps.remove_image') }}
           </Button>
         </div>
 
@@ -190,11 +232,11 @@ function getImage(group: StepGroupCreate, step: StepCreate) {
             v-if="getImage(group, step)"
             :src="getImage(group, step)!.image_preview"
             class="h-32 rounded border object-cover"
-        />
+         alt=""/>
       </div>
 
       <Button size="sm" variant="outline" @click="addStep(group)">
-        Add step
+        {{ t('Admin.steps.addStep') }}
       </Button>
     </div>
   </div>

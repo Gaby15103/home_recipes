@@ -12,6 +12,7 @@ import { useAuthStore } from "@/stores/auth.ts";
 import NavLink from "@/components/NavLink.vue";
 import {Button} from "@/components/ui/button";
 import { ROUTES } from "@/router/routes";
+import LanguageChanger from "@/components/MainNavbar/LanguageChanger.vue";
 
 const authStore = useAuthStore();
 interface Props {

@@ -5,7 +5,8 @@ import type {IngredientCreate, IngredientGroupCreate} from "@/models/RecipeCreat
 import {IngredientUnit} from "@/models/Recipe.ts";
 import IngredientUnitSelect from "@/components/Recipe/IngredientUnitSelect.vue";
 import {Textarea} from "@/components/ui/textarea";
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 const props = defineProps<{
   modelValue: IngredientGroupCreate[]
 }>()
@@ -55,15 +56,15 @@ function removeGroup(group: IngredientGroupCreate) {
 <template>
   <div class="space-y-6 mb-8">
     <div class="flex justify-between items-center">
-      <h2 class="text-xl font-semibold">Ingredients</h2>
-      <Button size="sm" @click="addGroup">Add group</Button>
+      <h2 class="text-xl font-semibold">{{ t('Admin.ingredients.title') }}</h2>
+      <Button size="sm" @click="addGroup">{{ t('Admin.ingredients.addGroup') }}</Button>
     </div>
 
     <div v-for="group in modelValue" class="border rounded p-4 space-y-3">
       <div class="grid grid-cols-2 gap-4">
-        <Input placeholder="Group title" class="w-[125%]" v-model="group.title"/>
+        <Input :placeholder="t('Admin.ingredients.groupTitle')" class="w-[125%]" v-model="group.title"/>
         <Button size="sm" class="ml-[50%] w-[50%]" variant="outline" @click="removeGroup(group)">
-          remove
+          {{ t('Admin.ingredients.remove') }}
         </Button>
       </div>
 
@@ -71,16 +72,16 @@ function removeGroup(group: IngredientGroupCreate) {
           v-for="ingredient in group.ingredients"
           class="grid grid-cols-4 gap-2 mb-3 p-1 rounded-2xl border-1 border-solid border-gray-1"
       >
-        <Input placeholder="Name" v-model="ingredient.name"/>
+        <Input :placeholder="t('Admin.ingredients.name')" v-model="ingredient.name"/>
         <Input type="number" v-model.number="ingredient.quantity"/>
         <IngredientUnitSelect v-model="ingredient.unit"/>
         <Button size="sm" class="ml-[50%] w-[50%]" variant="outline" @click="removeIngredient(group, ingredient)">
-          remove
+          {{ t('Admin.ingredients.remove') }}
         </Button>
         <div class="col-span-4 mt-1">
-          <Label class="text-sm text-gray-500">Note (optional)</Label>
+          <Label class="text-sm text-gray-500">{{ t('Admin.ingredients.note') }}</Label>
           <Textarea
-              placeholder="Add extra information for this ingredient"
+              :placeholder="t('Admin.ingredients.note_placeholder')"
               v-model="ingredient.note"
               class="w-full"
               rows="2"
@@ -89,7 +90,7 @@ function removeGroup(group: IngredientGroupCreate) {
       </div>
 
       <Button size="sm" variant="outline" @click="addIngredient(group)">
-        Add ingredient
+        {{ t('Admin.ingredients.addIngredient') }}
       </Button>
     </div>
   </div>

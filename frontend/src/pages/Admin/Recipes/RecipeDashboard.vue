@@ -6,13 +6,14 @@ import RecipeTable from "@/pages/Admin/Recipes/RecipeTable.vue"
 import { getAllRecipesByPage } from "@/api/recipe.ts"
 import type { Recipe } from "@/models/Recipe.ts"
 import router from "@/router";
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 // ------------------------- Stats -------------------------
 const stats = ref([
-  { label: "Total Recipes", value: 124, icon: BookOpen },
-  { label: "Public", value: 92, icon: LockOpen },
-  { label: "Private", value: 32, icon: LockIcon },
-  { label: "Tags", value: 8, icon: Tag },
+  { label: t('Admin.dashboard.stats.totalRecipes'), value: 124, icon: BookOpen },
+  { label: t('Admin.dashboard.stats.public'), value: 92, icon: LockOpen },
+  { label: t('Admin.dashboard.stats.private'), value: 32, icon: LockIcon },
+  { label: t('Admin.dashboard.stats.tags'), value: 8, icon: Tag },
 ])
 
 // ------------------------- Pagination State -------------------------
@@ -90,23 +91,23 @@ function goToCreate() {
         <!-- Quick Actions -->
         <div class="space-y-4">
           <h3 class="text-sm font-medium text-muted-foreground">
-            Quick actions
+            {{ t('Admin.dashboard.quickActions') }}
           </h3>
 
           <div class="flex flex-col gap-2">
             <Button class="justify-start gap-2" @click="goToCreate">
               <Plus class="h-4 w-4"/>
-              Create recipe
+              {{ t('Admin.dashboard.createRecipe') }}
             </Button>
 
             <Button variant="secondary" class="justify-start gap-2">
               <Folder class="h-4 w-4"/>
-              Manage categories
+              {{ t('Admin.dashboard.manageCategories') }}
             </Button>
 
             <Button variant="secondary" class="justify-start gap-2">
               <Tag class="h-4 w-4"/>
-              Manage tags
+              {{ t('Admin.dashboard.manageTags') }}
             </Button>
           </div>
         </div>
@@ -115,8 +116,12 @@ function goToCreate() {
       <!-- ===== Recipe Table ===== -->
       <div class="rounded-xl border bg-card p-4">
         <div class="flex items-center justify-between border-b px-4 py-3 mb-4">
-          <h2 class="font-semibold">Recent Recipes</h2>
-          <Button variant="ghost" size="sm">View all</Button>
+          <h2 class="font-semibold">
+            {{ t('Admin.dashboard.recentRecipes') }}
+          </h2>
+          <Button variant="ghost" size="sm">
+            {{ t('Admin.dashboard.viewAll') }}
+          </Button>
         </div>
 
         <RecipeTable

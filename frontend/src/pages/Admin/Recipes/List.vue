@@ -5,7 +5,8 @@ import { getAllRecipes } from "@/api/recipe";
 import Filter from "@/components/Recipe/Filter.vue"
 import { debounce } from "lodash-es"
 import {Spinner} from "@/components/ui/spinner";
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 const recipes = ref<Recipe[]>([]);
 const loading = ref(true);
 
@@ -49,7 +50,7 @@ async function applyFilters() {
 
 <template>
   <div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold mb-6">All Recipes</h1>
+    <h1 class="text-3xl font-bold mb-6">{{ t('Admin.recipe.list.title') }}</h1>
 
     <Filter v-model="filters" />
 
@@ -69,9 +70,9 @@ async function applyFilters() {
         <p class="text-gray-600 text-sm mb-2" v-if="recipe.description">
           {{ recipe.description }}
         </p>
-        <p class="text-gray-500 text-xs mb-1">Servings: {{ recipe.servings }}</p>
+        <p class="text-gray-500 text-xs mb-1">{{ t('Admin.recipe.list.servings') }}: {{ recipe.servings }}</p>
         <p class="text-gray-500 text-xs">
-          Prep: {{ recipe.prep_time_minutes }} min | Cook: {{ recipe.cook_time_minutes }} min
+          {{ t('Admin.recipe.list.prep') }}: {{ recipe.prep_time_minutes }} min | {{ t('Admin.recipe.list.cook') }}: {{ recipe.cook_time_minutes }} min
         </p>
 
         <div class="mt-2 flex flex-wrap gap-1">

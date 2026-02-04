@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Recipe } from "@/models/Recipe";
 import { ROUTES } from "@/router/routes.ts";
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 const route = useRoute();
 const router = useRouter();
 
@@ -37,7 +38,7 @@ function goToEdit() {
 
 async function removeRecipe() {
   if (!recipe.value) return;
-  const confirmed = confirm("Are you sure you want to delete this recipe?");
+  const confirmed = confirm(t('Admin.recipe.confirmDelete'));
   if (!confirmed) return;
 
   try {
@@ -80,18 +81,18 @@ async function removeRecipe() {
 
             <!-- Metadata -->
             <div class="grid grid-cols-2 gap-4 text-sm">
-              <div><strong>Author:</strong> {{ recipe.author }} (ID: {{ recipe.author_id }})</div>
-              <div><strong>Servings:</strong> {{ recipe.servings }}</div>
-              <div><strong>Prep:</strong> {{ recipe.prep_time_minutes }} min</div>
-              <div><strong>Cook:</strong> {{ recipe.cook_time_minutes }} min</div>
+              <div><strong>{{ t('Admin.recipe.view.author') }}:</strong> {{ recipe.author }} (ID: {{ recipe.author_id }})</div>
+              <div><strong>{{ t('Admin.recipe.fields.servings') }}:</strong> {{ recipe.servings }}</div>
+              <div><strong>{{ t('Admin.recipe.fields.prepTime') }}:</strong> {{ recipe.prep_time_minutes }} min</div>
+              <div><strong>{{ t('Admin.recipe.fields.cookTime') }}:</strong> {{ recipe.cook_time_minutes }} min</div>
               <div>
-                <strong>Visibility:</strong>
+                <strong>{{ t('Admin.recipe.view.visibility') }}:</strong>
                 <Badge :variant="recipe.is_private ? 'destructive' : 'outline'">
-                  {{ recipe.is_private ? "Private" : "Public" }}
+                  {{ recipe.is_private ? t('Admin.recipe.view.private') : t('Admin.recipe.view.public') }}
                 </Badge>
               </div>
               <div>
-                <strong>Tags:</strong>
+                <strong>{{ t('Admin.recipe.tags') }}:</strong>
                 <div class="flex gap-1 flex-wrap">
                   <Badge v-for="tag in recipe.tags" :key="tag.id" variant="secondary">{{ tag.name ?? tag.id }}</Badge>
                 </div>
@@ -100,8 +101,8 @@ async function removeRecipe() {
 
             <!-- Admin actions -->
             <div class="flex gap-3 pt-4">
-              <Button @click="goToEdit">✏️ Edit Recipe</Button>
-              <Button variant="destructive" @click="removeRecipe">🗑 Delete Recipe</Button>
+              <Button @click="goToEdit">✏️ {{ t('Admin.recipe.editTitle') }}</Button>
+              <Button variant="destructive" @click="removeRecipe">🗑 {{ t('Admin.common.delete') }}</Button>
             </div>
           </div>
         </CardContent>
@@ -110,12 +111,12 @@ async function removeRecipe() {
       <!-- Ingredients -->
       <Card>
         <CardHeader>
-          <CardTitle>Ingredients</CardTitle>
+          <CardTitle>{{ t('Admin.recipe.view.ingredients') }}</CardTitle>
         </CardHeader>
         <CardContent class="space-y-6">
           <template v-for="group in recipe.ingredient_groups" :key="group.id">
             <h3 class="font-semibold">
-              {{ group.title || "Ingredients" }} (ID: {{ group.id }})
+              {{ group.title || t('Admin.recipe.view.ingredients') }} (ID: {{ group.id }})
             </h3>
             <ul class="space-y-2">
               <li v-for="ing in group.ingredients" :key="ing.id" class="flex gap-2 items-start">
@@ -134,12 +135,12 @@ async function removeRecipe() {
       <!-- Steps -->
       <Card>
         <CardHeader>
-          <CardTitle>Preparation Steps</CardTitle>
+          <CardTitle>{{ t('Admin.recipe.view.steps') }}</CardTitle>
         </CardHeader>
         <CardContent class="space-y-6">
           <template v-for="group in recipe.step_groups" :key="group.id">
             <h3 class="font-semibold">
-              {{ group.title || "Steps" }} (ID: {{ group.id }})
+              {{ group.title || t('Admin.recipe.steps.title') }} (ID: {{ group.id }})
             </h3>
             <ol class="space-y-4 list-decimal pl-5">
               <li v-for="step in group.steps" :key="step.id">

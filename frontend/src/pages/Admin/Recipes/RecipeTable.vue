@@ -43,7 +43,8 @@ import {
 } from '@/components/ui/tooltip'
 import NavLink from "@/components/NavLink.vue";
 import {ROUTES} from "@/router/routes.ts";
-
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 const props = defineProps<{
   recipes: Recipe[]
   page: number
@@ -73,21 +74,22 @@ const columns: ColumnDef<Recipe>[] = [
   {
     id: 'select',
     header: ({table}) => h(Checkbox, {
-      'modelValue': table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
+      modelValue: table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate'),
       'onUpdate:modelValue': value => table.toggleAllPageRowsSelected(!!value),
-      'ariaLabel': 'Select all',
+      ariaLabel: t('Admin.table.selectAll'),
     }),
     cell: ({row}) => h(Checkbox, {
-      'modelValue': row.getIsSelected(),
+      modelValue: row.getIsSelected(),
       'onUpdate:modelValue': value => row.toggleSelected(!!value),
-      'ariaLabel': 'Select row',
+      ariaLabel: t('Admin.table.selectRow'),
     }),
     enableSorting: false,
     enableHiding: false,
   },
+
   {
     accessorKey: 'title',
-    header: 'Title',
+    header: t('Admin.table.title'),
     cell: ({row}) => {
       const title = row.getValue('title') as string
 
@@ -95,53 +97,51 @@ const columns: ColumnDef<Recipe>[] = [
           TooltipProvider,
           {},
           () =>
-              h(
-                  Tooltip,
-                  {},
-                  {
-                    default: () => [
-                      h(
-                          TooltipTrigger,
-                          {asChild: true},
-                          () =>
-                              h(
-                                  'div',
-                                  {
-                                    class:
-                                        'max-w-[220px] truncate cursor-default font-medium',
-                                  },
-                                  title,
-                              ),
-                      ),
-                      h(
-                          TooltipContent,
-                          {side: 'top', class: 'max-w-sm break-words'},
-                          () => title,
-                      ),
-                    ],
-                  },
-              ),
+              h(Tooltip, {}, {
+                default: () => [
+                  h(
+                      TooltipTrigger,
+                      {asChild: true},
+                      () =>
+                          h(
+                              'div',
+                              { class: 'max-w-[220px] truncate cursor-default font-medium' },
+                              title
+                          )
+                  ),
+                  h(
+                      TooltipContent,
+                      {side: 'top', class: 'max-w-sm break-words'},
+                      () => title
+                  ),
+                ],
+              })
       )
     },
   },
+
   {
     accessorKey: 'author',
-    header: ({column}) => {
-      return h(Button, {
-        variant: 'ghost',
-        onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
-      }, () => ['Author', h(ArrowUpDown, {class: 'ml-2 h-4 w-4'})])
-    },
+    header: ({column}) =>
+        h(Button, {
+          variant: 'ghost',
+          onClick: () => column.toggleSorting(column.getIsSorted() === 'asc'),
+        }, () => [
+          t('Admin.table.author'),
+          h(ArrowUpDown, { class: 'ml-2 h-4 w-4' })
+        ]),
     cell: ({row}) => row.getValue('author'),
   },
+
   {
     accessorKey: 'cook_time_minutes',
-    header: 'Cook Time',
-    cell: ({row}) => row.getValue('cook_time_minutes') + ' min',
+    header: t('Admin.table.cookTime'),
+    cell: ({row}) => `${row.getValue('cook_time_minutes')} ${t('recipe.meta.minutes')}`,
   },
+
   {
     accessorKey: 'tags',
-    header: 'Tags',
+    header: t('Admin.table.tags'),
     cell: ({row}) => {
       const tags = row.getValue('tags') as Tag[]
       const MAX_VISIBLE = 3
@@ -160,42 +160,27 @@ const columns: ColumnDef<Recipe>[] = [
           TooltipProvider,
           {},
           () =>
-              h(
-                  Tooltip,
-                  {},
-                  {
-                    default: () => [
-                      h(
-                          TooltipTrigger,
-                          {asChild: true},
-                          () =>
-                              h(
-                                  'div',
-                                  {class: 'flex flex-wrap gap-1 max-w-[260px]'},
-                                  [
-                                    ...visible.map(renderBadge),
+              h(Tooltip, {}, {
+                default: () => [
+                  h(
+                      TooltipTrigger,
+                      {asChild: true},
+                      () =>
+                          h('div', {class: 'flex flex-wrap gap-1 max-w-[260px]'}, [
+                            ...visible.map(renderBadge),
 
-                                    hidden.length
-                                        ? h(
-                                            Badge,
-                                            {variant: 'outline'},
-                                            () => `+${hidden.length}`,
-                                        )
-                                        : null,
-                                  ],
-                              ),
-                      ),
+                            hidden.length
+                                ? h(Badge, {variant: 'outline'}, () => `+${hidden.length}`)
+                                : null,
+                          ])
+                  ),
 
-                      hidden.length
-                          ? h(
-                              TooltipContent,
-                              {class: 'flex flex-wrap gap-1 max-w-sm'},
-                              () => tags.map(renderBadge),
-                          )
-                          : null,
-                    ],
-                  },
-              ),
+                  hidden.length
+                      ? h(TooltipContent, {class: 'flex flex-wrap gap-1 max-w-sm'},
+                          () => tags.map(renderBadge))
+                      : null,
+                ],
+              })
       )
     },
   },
@@ -209,6 +194,7 @@ const columns: ColumnDef<Recipe>[] = [
     }),
   },
 ]
+
 
 const table = useVueTable({
   get data() {
@@ -246,17 +232,17 @@ const table = useVueTable({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem @click="copyId(recipe.id)">Copy recipe ID</DropdownMenuItem>
+        <DropdownMenuLabel>{{ t('Admin.common.actions') }}</DropdownMenuLabel>
+        <DropdownMenuItem @click="copyId(recipe.id)">{{ t('Admin.table.copyId') }}</DropdownMenuItem>
         <DropdownMenuSeparator/>
         <DropdownMenuItem>
           <RouterLink :to="ROUTES.ADMIN.RECIPE.VIEW(recipe.id)">
-            View recipe
+            {{ t('Admin.table.viewRecipe') }}
           </RouterLink>
           </DropdownMenuItem>
         <DropdownMenuItem>
           <RouterLink :to="ROUTES.ADMIN.RECIPE.EDIT(recipe.id)">
-            Edit recipe
+            {{ t('Admin.table.editRecipe') }}
           </RouterLink>
          </DropdownMenuItem>
       </DropdownMenuContent>
@@ -266,14 +252,14 @@ const table = useVueTable({
   <div class="flex items-center py-4 gap-2">
     <Input
         class="max-w-sm"
-        placeholder="Filter recipes..."
+        :placeholder="t('Admin.table.filter')"
         :model-value="table.getColumn('title')?.getFilterValue() as string"
         @update:model-value="table.getColumn('title')?.setFilterValue($event)"
     />
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
         <Button variant="outline" class="ml-auto">
-          Columns
+          {{ t('Admin.table.columns') }}
           <ChevronDown class="ml-2 h-4 w-4"/>
         </Button>
       </DropdownMenuTrigger>
@@ -318,7 +304,7 @@ const table = useVueTable({
         </template>
         <TableRow v-else>
           <TableCell :colspan="columns.length" class="h-24 text-center">
-            No recipes found.
+            {{ t('Admin.table.noRecipes') }}
           </TableCell>
         </TableRow>
       </TableBody>
@@ -327,8 +313,8 @@ const table = useVueTable({
 
   <div class="flex items-center justify-end space-x-2 py-4">
     <div class="flex-1 text-sm text-muted-foreground">
-      {{ table.getFilteredSelectedRowModel().rows.length }} of
-      {{ table.getFilteredRowModel().rows.length }} recipe(s) selected.
+      {{ table.getFilteredSelectedRowModel().rows.length }} {{ t('Admin.table.of') }}
+      {{ table.getFilteredRowModel().rows.length }} {{ t('Admin.table.recipe_selected') }}
     </div>
     <div class="space-x-2">
       <Button
@@ -337,7 +323,7 @@ const table = useVueTable({
           :disabled="props.page === 1 || props.loading"
           @click="emit('previous-page')"
       >
-        Previous
+        {{ t('Admin.table.previous') }}
       </Button>
 
       <Button
@@ -346,7 +332,7 @@ const table = useVueTable({
           :disabled="props.page * props.perPage >= props.total || props.loading"
           @click="emit('next-page')"
       >
-        Next
+        {{ t('Admin.table.next') }}
       </Button>
     </div>
   </div>

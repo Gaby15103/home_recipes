@@ -8,6 +8,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import type {InputTag, Tag} from "@/models/Tag.ts";
+import {useI18n} from "vue-i18n";
+const { t } = useI18n()
 
 const props = defineProps<{ modelValue: InputTag[] }>()
 const emit = defineEmits(['update:modelValue'])
@@ -45,7 +47,7 @@ function syncImportedTags() {
 
 const getTagName = (item: InputTag) => {
   if (item.type === 'new') return item.name
-  return allTags.value.find((t: { id: any }) => t.id === item.id)?.name || 'Loading...'
+  return allTags.value.find((t: { id: any }) => t.id === item.id)?.name || t('Admin.tags.loading')
 }
 
 // Logic to check if the current search term is unique
@@ -98,7 +100,11 @@ function removeTag(index: number) {
     <Popover v-model:open="open">
       <PopoverTrigger as-child>
         <Button variant="outline" class="w-full justify-between">
-          {{ modelValue.length > 0 ? `${modelValue.length} tags selected` : "Select tags..." }}
+          {{
+            modelValue.length > 0
+                ? t('Admin.tags.selected', { count: modelValue.length })
+                : t('Admin.tags.select')
+          }}
           <ChevronsUpDown class="ml-2 h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -112,13 +118,15 @@ function removeTag(index: number) {
         }">
           <CommandInput
               v-model="searchQuery"
-              placeholder="Search or type new tag..."
+              :placeholder="t('Admin.tags.search_or_create')"
           />
 
           <CommandList>
-            <CommandEmpty v-if="!canCreate">No tags found.</CommandEmpty>
+            <CommandEmpty v-if="!canCreate">
+              {{ t('Admin.tags.none_found') }}
+            </CommandEmpty>
 
-            <CommandGroup v-if="allTags.length > 0" title="Suggestions">
+            <CommandGroup v-if="allTags.length > 0" :title="t('Admin.tags.suggestions')">
               <CommandItem
                   v-for="tag in allTags"
                   :key="tag.id"
@@ -130,7 +138,7 @@ function removeTag(index: number) {
               </CommandItem>
             </CommandGroup>
 
-            <CommandGroup v-if="canCreate" title="New Tag">
+            <CommandGroup v-if="canCreate" :title="t('Admin.tags.new_tag')">
               <CommandItem
                   :key="searchQuery"
                   :value="searchQuery"
@@ -138,7 +146,7 @@ function removeTag(index: number) {
                   class="cursor-pointer text-blue-600 font-medium"
               >
                 <Plus class="mr-2 h-4 w-4" />
-                Create "{{ searchQuery }}"
+                {{ t('Admin.tags.create', { name: searchQuery }) }}
               </CommandItem>
             </CommandGroup>
           </CommandList>
