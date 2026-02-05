@@ -10,22 +10,31 @@ use crate::prelude::*;
 use crate::utils::auth::{authenticate};
 use actix_multipart::form::{MultipartForm};
 use uuid::Uuid;
+use crate::schema::step_translations::language_code;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
     recipe: U,
 }
+#[derive(Debug, Deserialize)]
+pub struct RecipeLangQuery {
+    pub lang: Option<String>,
+}
 
 pub async fn get(
     state: web::Data<AppState>,
     path: web::Path<String>,
+    query: web::Query<RecipeLangQuery>,
 ) -> Result<HttpResponse, Error> {
     let id_str = path.into_inner();
     let id = Uuid::parse_str(&id_str).map_err(|_| Error::InternalServerError)?;
 
+    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
+
+
     let recipe = state
         .db
-        .send(GetRecipeById { id })
+        .send(GetRecipeById { id, language_code: lang_code })
         .await
         .map_err(|_| Error::InternalServerError)??;
 
@@ -36,12 +45,15 @@ pub async fn create(
     state: Data<AppState>,
     req: HttpRequest,
     MultipartForm(form): MultipartForm<CreateRecipeForm>,
+    query: web::Query<RecipeLangQuery>,
 ) -> Result<HttpResponse, Error> {
     let auth = authenticate(&state, &req).await?;
 
     let new_recipe = form.recipe.into_inner().recipe;
 
     new_recipe.validate()?;
+
+    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
 
     let res = state
         .db
@@ -51,6 +63,7 @@ pub async fn create(
             main_image: form.main_image,
             step_images: form.step_images,
             step_images_meta: form.step_images_meta.into_inner(),
+            language_code: lang_code
         })
         .await
         .map_err(|_| crate::error::Error::InternalServerError)??;
@@ -102,11 +115,13 @@ pub struct GetFilter {
 
     pub date_from: Option<chrono::NaiveDate>,
     pub date_to: Option<chrono::NaiveDate>,
+    pub lang: Option<String>,
 }
 
 pub struct GetAllRecipes {
     pub filters: GetFilter,
     pub include_private: bool,
+    pub language_code: String,
 }
 
 pub async fn list(
@@ -133,11 +148,14 @@ pub async fn list(
         false
     };
 
+    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
+
     let recipes = state
         .db
         .send(GetAllRecipes {
             filters: query.into_inner(),
             include_private,
+            language_code: lang_code
         })
         .await
         .map_err(|_| Error::InternalServerError)??;
@@ -151,6 +169,16 @@ pub struct GetAllRecipesByPage {
     pub include_private: bool,
     pub page: Option<i64>,
     pub per_page: Option<i64>,
+    pub language_code: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetAllRecipesByPageQuery {
+    pub filters: Option<GetFilter>,
+    pub include_private: bool,
+    pub page: Option<i64>,
+    pub per_page: Option<i64>,
+    pub lang: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -163,7 +191,7 @@ pub struct PaginatedRecipes {
 
 pub async fn get_by_page(
     state: Data<AppState>,
-    query: web::Query<GetAllRecipesByPage>,
+    query: web::Query<GetAllRecipesByPageQuery>,
     req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
     let query = query.into_inner();
@@ -182,6 +210,8 @@ pub async fn get_by_page(
         false
     };
 
+    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
+    
     let recipes = state
         .db
         .send(GetAllRecipesByPage {
@@ -189,6 +219,7 @@ pub async fn get_by_page(
             include_private,
             page: query.page,
             per_page: query.per_page,
+            language_code: lang_code
         })
         .await
         .map_err(|_| Error::InternalServerError)??;
@@ -206,7 +237,7 @@ pub async fn delete(
 
     state
         .db
-        .send(GetRecipeById { id: recipe_id })
+        .send(GetRecipeById { id: recipe_id, language_code: "fr".to_string() })
         .await??;
 
     let is_admin = auth.roles.iter().any(|r| {
@@ -280,14 +311,18 @@ pub async fn favorite(
 pub async fn get_favorites(
     state: Data<AppState>,
     req: HttpRequest,
+    query: web::Query<RecipeLangQuery>,
 ) -> Result<HttpResponse, Error> {
     println!("fuck you");
     let auth = authenticate(&state, &req).await?;
+
+    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
 
     let recipes = state
         .db
         .send(GetFavoriteRecipes {
             user_id: auth.user.id,
+            language_code: lang_code,
         })
         .await
         .map_err(|_| Error::InternalServerError)??;
@@ -430,10 +465,13 @@ pub async fn restore_version(
     state: Data<AppState>,
     req: HttpRequest,
     path: web::Path<(Uuid, Uuid)>, // (recipe_id, version_id)
+    query: web::Query<RecipeLangQuery>,
 ) -> Result<HttpResponse, Error> {
     let auth = authenticate(&state, &req).await?;
 
     let (recipe_id, version_id) = path.into_inner();
+
+    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
 
     let recipe = state
         .db
@@ -441,6 +479,7 @@ pub async fn restore_version(
             recipe_id,
             version_id,
             user_id: auth.user.id,
+            language_code: lang_code,
         })
         .await??;
 

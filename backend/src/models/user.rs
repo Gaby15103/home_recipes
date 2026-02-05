@@ -7,7 +7,7 @@ use crate::schema::{users};
 // -----------------------------
 // Preferences DTO
 // -----------------------------
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserPreferences {
     pub language: Option<String>,
     pub theme: Option<String>,
@@ -16,7 +16,7 @@ pub struct UserPreferences {
 // -----------------------------
 // User DB Model
 // -----------------------------
-#[derive(Queryable, Insertable, Identifiable, Debug)]
+#[derive(Queryable, Insertable, Identifiable, Debug,Clone)]
 #[diesel(table_name = users)]
 pub struct User {
     pub id: Uuid,

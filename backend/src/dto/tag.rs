@@ -10,7 +10,7 @@ pub struct TagResponse {
     pub name: String,
 }
 
-#[derive(Debug, Deserialize,Serialize)]
+#[derive(Debug, Deserialize,Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum InputTag {
     Existing { id: Uuid },

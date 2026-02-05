@@ -1,4 +1,5 @@
 ﻿use std::collections::HashMap;
+use std::path::Path;
 use super::DbExecutor;
 use crate::app::recipes::{GetAllRecipes, GetAllRecipesByPage, PaginatedRecipes};
 use crate::db::ingredients::{
@@ -6,8 +7,8 @@ use crate::db::ingredients::{
 };
 use crate::db::step::{create_step_groups, fetch_step_groups_for_recipe, sync_step_groups};
 use crate::db::tags::{create_or_associate_tags, fetch_tags_for_recipe};
-use crate::dto::{CreateComment, CreateRecipe, DeleteComment, DeleteRecipe, GetFavoriteRecipes, GetRecipeAnalytics, GetRecipeById, GetRecipeComments, GetRecipeRating, GetRecipeVersion, GetRecipeVersions, IngredientGroupResponse, RecipeCommentResponse, RecipeRatingResponse, RecipeResponse, RecipeVersionResponse, RegisterRecipeView, RestoreRecipeVersion, SetRecipeRating, StepGroupResponse, TagResponse, ToggleFavorite, UnsetRecipeRating, UpdateRecipe, UpdateRecipeInput};
-use crate::models::{NewFavorite, NewRecipe, NewRecipeAnalytics, NewRecipeComment, NewRecipeRating, NewRecipeVersion, Recipe, RecipeChange, RecipeComment, RecipeVersion, User};
+use crate::dto::{CreateComment, CreateRecipe, DeleteComment, DeleteRecipe, GetFavoriteRecipes, GetRecipeAnalytics, GetRecipeById, GetRecipeComments, GetRecipeRating, GetRecipeVersion, GetRecipeVersions, IngredientGroupResponse, RecipeCommentResponse, RecipeRatingResponse, RecipeResponse, RecipeTranslationResponse, RecipeVersionResponse, RegisterRecipeView, RestoreRecipeVersion, SetRecipeRating, StepGroupResponse, TagResponse, ToggleFavorite, UnsetRecipeRating, UpdateRecipe, UpdateRecipeInput};
+use crate::models::{NewFavorite, NewRecipe, NewRecipeAnalytics, NewRecipeComment, NewRecipeRating, NewRecipeVersion, Recipe, RecipeChange, RecipeComment, RecipeTranslation, RecipeVersion, User};
 use crate::prelude::*;
 use crate::utils::image_upload::upload_recipe_image;
 use actix::prelude::*;
@@ -30,24 +31,48 @@ impl Handler<GetRecipeById> for DbExecutor {
 
     fn handle(&mut self, msg: GetRecipeById, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipes::dsl::*;
+        use crate::schema::recipe_translations::dsl as tr;
 
         let mut conn = self.0.get()?;
 
-        // Fetch the main recipe
-        let recipe_model: Recipe = recipes.find(msg.id).first(&mut conn)?;
+        let recipe_model: Recipe = recipes
+            .filter(id.eq(msg.id))
+            .first(&mut conn)?;
 
-        // Fetch related data
+        let translations = tr::recipe_translations
+            .filter(tr::recipe_id.eq(recipe_model.id))
+            .load::<RecipeTranslation>(&mut conn)?;
+
+
+        let translation_dtos = translations
+            .into_iter()
+            .map(|t| RecipeTranslationResponse {
+                language_code: t.language_code,
+                title: t.title,
+                description: t.description,
+            })
+            .collect();
+
+
+        // Fetch related data in the requested language
         let tags = fetch_tags_for_recipe(&mut conn, recipe_model.id)?;
-        let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_model.id)?;
-        let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_model.id)?;
+        let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_model.id, Some(&msg.language_code))?;
+        let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_model.id, Some(&msg.language_code))?;
 
-        // Compose response
-        Ok(RecipeResponse::from_parts(
-            recipe_model,
+        Ok(RecipeResponse {
+            id: recipe_model.id,
+            image_url: recipe_model.image_url,
+            servings: recipe_model.servings,
+            prep_time_minutes: recipe_model.prep_time_minutes,
+            cook_time_minutes: recipe_model.cook_time_minutes,
+            author: recipe_model.author,
+            author_id: recipe_model.author_id,
+            is_private: recipe_model.is_private,
+            translations: translation_dtos,
             tags,
             ingredient_groups,
             step_groups,
-        ))
+        })
     }
 }
 
@@ -60,19 +85,20 @@ impl Handler<CreateRecipe> for DbExecutor {
 
     fn handle(&mut self, msg: CreateRecipe, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipes::dsl::*;
+        use crate::schema::recipe_translations;
         use std::fs;
-        use std::path::{Path, PathBuf};
+        use std::path::PathBuf;
         use uuid::Uuid;
 
+        // --- Ensure recipe image directory exists ---
         let image_dir = PathBuf::from("assets/recipes");
-
         fs::create_dir_all(&image_dir).map_err(|e| {
             log::error!("Failed to create image directory: {}", e);
             diesel::result::Error::RollbackTransaction
         })?;
 
+        // --- Save main recipe image ---
         let temp_file = msg.main_image;
-
         let extension = temp_file
             .file_name
             .as_deref()
@@ -86,26 +112,23 @@ impl Handler<CreateRecipe> for DbExecutor {
             chrono::Utc::now().timestamp(),
             extension
         );
-
         let disk_path = image_dir.join(&file_name);
-
         fs::copy(temp_file.file.path(), &disk_path).map_err(|e| {
             log::error!("Failed to copy recipe image: {}", e);
             diesel::result::Error::RollbackTransaction
         })?;
+        let url = format!("/assets/recipes/{}", file_name);
 
-        let other_image_url = format!("/assets/recipes/{}", file_name);
-
+        // --- Get DB connection ---
         let mut conn = self.0.get()?;
 
+        // --- Insert Recipe (without title/description) ---
         let new_recipe = NewRecipe {
-            title: msg.new_recipe.title,
-            description: msg.new_recipe.description,
-            image_url: other_image_url.to_string(),
+            image_url: url.clone(),
             servings: msg.new_recipe.servings,
             prep_time_minutes: msg.new_recipe.prep_time_minutes,
             cook_time_minutes: msg.new_recipe.cook_time_minutes,
-            author: msg.new_recipe.author,
+            author: msg.new_recipe.author.clone(),
             author_id: msg.new_recipe.author_id,
             is_private: msg.new_recipe.is_private,
         };
@@ -113,13 +136,38 @@ impl Handler<CreateRecipe> for DbExecutor {
         let inserted_recipe: Recipe = diesel::insert_into(recipes)
             .values(&new_recipe)
             .get_result(&mut conn)?;
+
+        // --- Insert Recipe Translations ---
+        let mut translations_resp = Vec::new();
+        for tr in msg.new_recipe.translations {
+            diesel::insert_into(recipe_translations::table)
+                .values((
+                    recipe_translations::recipe_id.eq(inserted_recipe.id),
+                    recipe_translations::language_code.eq(&tr.language_code),
+                    recipe_translations::title.eq(&tr.title),
+                    recipe_translations::description.eq(&tr.description),
+                ))
+                .execute(&mut conn)?;
+
+            translations_resp.push(RecipeTranslationResponse {
+                language_code: tr.language_code,
+                title: tr.title,
+                description: tr.description,
+            });
+        }
+
+        // --- Tags ---
         let inserted_tags =
             create_or_associate_tags(&mut conn, inserted_recipe.id, msg.new_recipe.tags)?;
+
+        // --- Ingredient groups (with translations) ---
         let inserted_ingredient_groups = create_ingredient_groups(
             &mut conn,
             inserted_recipe.id,
             msg.new_recipe.ingredient_groups,
         )?;
+
+        // --- Step groups (with translations and images) ---
         let inserted_step_groups = create_step_groups(
             &mut conn,
             inserted_recipe.id,
@@ -128,14 +176,29 @@ impl Handler<CreateRecipe> for DbExecutor {
             msg.step_images_meta,
         )?;
 
+        // --- Fetch with language_code to return response ---
+        let ingredient_groups = fetch_ingredient_groups_for_recipe(
+            &mut conn,
+            inserted_recipe.id,
+            Some(&msg.language_code),
+        )?;
+
+        let step_groups = fetch_step_groups_for_recipe(
+            &mut conn,
+            inserted_recipe.id,
+            Some(&msg.language_code),
+        )?;
+
         Ok(RecipeResponse::from_parts(
             inserted_recipe,
-            inserted_tags,
-            inserted_ingredient_groups,
-            inserted_step_groups,
+            translations_resp,                  // translations: if you want to fetch them later
+            inserted_tags,           // tags
+            ingredient_groups,       // ingredient groups
+            step_groups,             // step groups
         ))
     }
 }
+
 
 impl Message for UpdateRecipe {
     type Result = Result<RecipeResponse>;
@@ -145,64 +208,94 @@ impl Handler<UpdateRecipe> for DbExecutor {
     type Result = Result<RecipeResponse>;
 
     fn handle(&mut self, msg: UpdateRecipe, _: &mut Self::Context) -> Self::Result {
-        use crate::schema::recipes::dsl::*;
+        use crate::schema::{recipes, recipe_translations, recipe_versions};
 
         let mut conn = self.0.get()?;
 
+        // --- Upload new main image if provided ---
         let new_image_url: String = if let Some(temp_file) = msg.main_image {
             upload_recipe_image(temp_file)?
         } else {
-            // fallback to existing image_url, or empty string if None
-            msg.update_recipe.image_url.clone().unwrap_or_default()
+            recipes::table
+                .find(msg.update_recipe.id)
+                .select(recipes::image_url)
+                .first::<String>(&mut conn)?
         };
 
+        // --- Fetch current recipe state to version it ---
+        let current_recipe: Recipe = recipes::table
+            .find(msg.update_recipe.id)
+            .first(&mut conn)?;
+
+        // --- Save version before updating ---
+        let version_data = serde_json::to_value(&current_recipe)
+            .expect("Failed to serialize recipe for versioning");
+
+        diesel::insert_into(recipe_versions::table)
+            .values((
+                recipe_versions::recipe_id.eq(current_recipe.id),
+                recipe_versions::data.eq(version_data),
+                recipe_versions::created_at.eq(chrono::Utc::now().naive_utc()),
+                recipe_versions::edited_by.eq(msg.update_recipe.author_id.unwrap_or_default()),
+            ))
+            .execute(&mut conn)?;
+
+        // --- Prepare changes for the main recipe ---
         let change = RecipeChange {
-            title: msg.update_recipe.title,
-            description: msg.update_recipe.description,
-            image_url: new_image_url,
             servings: msg.update_recipe.servings,
             prep_time_minutes: msg.update_recipe.prep_time_minutes,
             cook_time_minutes: msg.update_recipe.cook_time_minutes,
-            author: msg.update_recipe.author,
+            author: msg.update_recipe.author.clone(),
             author_id: msg.update_recipe.author_id,
             is_private: msg.update_recipe.is_private,
+            image_url: new_image_url,
         };
 
-        let current_recipe_snapshot = RecipeResponse::from_parts(
-            recipes.find(msg.update_recipe.id).first::<Recipe>(&mut conn)?,
-            fetch_tags_for_recipe(&mut conn, msg.update_recipe.id)?,
-            fetch_ingredient_groups_for_recipe(&mut conn, msg.update_recipe.id)?,
-            fetch_step_groups_for_recipe(&mut conn, msg.update_recipe.id)?,
-        );
-
-        create_recipe_version(&mut conn, &current_recipe_snapshot, msg.auth.user)?;
-
-
-        let recipe: Recipe = diesel::update(recipes.find(msg.update_recipe.id))
+        // --- Update the recipe itself ---
+        let recipe: Recipe = diesel::update(recipes::table.find(msg.update_recipe.id))
             .set(change)
             .get_result(&mut conn)?;
 
-        let tags = create_or_associate_tags(&mut conn, recipe.id, msg.update_recipe.tags)?;
+        // --- Handle tags ---
+        let tags = create_or_associate_tags(&mut conn, recipe.id, msg.update_recipe.tags.clone())?;
 
-        let ingredient_groups =
-            sync_ingredient_groups(&mut conn, recipe.id, msg.update_recipe.ingredient_groups)?;
+        // --- Sync ingredient groups and step groups ---
+        let ingredient_groups = sync_ingredient_groups(
+            &mut conn,
+            recipe.id,
+            msg.update_recipe.ingredient_groups.clone(),
+        )?;
 
         let step_groups = sync_step_groups(
             &mut conn,
             recipe.id,
-            msg.update_recipe.step_groups,
+            msg.update_recipe.step_groups.clone(),
             msg.step_images,
-            msg.step_images_meta,
+            msg.step_images_meta.clone(),
         )?;
+
+        // --- Fetch recipe translations ---
+        let translations: Vec<RecipeTranslationResponse> = recipe_translations::table
+            .filter(recipe_translations::recipe_id.eq(recipe.id))
+            .load::<crate::models::RecipeTranslation>(&mut conn)?
+            .into_iter()
+            .map(|t| crate::dto::RecipeTranslationResponse {
+                language_code: t.language_code,
+                title: t.title,
+                description: t.description,
+            })
+            .collect();
 
         Ok(RecipeResponse::from_parts(
             recipe,
+            translations,
             tags,
             ingredient_groups,
             step_groups,
         ))
     }
 }
+
 
 fn create_recipe_version(
     conn: &mut PgConnection,
@@ -238,61 +331,78 @@ impl Handler<GetAllRecipes> for DbExecutor {
 
     fn handle(&mut self, msg: GetAllRecipes, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipes::dsl::*;
+        use crate::schema::recipe_translations::dsl::*;
+
 
         let mut conn = self.0.get()?;
-
         let mut query = recipes.into_boxed();
 
         if !msg.include_private {
             query = query.filter(is_private.eq(false));
         }
 
-        // 🔍 Filters
+        // 🔍 Apply filters
         if let Some(search) = &msg.filters.search {
             let pattern = format!("%{}%", search);
 
-            query = query.filter(title.ilike(pattern.clone()).or(description.ilike(pattern)));
+            // get recipe IDs that match the search in the specified language
+            let matching_ids: Vec<Uuid> = recipe_translations
+                .filter(language_code.eq(&msg.language_code))
+                .filter(
+                    title.ilike(&pattern)
+                        .or(description.ilike(&pattern))
+                )
+                .select(recipe_id)
+                .load(&mut conn)?;
+
+            // filter recipes by those IDs
+            query = query.filter(crate::schema::recipes::dsl::id.eq_any(matching_ids));
         }
 
-        if let Some(min) = msg.filters.min_prep {
-            query = query.filter(prep_time_minutes.ge(min));
-        }
+        if let Some(min) = msg.filters.min_prep { query = query.filter(prep_time_minutes.ge(min)); }
+        if let Some(max) = msg.filters.max_prep { query = query.filter(prep_time_minutes.le(max)); }
+        if let Some(min) = msg.filters.min_cook { query = query.filter(cook_time_minutes.ge(min)); }
+        if let Some(max) = msg.filters.max_cook { query = query.filter(cook_time_minutes.le(max)); }
+        if let Some(from) = msg.filters.date_from { query = query.filter(crate::schema::recipes::dsl::created_at.ge(from.and_hms_opt(0, 0, 0).unwrap())); }
+        if let Some(to) = msg.filters.date_to { query = query.filter(crate::schema::recipes::dsl::created_at.le(to.and_hms_opt(23, 59, 59).unwrap())); }
 
-        if let Some(max) = msg.filters.max_prep {
-            query = query.filter(prep_time_minutes.le(max));
-        }
-
-        if let Some(min) = msg.filters.min_cook {
-            query = query.filter(cook_time_minutes.ge(min));
-        }
-
-        if let Some(max) = msg.filters.max_cook {
-            query = query.filter(cook_time_minutes.le(max));
-        }
-
-        if let Some(from) = msg.filters.date_from {
-            query = query.filter(created_at.ge(from.and_hms_opt(0, 0, 0).unwrap()));
-        }
-
-        if let Some(to) = msg.filters.date_to {
-            query = query.filter(created_at.le(to.and_hms_opt(23, 59, 59).unwrap()));
-        }
-
-        let recipe_models: Vec<Recipe> = query.order(created_at.desc()).load(&mut conn)?;
-
+        let recipe_models: Vec<Recipe> = query.order(crate::schema::recipes::dsl::created_at.desc()).load(&mut conn)?;
         let mut result = Vec::with_capacity(recipe_models.len());
 
         for recipe in recipe_models {
-            let recipe_id = recipe.id;
+            let other_recipe_id = recipe.id;
 
-            let tags = fetch_tags_for_recipe(&mut conn, recipe_id)?;
-            let ingredient_groups = Vec::new();
-            //fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
-            let step_groups = Vec::new();
-            //fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
+            // --- Fetch tags ---
+            let tags = fetch_tags_for_recipe(&mut conn, other_recipe_id)?;
+
+            // --- Fetch ingredient and step groups in the requested language ---
+            let ingredient_groups = fetch_ingredient_groups_for_recipe(
+                &mut conn,
+                other_recipe_id,
+                Some(&msg.language_code),
+            )?;
+            let step_groups = fetch_step_groups_for_recipe(
+                &mut conn,
+                other_recipe_id,
+                Some(&msg.language_code),
+            )?;
+
+            // --- Fetch the translation for this language ---
+            let translations: Vec<RecipeTranslationResponse> = recipe_translations
+                .filter(recipe_id.eq(other_recipe_id))
+                .filter(language_code.eq(&msg.language_code))
+                .load::<crate::models::RecipeTranslation>(&mut conn)?
+                .into_iter()
+                .map(|t| crate::dto::RecipeTranslationResponse {
+                    language_code: t.language_code,
+                    title: t.title,
+                    description: t.description,
+                })
+                .collect();
 
             result.push(RecipeResponse::from_parts(
                 recipe,
+                translations,
                 tags,
                 ingredient_groups,
                 step_groups,
@@ -303,6 +413,8 @@ impl Handler<GetAllRecipes> for DbExecutor {
     }
 }
 
+
+
 impl Message for GetAllRecipesByPage {
     type Result = Result<PaginatedRecipes>;
 }
@@ -312,13 +424,14 @@ impl Handler<GetAllRecipesByPage> for DbExecutor {
 
     fn handle(&mut self, msg: GetAllRecipesByPage, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipes::dsl::*;
+        use crate::schema::recipe_translations::dsl::*;
 
         let mut conn = self.0.get()?;
 
         let filters = msg.filters.as_ref();
         let include_private = msg.include_private;
 
-        let build_query = || {
+        let mut build_query = || {
             use crate::schema::recipes::dsl::*;
 
             let mut q = recipes.into_boxed();
@@ -330,7 +443,15 @@ impl Handler<GetAllRecipesByPage> for DbExecutor {
             if let Some(filters) = filters {
                 if let Some(search) = &filters.search {
                     let pattern = format!("%{}%", search);
-                    q = q.filter(title.ilike(pattern.clone()).or(description.ilike(pattern)));
+
+                    let matching_ids: Vec<uuid::Uuid> = recipe_translations
+                        .filter(language_code.eq(&msg.language_code))
+                        .filter(title.ilike(&pattern).or(description.ilike(&pattern)))
+                        .select(recipe_id)
+                        .load(&mut conn)
+                        .unwrap_or_default();
+
+                    q = q.filter(id.eq_any(matching_ids));
                 }
 
                 if let Some(min) = filters.min_prep {
@@ -357,7 +478,7 @@ impl Handler<GetAllRecipesByPage> for DbExecutor {
 
             q
         };
-
+        let mut conn = self.0.get()?;
         // Total count
         let total: i64 = build_query().count().get_result(&mut conn)?;
 
@@ -368,21 +489,35 @@ impl Handler<GetAllRecipesByPage> for DbExecutor {
 
         // Fetch page
         let recipe_models: Vec<Recipe> = build_query()
-            .order(created_at.desc())
+            .order(crate::schema::recipes::dsl::created_at.desc())
             .limit(per_page)
             .offset(offset)
             .load(&mut conn)?;
 
         let mut result = Vec::with_capacity(recipe_models.len());
 
+
         for recipe in recipe_models {
-            let recipe_id = recipe.id;
-            let tags = fetch_tags_for_recipe(&mut conn, recipe_id)?;
+            let other_recipe_id = recipe.id;
+            let tags = fetch_tags_for_recipe(&mut conn, other_recipe_id)?;
             let ingredient_groups = Vec::new(); // fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
             let step_groups = Vec::new(); // fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
 
+            let translations: Vec<RecipeTranslationResponse> = recipe_translations
+                .filter(recipe_id.eq(other_recipe_id))
+                .filter(language_code.eq(&msg.language_code))
+                .load::<crate::models::RecipeTranslation>(&mut conn)?
+                .into_iter()
+                .map(|t| crate::dto::RecipeTranslationResponse {
+                    language_code: t.language_code,
+                    title: t.title,
+                    description: t.description,
+                })
+                .collect();
+
             result.push(RecipeResponse::from_parts(
                 recipe,
+                translations,
                 tags,
                 ingredient_groups,
                 step_groups,
@@ -470,7 +605,7 @@ impl Handler<GetFavoriteRecipes> for DbExecutor {
     type Result = Result<Vec<RecipeResponse>>;
 
     fn handle(&mut self, msg: GetFavoriteRecipes, _: &mut Self::Context) -> Self::Result {
-        use crate::schema::{favorites, recipes};
+        use crate::schema::{favorites, recipes, recipe_translations};
 
         let mut conn = self.0.get()?;
 
@@ -486,15 +621,29 @@ impl Handler<GetFavoriteRecipes> for DbExecutor {
         let mut responses = Vec::with_capacity(recipe_rows.len());
 
         for recipe in recipe_rows {
-            let recipe_id = recipe.id;
+            let recipe_id_val = recipe.id;
 
-            let tags = fetch_tags_for_recipe(&mut conn, recipe_id)?;
-            let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
-            let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
+            let tags = fetch_tags_for_recipe(&mut conn, recipe_id_val)?;
+            let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_id_val, Some(&msg.language_code))?;
+            let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_id_val, Some(&msg.language_code))?;
+
+            // --- Fetch translation for requested language ---
+            let translations: Vec<RecipeTranslationResponse> = recipe_translations::table
+                .filter(recipe_translations::recipe_id.eq(recipe_id_val))
+                .filter(recipe_translations::language_code.eq(&msg.language_code))
+                .load::<crate::models::RecipeTranslation>(&mut conn)?
+                .into_iter()
+                .map(|t| crate::dto::RecipeTranslationResponse {
+                    language_code: t.language_code,
+                    title: t.title,
+                    description: t.description,
+                })
+                .collect();
 
             responses.push(
                 RecipeResponse::from_parts(
                     recipe,
+                    translations,
                     tags,
                     ingredient_groups,
                     step_groups,
@@ -505,6 +654,7 @@ impl Handler<GetFavoriteRecipes> for DbExecutor {
         Ok(responses)
     }
 }
+
 
 
 impl Message for SetRecipeRating {
@@ -867,43 +1017,65 @@ impl Handler<RestoreRecipeVersion> for DbExecutor {
 
     fn handle(&mut self, msg: RestoreRecipeVersion, _: &mut Self::Context) -> Self::Result {
         use crate::schema::recipes::dsl::*;
+        use crate::schema::recipe_translations::dsl as translations_dsl;
         use crate::schema::recipe_versions::dsl as versions_dsl;
 
         let mut conn = self.0.get()?;
 
-        // Fetch version JSON
-        let row: (Uuid, Uuid, serde_json::Value, chrono::NaiveDateTime, Uuid) =
+        // 1️⃣ Fetch version JSON
+        let row: (uuid::Uuid, uuid::Uuid, serde_json::Value, chrono::NaiveDateTime, uuid::Uuid) =
             versions_dsl::recipe_versions
                 .filter(versions_dsl::id.eq(msg.version_id))
-                .select((versions_dsl::id, versions_dsl::recipe_id, versions_dsl::data, versions_dsl::created_at, versions_dsl::edited_by))
+                .select((
+                    versions_dsl::id,
+                    versions_dsl::recipe_id,
+                    versions_dsl::data,
+                    versions_dsl::created_at,
+                    versions_dsl::edited_by,
+                ))
                 .first(&mut conn)?;
 
+        // Deserialize the core recipe fields
         let version_recipe: Recipe = serde_json::from_value(row.2)
             .expect("Failed to deserialize recipe JSON for restoration");
 
-        // Update main recipe
+        // 2️⃣ Restore main recipe fields (excluding title/description)
         let restored_recipe: Recipe = diesel::update(recipes.find(row.1))
             .set((
-                title.eq(&version_recipe.title),
-                description.eq(&version_recipe.description),
-                image_url.eq(&version_recipe.image_url),
+                image_url.eq(version_recipe.image_url),
                 servings.eq(version_recipe.servings),
                 prep_time_minutes.eq(version_recipe.prep_time_minutes),
                 cook_time_minutes.eq(version_recipe.cook_time_minutes),
-                author.eq(&version_recipe.author),
+                author.eq(version_recipe.author),
                 author_id.eq(version_recipe.author_id),
                 is_private.eq(version_recipe.is_private),
             ))
             .get_result(&mut conn)?;
 
-        // You could optionally restore tags, steps, ingredients here if needed
+        // 3️⃣ Fetch translations from the separate table
+        let translations: Vec<RecipeTranslationResponse> = translations_dsl::recipe_translations
+            .filter(translations_dsl::recipe_id.eq(row.1))
+            .load::<crate::models::RecipeTranslation>(&mut conn)?
+            .into_iter()
+            .map(|t| crate::dto::RecipeTranslationResponse {
+                language_code: t.language_code,
+                title: t.title,
+                description: t.description,
+            })
+            .collect();
 
-        // Return restored recipe
+        // 4️⃣ Fetch tags, ingredient groups, step groups
+        let tags = fetch_tags_for_recipe(&mut conn, row.1)?;
+        let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, row.1, Some(&msg.language_code))?;
+        let step_groups = fetch_step_groups_for_recipe(&mut conn, row.1, Some(&msg.language_code))?;
+
+        // 5️⃣ Return restored recipe response
         Ok(RecipeResponse::from_parts(
             restored_recipe,
-            fetch_tags_for_recipe(&mut conn, row.1)?,
-            fetch_ingredient_groups_for_recipe(&mut conn, row.1)?,
-            fetch_step_groups_for_recipe(&mut conn, row.1)?,
+            translations,
+            tags,
+            ingredient_groups,
+            step_groups,
         ))
     }
 }

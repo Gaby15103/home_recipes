@@ -1,4 +1,6 @@
-﻿use crate::models::{Role, User};
+﻿use serde::de::IntoDeserializer;
+use serde_json::from_value;
+use crate::models::{Role, User, UserPreferences};
 use crate::utils::auth::Auth;
 use uuid::Uuid;
 use crate::dto::EmailVerificationTokenResponse;
@@ -123,13 +125,14 @@ pub struct UserResponseInner {
     pub first_name: String,
     pub last_name: String,
     pub avatar_url: Option<String>,
-    pub preferences: serde_json::Value,
+    pub preferences: UserPreferences,
     pub emai_verified: bool,
     pub roles: Vec<Role>,
 }
 
 impl UserResponse {
     pub fn from_user_and_roles(user: &User, roles: Vec<Role>) -> Self {
+        let preferences: UserPreferences = from_value(user.preferences.clone()).unwrap_or_else(|_| UserPreferences::default());
         UserResponse {
             user: UserResponseInner {
                 id: user.id.clone(),
@@ -138,7 +141,7 @@ impl UserResponse {
                 first_name: user.first_name.clone(),
                 last_name: user.last_name.clone(),
                 avatar_url: user.avatar_url.clone(),
-                preferences: user.preferences.clone(),
+                preferences,
                 emai_verified: user.email_verified.unwrap().clone(),
                 roles,
             },
@@ -146,6 +149,7 @@ impl UserResponse {
     }
 
     pub fn from_auth(auth: Auth) -> Self {
+        let preferences: UserPreferences = from_value(auth.user.preferences.clone()).unwrap_or_else(|_| UserPreferences::default());
         UserResponse {
             user: UserResponseInner {
                 id: auth.user.id,
@@ -154,10 +158,18 @@ impl UserResponse {
                 first_name: auth.user.first_name,
                 last_name: auth.user.last_name,
                 avatar_url: auth.user.avatar_url,
-                preferences: auth.user.preferences,
+                preferences,
                 emai_verified: auth.user.email_verified.unwrap().clone(),
                 roles: auth.roles,
             },
+        }
+    }
+}
+impl Default for UserPreferences {
+    fn default() -> Self {
+        Self {
+            language: Some("en".to_string()),
+            theme: Some("light".to_string()),
         }
     }
 }

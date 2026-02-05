@@ -44,14 +44,17 @@ use crate::schema::{recipe_ingredient_translations};
 // -----------------------------
 // RecipeIngredientTranslation DB Model
 // -----------------------------
-#[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
+#[derive(Queryable, Insertable, Identifiable, Associations, Debug,Selectable)]
 #[diesel(table_name = recipe_ingredient_translations)]
 #[diesel(belongs_to(RecipeIngredient))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct RecipeIngredientTranslation {
     pub id: Uuid,
     pub recipe_ingredient_id: Uuid,
     pub language_code: String,
     pub note: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Insertable)]

@@ -34,14 +34,17 @@ use crate::schema::{step_group_translations};
 // -----------------------------
 // StepGroupTranslation DB Model
 // -----------------------------
-#[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
+#[derive(Queryable, Insertable, Identifiable, Associations, Debug,Selectable)]
 #[diesel(table_name = step_group_translations)]
 #[diesel(belongs_to(StepGroup))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct StepGroupTranslation {
     pub id: Uuid,
     pub step_group_id: Uuid,
     pub language_code: String,
     pub title: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Insertable)]

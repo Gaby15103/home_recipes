@@ -35,14 +35,17 @@ use crate::schema::{ingredient_group_translations};
 // -----------------------------
 // IngredientGroupTranslation
 // -----------------------------
-#[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
+#[derive(Queryable, Insertable, Identifiable, Associations, Debug,Selectable)]
 #[diesel(table_name = ingredient_group_translations)]
 #[diesel(belongs_to(IngredientGroup))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct IngredientGroupTranslation {
     pub id: Uuid,
     pub ingredient_group_id: Uuid,
     pub language_code: String,
     pub title: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Insertable)]

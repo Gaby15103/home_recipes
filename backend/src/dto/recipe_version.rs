@@ -22,6 +22,7 @@ pub struct RestoreRecipeVersion {
     pub recipe_id: Uuid,
     pub version_id: Uuid,
     pub user_id: Uuid,
+    pub language_code: String,
 }
 impl RecipeVersionResponse {
     pub fn from_tuple(

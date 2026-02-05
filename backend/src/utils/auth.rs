@@ -1,9 +1,8 @@
-﻿use actix::Message;
-use actix_web::{HttpRequest, http::header::AUTHORIZATION, web::Data};
-use actix_web::http::header::HeaderValue;
+﻿use actix_web::{HttpRequest,web::Data};
+use serde_json::from_value;
 use uuid::Uuid;
 use crate::app::AppState;
-use crate::models::{Role, User};
+use crate::models::{Role, User, UserPreferences};
 use crate::prelude::*;
 
 const TOKEN_PREFIX: &str = "Bearer ";
@@ -13,12 +12,13 @@ pub struct Auth {
     pub user: User,
     pub session_id: Uuid,
     pub roles: Vec<Role>,
+    pub preferences: UserPreferences,
 }
 
 pub struct GetSessionAuth {
     pub session_id: Uuid,
 }
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct SessionAuth {
     pub session_id: Uuid,
     pub user: User,
@@ -46,8 +46,9 @@ pub async fn authenticate(state: &Data<AppState>, req: &HttpRequest) -> Result<A
     }
 
     Ok(Auth {
-        user: auth_data.user,
+        user: auth_data.user.clone(),
         session_id: auth_data.session_id,
         roles: auth_data.roles,
+        preferences: from_value(auth_data.user.preferences.clone()).unwrap_or_else(|_| UserPreferences::default())
     })
 }
