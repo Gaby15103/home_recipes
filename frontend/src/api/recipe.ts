@@ -6,8 +6,12 @@ import type {PaginatedRecipes, Recipe, RecipeComment, RecipeFilter, RecipeRating
 import type {RecipeEdit} from "@/models/RecipeEdit.ts";
 import {editToUpdatePayload} from "@/mappers/recipe.mapper.ts";
 
-export function getAllRecipes(filters?: RecipeFilter) {
-    const params: Record<string, any> = {...filters};
+export function getAllRecipes(filters?: RecipeFilter, include_private?: boolean) {
+    const params: Record<string, any> = { ...filters };
+
+    if (include_private != null) {
+        params.scope = include_private;
+    }
     return api<Recipe[]>(RecipeRoutes.all(), {method: "GET", params});
 }
 

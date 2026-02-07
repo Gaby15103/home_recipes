@@ -39,7 +39,7 @@ watch(filters, debouncedApply, { deep: true })
 async function applyFilters() {
   loading.value = true
   try {
-    recipes.value = await getAllRecipes(true, filters.value)
+    recipes.value = await getAllRecipes(filters.value, true)
   } catch (err) {
     console.error("Failed to fetch recipes:", err)
   } finally {
