@@ -41,7 +41,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import NavLink from "@/components/NavLink.vue";
 import {ROUTES} from "@/router/routes.ts";
 import {useI18n} from "vue-i18n";
 const { t } = useI18n()
@@ -88,7 +87,8 @@ const columns: ColumnDef<Recipe>[] = [
   },
 
   {
-    accessorKey: 'title',
+    accessorFn: (row: Recipe) => row.translations[0]?.title ?? '—',
+    id: 'title',
     header: t('Admin.table.title'),
     cell: ({row}) => {
       const title = row.getValue('title') as string

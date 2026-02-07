@@ -2,8 +2,6 @@ import type {Tag} from "@/models/Tag.ts";
 
 export interface Recipe {
     id: string;
-    title: string;
-    description: string|null;
     image_url: string;
     servings: number;
     prep_time_minutes: number;
@@ -14,21 +12,36 @@ export interface Recipe {
     tags: Tag[];
     ingredient_groups: IngredientGroup[];
     step_groups: StepGroup[];
+    translations: RecipeTranslation[];
+}
+export interface RecipeTranslation{
+    language_code: String;
+    title: String;
+    description: String;
 }
 export interface IngredientGroup {
     id: string;
-    title: string;
     position: number;
     ingredients: Ingredient[];
+    translations: IngredientGroupTranslation[]
+}
+export interface IngredientGroupTranslation{
+    language_code: String;
+    title: String;
 }
 export interface Ingredient {
     id: string;
-    name: string;
     quantity: number;
     unit: IngredientUnit;
     note: string|null;
     position: number;
+    translations: IngredientTranslation[];
 }
+export interface IngredientTranslation {
+    language_code: String;
+    name: String;
+}
+
 
 //TODO add pinch, a can, unique like 1 oignon or an other where you put with our without mesure
 // @ts-ignore
@@ -44,17 +57,26 @@ export enum IngredientUnit {
 }
 export interface StepGroup {
     id: string;
-    title: string;
     position: number;
     steps: Step[];
+    translations: StepGroupTranslation[];
+}
+export interface StepGroupTranslation {
+    language_code: String;
+    title: String;
 }
 export interface Step {
     id: string;
     step_group_id: string;
     position: number;
-    instruction: string;
     image_url: string|null;
     duration_minutes: number|null;
+    translations: StepTranslation[];
+}
+
+export interface StepTranslation {
+    language_code: String;
+    instruction: String;
 }
 
 export interface RecipeFilter {

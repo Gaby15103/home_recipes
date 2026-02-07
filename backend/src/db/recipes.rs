@@ -43,21 +43,45 @@ impl Handler<GetRecipeById> for DbExecutor {
             .filter(tr::recipe_id.eq(recipe_model.id))
             .load::<RecipeTranslation>(&mut conn)?;
 
+        // Decide whether to return all or just one
+        let translation_dtos: Vec<RecipeTranslationResponse> = if msg.include_all_translations {
+            translations
+                .into_iter()
+                .map(|t| RecipeTranslationResponse {
+                    language_code: t.language_code,
+                    title: t.title,
+                    description: t.description,
+                })
+                .collect()
+        } else {
+            pick_translation(&*translations, &msg.language_code, &recipe_model.original_language_code)
+                .map(|t| RecipeTranslationResponse {
+                    language_code: t.language_code,
+                    title: t.title,
+                    description: t.description,
+                })
+                .into_iter()
+                .collect()
+        };
 
-        let translation_dtos = translations
-            .into_iter()
-            .map(|t| RecipeTranslationResponse {
-                language_code: t.language_code,
-                title: t.title,
-                description: t.description,
-            })
-            .collect();
 
 
         // Fetch related data in the requested language
         let tags = fetch_tags_for_recipe(&mut conn, recipe_model.id)?;
-        let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_model.id, Some(&msg.language_code))?;
-        let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_model.id, Some(&msg.language_code))?;
+        let ingredient_groups =
+            fetch_ingredient_groups_for_recipe(
+                &mut conn,
+                recipe_model.id,
+                Some(&msg.language_code),
+                &*recipe_model.original_language_code
+            )?;
+        let step_groups =
+            fetch_step_groups_for_recipe(
+                &mut conn,
+                recipe_model.id,
+                Some(&msg.language_code),
+                &*recipe_model.original_language_code
+            )?;
 
         Ok(RecipeResponse {
             id: recipe_model.id,
@@ -75,6 +99,22 @@ impl Handler<GetRecipeById> for DbExecutor {
         })
     }
 }
+
+fn pick_translation(
+    translations: &[RecipeTranslation],
+    requested_lang: &str,
+    fallback_lang: &str,
+) -> Option<RecipeTranslation> {
+    // First try requested language
+    translations
+        .iter()
+        .find(|t| t.language_code == requested_lang)
+        .cloned()
+        // Then fallback
+        .or_else(|| translations.iter().find(|t| t.language_code == fallback_lang).cloned())
+}
+
+
 
 impl Message for CreateRecipe {
     type Result = Result<RecipeResponse>;
@@ -165,6 +205,7 @@ impl Handler<CreateRecipe> for DbExecutor {
             &mut conn,
             inserted_recipe.id,
             msg.new_recipe.ingredient_groups,
+            &*msg.language_code
         )?;
 
         // --- Step groups (with translations and images) ---
@@ -181,12 +222,14 @@ impl Handler<CreateRecipe> for DbExecutor {
             &mut conn,
             inserted_recipe.id,
             Some(&msg.language_code),
+            &*inserted_recipe.original_language_code
         )?;
 
         let step_groups = fetch_step_groups_for_recipe(
             &mut conn,
             inserted_recipe.id,
             Some(&msg.language_code),
+            &*inserted_recipe.original_language_code
         )?;
 
         Ok(RecipeResponse::from_parts(
@@ -264,6 +307,7 @@ impl Handler<UpdateRecipe> for DbExecutor {
             &mut conn,
             recipe.id,
             msg.update_recipe.ingredient_groups.clone(),
+            &*msg.language_code
         )?;
 
         let step_groups = sync_step_groups(
@@ -272,6 +316,7 @@ impl Handler<UpdateRecipe> for DbExecutor {
             msg.update_recipe.step_groups.clone(),
             msg.step_images,
             msg.step_images_meta.clone(),
+            &*msg.language_code
         )?;
 
         // --- Fetch recipe translations ---
@@ -380,25 +425,23 @@ impl Handler<GetAllRecipes> for DbExecutor {
                 &mut conn,
                 other_recipe_id,
                 Some(&msg.language_code),
+                &*recipe.original_language_code
             )?;
             let step_groups = fetch_step_groups_for_recipe(
                 &mut conn,
                 other_recipe_id,
                 Some(&msg.language_code),
+                &*recipe.original_language_code
             )?;
 
             // --- Fetch the translation for this language ---
-            let translations: Vec<RecipeTranslationResponse> = recipe_translations
-                .filter(recipe_id.eq(other_recipe_id))
-                .filter(language_code.eq(&msg.language_code))
-                .load::<crate::models::RecipeTranslation>(&mut conn)?
-                .into_iter()
-                .map(|t| crate::dto::RecipeTranslationResponse {
-                    language_code: t.language_code,
-                    title: t.title,
-                    description: t.description,
-                })
-                .collect();
+            let translation = load_translation(&mut conn, &recipe, &msg.language_code)?;
+
+            let translations = vec![RecipeTranslationResponse {
+                language_code: translation.language_code,
+                title: translation.title,
+                description: translation.description,
+            }];
 
             result.push(RecipeResponse::from_parts(
                 recipe,
@@ -412,6 +455,30 @@ impl Handler<GetAllRecipes> for DbExecutor {
         Ok(result)
     }
 }
+
+fn load_translation(
+    conn: &mut PgConnection,
+    recipe: &Recipe,
+    requested_lang: &str,
+) -> QueryResult<RecipeTranslation> {
+    use crate::schema::recipe_translations::dsl::*;
+
+    // Try requested language first
+    if let Ok(t) = recipe_translations
+        .filter(recipe_id.eq(recipe.id))
+        .filter(language_code.eq(requested_lang))
+        .first::<RecipeTranslation>(conn)
+    {
+        return Ok(t);
+    }
+
+    // Fallback to original language
+    recipe_translations
+        .filter(recipe_id.eq(recipe.id))
+        .filter(language_code.eq(&recipe.original_language_code))
+        .first::<RecipeTranslation>(conn)
+}
+
 
 
 
@@ -503,17 +570,13 @@ impl Handler<GetAllRecipesByPage> for DbExecutor {
             let ingredient_groups = Vec::new(); // fetch_ingredient_groups_for_recipe(&mut conn, recipe_id)?;
             let step_groups = Vec::new(); // fetch_step_groups_for_recipe(&mut conn, recipe_id)?;
 
-            let translations: Vec<RecipeTranslationResponse> = recipe_translations
-                .filter(recipe_id.eq(other_recipe_id))
-                .filter(language_code.eq(&msg.language_code))
-                .load::<crate::models::RecipeTranslation>(&mut conn)?
-                .into_iter()
-                .map(|t| crate::dto::RecipeTranslationResponse {
-                    language_code: t.language_code,
-                    title: t.title,
-                    description: t.description,
-                })
-                .collect();
+            let translation = load_translation(&mut conn, &recipe, &msg.language_code)?;
+
+            let translations = vec![RecipeTranslationResponse {
+                language_code: translation.language_code,
+                title: translation.title,
+                description: translation.description,
+            }];
 
             result.push(RecipeResponse::from_parts(
                 recipe,
@@ -624,8 +687,20 @@ impl Handler<GetFavoriteRecipes> for DbExecutor {
             let recipe_id_val = recipe.id;
 
             let tags = fetch_tags_for_recipe(&mut conn, recipe_id_val)?;
-            let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, recipe_id_val, Some(&msg.language_code))?;
-            let step_groups = fetch_step_groups_for_recipe(&mut conn, recipe_id_val, Some(&msg.language_code))?;
+            let ingredient_groups =
+                fetch_ingredient_groups_for_recipe(
+                    &mut conn,
+                    recipe_id_val,
+                    Some(&msg.language_code),
+                    &*recipe.original_language_code
+                )?;
+            let step_groups =
+                fetch_step_groups_for_recipe(
+                    &mut conn,
+                    recipe_id_val,
+                    Some(&msg.language_code),
+                    &*recipe.original_language_code
+                )?;
 
             // --- Fetch translation for requested language ---
             let translations: Vec<RecipeTranslationResponse> = recipe_translations::table
@@ -1066,8 +1141,20 @@ impl Handler<RestoreRecipeVersion> for DbExecutor {
 
         // 4️⃣ Fetch tags, ingredient groups, step groups
         let tags = fetch_tags_for_recipe(&mut conn, row.1)?;
-        let ingredient_groups = fetch_ingredient_groups_for_recipe(&mut conn, row.1, Some(&msg.language_code))?;
-        let step_groups = fetch_step_groups_for_recipe(&mut conn, row.1, Some(&msg.language_code))?;
+        let ingredient_groups =
+            fetch_ingredient_groups_for_recipe(
+                &mut conn,
+                row.1,
+                Some(&msg.language_code),
+                &*restored_recipe.original_language_code
+            )?;
+        let step_groups =
+            fetch_step_groups_for_recipe(
+                &mut conn,
+                row.1,
+                Some(&msg.language_code),
+                &*restored_recipe.original_language_code
+            )?;
 
         // 5️⃣ Return restored recipe response
         Ok(RecipeResponse::from_parts(

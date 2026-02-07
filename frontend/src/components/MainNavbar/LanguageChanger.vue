@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
+import { setLanguage } from "@/utils/setLanguage";
 const { t, locale, availableLocales } = useI18n()
 
 function changeLocale(newLocale: string) {
@@ -26,7 +27,7 @@ function changeLocale(newLocale: string) {
       <DropdownMenuItem
           v-for="loc in availableLocales"
           :key="loc"
-          @click="changeLocale(loc)"
+          @click="setLanguage(loc)"
       >
         {{ loc.toUpperCase() }}
       </DropdownMenuItem>

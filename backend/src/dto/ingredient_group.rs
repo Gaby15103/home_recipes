@@ -22,7 +22,7 @@ pub struct IngredientGroupTranslationInput {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IngredientGroupTranslationResponse {
-    pub language: String,
+    pub language_code: String,
     pub title: String,
 }
 
@@ -63,7 +63,7 @@ impl From<(
         let translations_dto = translations
             .iter()
             .map(|t| IngredientGroupTranslationResponse {
-                language: t.language_code.clone(),
+                language_code: t.language_code.clone(),
                 title: t.title.clone(),
             })
             .collect::<Vec<_>>();

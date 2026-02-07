@@ -10,6 +10,7 @@ pub fn create_ingredient_groups(
     conn: &mut PgConnection,
     recipe_id_val: Uuid,
     groups: Vec<IngredientGroupInput>,
+    fallback_language: &str,
 ) -> Result<Vec<IngredientGroupResponse>, diesel::result::Error> {
 
     use crate::schema::{
@@ -86,7 +87,7 @@ pub fn create_ingredient_groups(
         }
     }
 
-    fetch_ingredient_groups_for_recipe(conn, recipe_id_val, Some("fr"))
+    fetch_ingredient_groups_for_recipe(conn, recipe_id_val, Some("fr"),fallback_language)
 }
 
 
@@ -94,6 +95,7 @@ pub fn fetch_ingredient_groups_for_recipe(
     conn: &mut PgConnection,
     recipe_id: Uuid,
     language_code: Option<&str>, // None = all languages, Some("fr") = filter
+    fallback_language: &str,
 ) -> Result<Vec<IngredientGroupResponse>, diesel::result::Error> {
     use crate::schema::{
         ingredient_groups,
@@ -118,9 +120,15 @@ pub fn fetch_ingredient_groups_for_recipe(
             .filter(ingredient_group_translations::ingredient_group_id.eq(group.id))
             .into_boxed();
 
-        if let Some(lang) = language_code {
-            group_tr_query = group_tr_query.filter(ingredient_group_translations::language_code.eq(lang));
-        }
+        let group_tr_query = if let Some(lang) = language_code {
+            group_tr_query.filter(
+                ingredient_group_translations::language_code
+                    .eq(lang)
+                    .or(ingredient_group_translations::language_code.eq(fallback_language))
+            )
+        } else {
+            group_tr_query
+        };
 
         let group_translations = group_tr_query.load::<IngredientGroupTranslation>(conn)?;
 
@@ -141,9 +149,15 @@ pub fn fetch_ingredient_groups_for_recipe(
                 .filter(ingredient_translations::ingredient_id.eq(ingredient.id))
                 .into_boxed();
 
-            if let Some(lang) = language_code {
-                ing_tr_query = ing_tr_query.filter(ingredient_translations::language_code.eq(lang));
-            }
+            let ing_tr_query = if let Some(lang) = language_code {
+                ing_tr_query.filter(
+                    ingredient_translations::language_code
+                        .eq(lang)
+                        .or(ingredient_translations::language_code.eq(fallback_language))
+                )
+            } else {
+                ing_tr_query
+            };
 
             let translations = ing_tr_query.load::<IngredientTranslation>(conn)?;
 
@@ -178,6 +192,7 @@ pub fn sync_ingredient_groups(
     conn: &mut PgConnection,
     recipe_id: Uuid,
     groups: Vec<IngredientGroupUpdate>,
+    fallback_language: &str,
 ) -> Result<Vec<IngredientGroupResponse>, diesel::result::Error> {
 
     use crate::schema::{
@@ -394,5 +409,5 @@ pub fn sync_ingredient_groups(
             .execute(conn)?;
     }
 
-    fetch_ingredient_groups_for_recipe(conn, recipe_id, Some("fr"))
+    fetch_ingredient_groups_for_recipe(conn, recipe_id, Some("fr"),fallback_language)
 }

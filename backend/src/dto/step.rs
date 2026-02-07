@@ -43,7 +43,7 @@ pub struct StepResponse {
     pub position: i32,
     pub image_url: Option<String>,
     pub duration_minutes: Option<i32>,
-    pub translation: Vec<StepTranslationResponse>,
+    pub translations: Vec<StepTranslationResponse>,
 }
 
 #[derive(Debug, Deserialize, Validate, Serialize, Clone)]
@@ -88,7 +88,7 @@ impl From<(Step, Vec<StepTranslation>)> for StepResponse {
             position: step.position,
             duration_minutes: step.duration_minutes,
             image_url: step.image_url,
-            translation,
+            translations: translation,
         }
     }
 }

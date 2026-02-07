@@ -54,6 +54,7 @@ use crate::schema::{recipe_translations};
 #[derive(Queryable, Insertable, Identifiable, Associations, Debug)]
 #[diesel(table_name = recipe_translations)]
 #[diesel(belongs_to(Recipe))]
+#[derive(Clone)]
 pub struct RecipeTranslation {
     pub id: Uuid,
     pub recipe_id: Uuid,

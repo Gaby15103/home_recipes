@@ -39,28 +39,57 @@ const rating = ref<RecipeRating | null>(null)
 const favorited = ref(false);
 const favoriteLoading = ref(false);
 
-onMounted(async () => {
+const { locale } = useI18n();
+
+watch(locale, () => {
+  loadRecipe();
+});
+async function loadRecipe() {
   loading.value = true;
   try {
     recipe.value = await getRecipeById(route.params.id as string);
-
-    if (recipe.value) {
-      newComment.value.recipe_id = recipe.value.id;
-      // Fetch comments
-      comments.value = await getComments(recipe.value.id);
-
-      // Fetch rating
-      rating.value = await getRating(recipe.value.id);
-
-      // Fetch favorite status
-      const favs = await getFavorites();
-      favorited.value = favs.some(f => f.id === recipe.value!.id);
-    }
   } catch (err: any) {
     error.value = err.message || t("recipe.errors.fetch");
   } finally {
     loading.value = false;
   }
+}
+async function loadData() {
+  if (recipe.value) {
+    try {
+      // Fetch rating
+      rating.value = await getRating(recipe.value.id);
+    } catch (err: any) {
+      error.value = err.message || t("rating.errors.fetch");
+    }
+
+    try {
+      // Fetch favorite status
+      const favs = await getFavorites();
+      favorited.value = favs.some(f => f.id === recipe.value!.id);
+    } catch (err: any) {
+      error.value = err.message || t("favorited.errors.fetch");
+    }
+  }
+}
+async function loadComment(){
+  if (recipe.value){
+
+    newComment.value.recipe_id = recipe.value.id;
+
+    try {
+      // Fetch comments
+      comments.value = await getComments(recipe.value.id);
+    } catch (err: any) {
+      error.value = err.message || t("comments.errors.fetch");
+    }
+
+  }
+}
+onMounted(() => {
+  loadRecipe()
+  loadData()
+  loadComment()
 });
 
 watch(
@@ -138,13 +167,13 @@ async function postComment() {
           <div class="shrink-0 md:w-1/2 rounded-xl overflow-hidden border dark:border-gray-700">
             <img
                 :src="$apiUrl + recipe.image_url"
-                :alt="recipe.title"
+                :alt="recipe.translations[0].title"
                 class="w-full h-full object-cover"
             />
           </div>
           <div class="flex-1 flex flex-col justify-between space-y-4">
             <div class="space-y-2">
-              <h1 class="text-4xl font-serif font-bold leading-tight">{{ recipe.title }}</h1>
+              <h1 class="text-4xl font-serif font-bold leading-tight">{{ recipe.translations[0].title }}</h1>
 
               <!-- Rating -->
               <div v-if="rating" class="flex items-center gap-2">
@@ -179,7 +208,7 @@ async function postComment() {
               </ul>
 
               <!-- Description -->
-              <p class="text-gray-700 dark:text-gray-300">{{ recipe.description }}</p>
+              <p class="text-gray-700 dark:text-gray-300">{{ recipe.translations[0].description }}</p>
 
               <!-- Tags -->
               <div v-if="recipe.tags?.length" class="mt-2">
@@ -228,8 +257,8 @@ async function postComment() {
         </CardHeader>
         <CardContent class="space-y-10 mb-10">
           <template v-for="group in recipe.ingredient_groups" :key="group.position">
-            <div v-if="group.title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
-              {{ group.title }}
+            <div v-if="group.translations[0].title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
+              {{ group.translations[0].title }}
             </div>
             <ul class="space-y-2">
               <li
@@ -266,15 +295,15 @@ async function postComment() {
         </CardHeader>
         <CardContent class="space-y-10 mb-10">
           <template v-for="group in recipe.step_groups" :key="group.position">
-            <div v-if="group.title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
-              {{ group.title }}
+            <div v-if="group.translations[0].title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
+              {{ group.translations[0].title }}
             </div>
             <ul class="pl-5 space-y-4">
               <li v-for="step in group.steps" :key="step.position" class="space-y-3">
                 <div class="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
                   <div>
                     <Checkbox class="scale-150 m-2"/>
-                    {{ step.instruction }}
+                    {{ step.translations[0].instruction }}
                   </div>
                   <span v-if="step.duration_minutes" class="text-sm text-gray-500 dark:text-gray-400 ml-1">
                       ({{ step.duration_minutes }} min)

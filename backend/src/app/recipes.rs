@@ -9,8 +9,10 @@ use crate::dto::*;
 use crate::prelude::*;
 use crate::utils::auth::{authenticate};
 use actix_multipart::form::{MultipartForm};
+use actix_web::http::header::AcceptLanguage;
 use uuid::Uuid;
 use crate::schema::step_translations::language_code;
+use crate::utils::header_extractor::extract_language;
 
 #[derive(Debug, Deserialize)]
 pub struct In<U> {
@@ -19,22 +21,25 @@ pub struct In<U> {
 #[derive(Debug, Deserialize)]
 pub struct RecipeLangQuery {
     pub lang: Option<String>,
+    pub all: Option<bool>,
 }
 
 pub async fn get(
     state: web::Data<AppState>,
+    req: HttpRequest,
     path: web::Path<String>,
     query: web::Query<RecipeLangQuery>,
 ) -> Result<HttpResponse, Error> {
     let id_str = path.into_inner();
     let id = Uuid::parse_str(&id_str).map_err(|_| Error::InternalServerError)?;
 
-    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
+    let lang_code = extract_language(&req);
+    let include_all_translations = query.all.unwrap_or(false);
 
 
     let recipe = state
         .db
-        .send(GetRecipeById { id, language_code: lang_code })
+        .send(GetRecipeById { id, language_code: lang_code, include_all_translations})
         .await
         .map_err(|_| Error::InternalServerError)??;
 
@@ -75,12 +80,15 @@ pub async fn update(
     state: Data<AppState>,
     req: HttpRequest,
     MultipartForm(form): MultipartForm<UpdateRecipeForm>,
+    query: web::Query<RecipeLangQuery>,
 ) -> Result<HttpResponse, Error> {
     let update_recipe = form.recipe.into_inner().recipe;
 
     update_recipe.validate()?;
 
     let auth = authenticate(&state, &req).await?;
+
+    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
 
     let res = state
         .db
@@ -90,6 +98,7 @@ pub async fn update(
             main_image: form.main_image,
             step_images: form.step_images,
             step_images_meta: form.step_images_meta.into_inner(),
+            language_code: lang_code
         })
         .await
         .map_err(|_| crate::error::Error::InternalServerError)??;
@@ -127,7 +136,7 @@ pub struct GetAllRecipes {
 pub async fn list(
     state: Data<AppState>,
     query: web::Query<GetFilter>,
-    req: HttpRequest,
+    req: HttpRequest
 ) -> Result<HttpResponse, Error> {
     let is_admin_scope = matches!(query.scope.as_deref(), Some("true"));
 
@@ -148,7 +157,7 @@ pub async fn list(
         false
     };
 
-    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
+    let lang_code = extract_language(&req);
 
     let recipes = state
         .db
@@ -210,7 +219,7 @@ pub async fn get_by_page(
         false
     };
 
-    let lang_code = query.lang.clone().unwrap_or_else(|| "fr".to_string());
+    let lang_code = extract_language(&req);
     
     let recipes = state
         .db
@@ -237,7 +246,7 @@ pub async fn delete(
 
     state
         .db
-        .send(GetRecipeById { id: recipe_id, language_code: "fr".to_string() })
+        .send(GetRecipeById { id: recipe_id, language_code: "fr".to_string(), include_all_translations: false })
         .await??;
 
     let is_admin = auth.roles.iter().any(|r| {

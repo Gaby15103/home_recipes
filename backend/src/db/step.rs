@@ -94,7 +94,7 @@ pub fn create_step_groups(
                 position: step.position,
                 duration_minutes: step.duration_minutes,
                 image_url,
-                translation: step.translation.into_iter().map(|t| crate::dto::StepTranslationResponse {
+                translations: step.translation.into_iter().map(|t| crate::dto::StepTranslationResponse {
                     language: t.language,
                     instruction: t.instruction,
                 }).collect(),
@@ -124,6 +124,7 @@ pub fn fetch_step_groups_for_recipe(
     conn: &mut PgConnection,
     recipe_id: Uuid,
     language_code: Option<&str>,
+    fallback_language: &str,
 ) -> Result<Vec<StepGroupResponse>, diesel::result::Error> {
     use crate::schema::{
         step_groups,
@@ -142,15 +143,21 @@ pub fn fetch_step_groups_for_recipe(
 
     for group in groups {
         // --- Fetch group translations
-        let mut query = step_group_translations::table
+        let group_tr_query = step_group_translations::table
             .filter(step_group_translations::step_group_id.eq(group.id))
             .into_boxed();
 
-        if let Some(lang) = language_code {
-            query = query.filter(step_group_translations::language_code.eq(lang));
-        }
+        let group_tr_query = if let Some(lang) = language_code {
+            group_tr_query.filter(
+                step_group_translations::language_code
+                    .eq(lang)
+                    .or(step_group_translations::language_code.eq(fallback_language)),
+            )
+        } else {
+            group_tr_query
+        };
 
-        let group_translations: Vec<StepGroupTranslation> = query.load(conn)?;
+        let group_translations: Vec<StepGroupTranslation> = group_tr_query.load(conn)?;
 
         let group_translations_resp = group_translations
             .into_iter()
@@ -160,7 +167,7 @@ pub fn fetch_step_groups_for_recipe(
             })
             .collect::<Vec<_>>();
 
-        // --- Fetch steps for this group
+        // ---------- STEPS ----------
         let step_rows: Vec<Step> = steps::table
             .filter(steps::step_group_id.eq(group.id))
             .order(steps::position.asc())
@@ -170,15 +177,21 @@ pub fn fetch_step_groups_for_recipe(
 
         for step in step_rows {
             // --- Fetch step translations
-            let mut query = step_translations::table
+            let step_tr_query = step_translations::table
                 .filter(step_translations::step_id.eq(step.id))
                 .into_boxed();
 
-            if let Some(lang) = language_code {
-                query = query.filter(step_translations::language_code.eq(lang));
-            }
+            let step_tr_query = if let Some(lang) = language_code {
+                step_tr_query.filter(
+                    step_translations::language_code
+                        .eq(lang)
+                        .or(step_translations::language_code.eq(fallback_language)),
+                )
+            } else {
+                step_tr_query
+            };
 
-            let translations: Vec<StepTranslation> = query.load(conn)?;
+            let translations: Vec<StepTranslation> = step_tr_query.load(conn)?;
 
             let translations_resp = translations
                 .into_iter()
@@ -194,7 +207,7 @@ pub fn fetch_step_groups_for_recipe(
                 position: step.position,
                 duration_minutes: step.duration_minutes,
                 image_url: step.image_url,
-                translation: translations_resp,
+                translations: translations_resp,
             });
         }
 
@@ -219,6 +232,7 @@ pub fn sync_step_groups(
     groups: Vec<StepGroupUpdate>,
     mut images: Vec<TempFile>,
     step_image_meta: Vec<StepImageMeta>,
+    fallback_language: &str,
 ) -> Result<Vec<StepGroupResponse>, diesel::result::Error> {
     use crate::schema::{step_groups, steps, step_group_translations, step_translations};
 
@@ -372,5 +386,5 @@ pub fn sync_step_groups(
     }
 
     // --- Return updated state
-    fetch_step_groups_for_recipe(conn, recipe_id,Some("fr"))
+    fetch_step_groups_for_recipe(conn, recipe_id,Some("fr"),fallback_language)
 }

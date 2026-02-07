@@ -143,11 +143,13 @@ pub struct UpdateRecipe {
     pub main_image: Option<TempFile>,
     pub step_images: Vec<TempFile>,
     pub step_images_meta: Vec<StepImageMeta>,
+    pub language_code: String,
 }
 
 pub struct GetRecipeById {
     pub id: Uuid,
     pub language_code: String, // single language for fetch
+    pub include_all_translations: bool,
 }
 
 pub struct DeleteRecipe {

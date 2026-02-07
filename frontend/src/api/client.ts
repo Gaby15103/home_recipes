@@ -1,4 +1,4 @@
-﻿import axios, {type AxiosRequestConfig } from "axios";
+﻿import axios, {AxiosHeaders, type AxiosRequestConfig} from "axios";
 
 export const API_URL = import.meta.env.VITE_API_URL;
 
@@ -7,6 +7,19 @@ const apiClient = axios.create({
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
 });
+
+apiClient.interceptors.request.use((config) => {
+    const lang = navigator.language || "en";
+
+    if (!config.headers) {
+        config.headers = new AxiosHeaders();
+    }
+
+    config.headers.set("Accept-Language", lang);
+
+    return config;
+});
+
 
 export async function api<T>(url: string, options: AxiosRequestConfig = {}): Promise<T> {
     try {
