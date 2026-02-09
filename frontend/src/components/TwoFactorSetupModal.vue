@@ -35,13 +35,13 @@ const modalConfig = computed(() => {
   if (showVerificationStep.value) {
     return {
       title: 'Verify Authentication Code',
-      description: 'Enter the 6-digit code from your authenticator app',
+      description: 'Enter the 6-digit code from your authenticator services',
       buttonText: 'Continue',
     };
   }
   return {
     title: 'Enable Two-Factor Authentication',
-    description: 'Scan the QR code or enter the setup key in your authenticator app',
+    description: 'Scan the QR code or enter the setup key in your authenticator services',
     buttonText: 'Continue',
   };
 });

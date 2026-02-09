@@ -1,49 +1,43 @@
-﻿use actix::MailboxError;
+use actix::MailboxError;
 use actix_web::{
-    error::{QueryPayloadError, ResponseError},
+    error::{JsonPayloadError, PayloadError, QueryPayloadError, ResponseError},
     http::StatusCode,
     HttpResponse,
 };
-use diesel::{
-    r2d2::PoolError,
-    result::{DatabaseErrorKind, Error as DieselError},
-};
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
-use libreauth::pass::ErrorCode as PassErrorCode;
+use sea_orm::DbErr;
 use serde_json::{json, Map as JsonMap, Value as JsonValue};
 use thiserror::Error;
 use validator::ValidationErrors;
 
-/// Application-level error type
+/* -------------------------------------------------------------------------- */
+/*                               APP ERROR TYPE                               */
+/* -------------------------------------------------------------------------- */
+
 #[derive(Debug, Error)]
 pub enum Error {
-    // 400
     #[error("Bad request")]
     BadRequest(JsonValue),
 
-    // 401
     #[error("Unauthorized")]
     Unauthorized(JsonValue),
 
-    // 403
     #[error("Forbidden")]
     Forbidden(JsonValue),
 
-    // 404
     #[error("Not found")]
     NotFound(JsonValue),
 
-    // 422
     #[error("Unprocessable entities")]
     UnprocessableEntity(JsonValue),
 
-    // 500
     #[error("Internal server error")]
     InternalServerError,
-
-    #[error("Failed to send confirmation email")]
-    EmailSend(JsonValue),
 }
+
+/* -------------------------------------------------------------------------- */
+/*                         ACTIX RESPONSE IMPLEMENTATION                      */
+/* -------------------------------------------------------------------------- */
 
 impl ResponseError for Error {
     fn status_code(&self) -> StatusCode {
@@ -54,7 +48,6 @@ impl ResponseError for Error {
             Error::NotFound(_) => StatusCode::NOT_FOUND,
             Error::UnprocessableEntity(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Error::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::EmailSend(_) =>  StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -64,9 +57,6 @@ impl ResponseError for Error {
                 HttpResponse::InternalServerError().json(json!({
                     "error": "Internal server error"
                 }))
-            }
-            Error::EmailSend(v) => {
-                HttpResponse::InternalServerError().json(v)
             }
             Error::BadRequest(v)
             | Error::Unauthorized(v)
@@ -79,22 +69,52 @@ impl ResponseError for Error {
     }
 }
 
-/* -------------------- Conversions -------------------- */
+/* -------------------------------------------------------------------------- */
+/*                               CONVERSIONS                                  */
+/* -------------------------------------------------------------------------- */
+
+/* ----- JSON ----- */
+
+impl From<JsonPayloadError> for Error {
+    fn from(err: JsonPayloadError) -> Self {
+        Error::UnprocessableEntity(json!({
+            "error": "Invalid JSON payload",
+            "details": err.to_string()
+        }))
+    }
+}
+
+/* ----- QUERY ----- */
 
 impl From<QueryPayloadError> for Error {
     fn from(err: QueryPayloadError) -> Self {
         Error::UnprocessableEntity(json!({
             "error": "Invalid query parameters",
-            "details": err.to_string(),
+            "details": err.to_string()
         }))
     }
 }
+
+/* ----- RAW PAYLOAD ----- */
+
+impl From<PayloadError> for Error {
+    fn from(err: PayloadError) -> Self {
+        Error::BadRequest(json!({
+            "error": "Invalid payload",
+            "details": err.to_string()
+        }))
+    }
+}
+
+/* ----- MAILBOX ----- */
 
 impl From<MailboxError> for Error {
     fn from(_: MailboxError) -> Self {
         Error::InternalServerError
     }
 }
+
+/* ----- JWT ----- */
 
 impl From<JwtError> for Error {
     fn from(error: JwtError) -> Self {
@@ -112,45 +132,29 @@ impl From<JwtError> for Error {
     }
 }
 
-impl From<DieselError> for Error {
-    fn from(error: DieselError) -> Self {
-        match error {
-            DieselError::NotFound => Error::NotFound(json!({
-                "error": "Requested record not found"
+/* ----- SEA ORM ----- */
+
+impl From<DbErr> for Error {
+    fn from(err: DbErr) -> Self {
+        match err {
+            DbErr::RecordNotFound(_) => Error::NotFound(json!({
+                "error": "Record not found"
             })),
-            DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
-                Error::UnprocessableEntity(json!({
-                    "error": info
-                        .details()
-                        .unwrap_or_else(|| info.message())
-                }))
-            }
+            DbErr::Exec(_) | DbErr::Query(_) => Error::InternalServerError,
             _ => Error::InternalServerError,
         }
     }
 }
 
-impl From<PoolError> for Error {
-    fn from(_: PoolError) -> Self {
-        Error::InternalServerError
-    }
-}
-
-impl From<PassErrorCode> for Error {
-    fn from(_: PassErrorCode) -> Self {
-        Error::InternalServerError
-    }
-}
+/* ----- VALIDATOR ----- */
 
 impl From<ValidationErrors> for Error {
     fn from(errors: ValidationErrors) -> Self {
         let mut map = JsonMap::new();
 
         for (field, errs) in errors.field_errors() {
-            let messages: Vec<JsonValue> = errs
-                .iter()
-                .map(|e| json!(e.message))
-                .collect();
+            let messages: Vec<JsonValue> =
+                errs.iter().map(|e| json!(e.message)).collect();
 
             map.insert(field.to_string(), json!(messages));
         }
@@ -161,49 +165,22 @@ impl From<ValidationErrors> for Error {
     }
 }
 
-impl From<libreauth::pass::Error> for Error {
-    fn from(err: libreauth::pass::Error) -> Self {
-        Error::UnprocessableEntity(json!({
-            "error": format!("Password hashing error: {}", err)
-        }))
-    }
+/* -------------------------------------------------------------------------- */
+/*                        ACTIX CONFIG ERROR HANDLERS                         */
+/* -------------------------------------------------------------------------- */
+
+pub fn json_error_handler(
+    err: JsonPayloadError,
+    _req: &actix_web::HttpRequest,
+) -> actix_web::Error {
+    let app_error: Error = err.into();
+    actix_web::Error::from(app_error)
 }
 
-/* -------------------- DB Error Layer -------------------- */
-
-#[derive(Debug)]
-pub enum DbError {
-    NotFound,
-    Forbidden,
-    Diesel(DieselError),
-    Pool(r2d2::Error),
-}
-
-impl From<DieselError> for DbError {
-    fn from(err: DieselError) -> Self {
-        match err {
-            DieselError::NotFound => DbError::NotFound,
-            e => DbError::Diesel(e),
-        }
-    }
-}
-
-impl From<r2d2::Error> for DbError {
-    fn from(err: r2d2::Error) -> Self {
-        DbError::Pool(err)
-    }
-}
-
-impl From<DbError> for Error {
-    fn from(err: DbError) -> Self {
-        match err {
-            DbError::NotFound => Error::NotFound(json!({
-                "error": "Record not found"
-            })),
-            DbError::Forbidden => Error::Forbidden(json!({
-                "error": "Forbidden"
-            })),
-            DbError::Diesel(_) | DbError::Pool(_) => Error::InternalServerError,
-        }
-    }
+pub fn query_error_handler(
+    err: QueryPayloadError,
+    _req: &actix_web::HttpRequest,
+) -> actix_web::Error {
+    let app_error: Error = err.into();
+    actix_web::Error::from(app_error)
 }
