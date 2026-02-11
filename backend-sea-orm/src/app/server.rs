@@ -1,9 +1,12 @@
 use actix_web::{App, HttpServer, web::Data};
 use sea_orm::Database;
 use std::sync::Arc;
+use actix_web::middleware::from_fn;
 use redis::Client;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use migration::{Migrator, MigratorTrait};
+use crate::app::middleware::auth_middleware;
 use crate::config::Config;
 use crate::errors;
 use crate::openapi::ApiDoc;
@@ -17,6 +20,7 @@ pub async fn start(config: Config) -> std::io::Result<()> {
     let db = Database::connect(&config.database_url)
         .await
         .expect("DB connection failed");
+    Migrator::up(&db, None).await.expect("TODO: panic message");
 
     let redis = Arc::new(
         Client::open(config.redis_url.clone())
@@ -49,6 +53,7 @@ pub async fn start(config: Config) -> std::io::Result<()> {
                     .error_handler(errors::query_error_handler)
             )
             .configure(routes::configure)
+            .wrap(from_fn(auth_middleware))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", ApiDoc::openapi())

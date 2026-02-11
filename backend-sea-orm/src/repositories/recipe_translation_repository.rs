@@ -2,7 +2,7 @@ use sea_orm::{ColumnTrait, DbErr};
 use sea_orm::{EntityTrait, QueryFilter};
 use sea_orm::{DatabaseConnection};
 use uuid::Uuid;
-use crate::entities::{recipe_translations, recipes};
+use entity::{recipe_translations, recipes};
 use crate::errors::Error;
 
 pub async fn find_all(

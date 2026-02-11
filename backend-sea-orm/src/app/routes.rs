@@ -1,15 +1,13 @@
 use actix_web::web;
 
-use crate::controllers::{
-    recipes_controller,
-    users_controller,
-};
+use crate::controllers::{auth_controller, recipes_controller, users_controller};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
 
     cfg.service(
         web::scope("/api")
             .configure(recipes_controller::configure)
-            //.configure(users_controller::configure)
+            .configure(auth_controller::configure)
+            .configure(users_controller::configure)
     );
 }

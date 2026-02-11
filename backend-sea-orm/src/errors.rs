@@ -1,12 +1,12 @@
 use actix::MailboxError;
 use actix_web::{
+    HttpResponse,
     error::{JsonPayloadError, PayloadError, QueryPayloadError, ResponseError},
     http::StatusCode,
-    HttpResponse,
 };
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
-use sea_orm::DbErr;
-use serde_json::{json, Map as JsonMap, Value as JsonValue};
+use sea_orm::{DbErr, TransactionError};
+use serde_json::{Map as JsonMap, Value as JsonValue, json};
 use thiserror::Error;
 use validator::ValidationErrors;
 
@@ -28,11 +28,17 @@ pub enum Error {
     #[error("Not found")]
     NotFound(JsonValue),
 
-    #[error("Unprocessable entities")]
+    #[error("Unprocessable entity")]
     UnprocessableEntity(JsonValue),
 
     #[error("Internal server error")]
     InternalServerError,
+
+    #[error("Email Already exists")]
+    EmailAlreadyExists,
+
+    #[error("Failed to send confirmation email")]
+    EmailSend(JsonValue),
 }
 
 /* -------------------------------------------------------------------------- */
@@ -48,22 +54,26 @@ impl ResponseError for Error {
             Error::NotFound(_) => StatusCode::NOT_FOUND,
             Error::UnprocessableEntity(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Error::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::EmailAlreadyExists => StatusCode::CONFLICT,
+            Error::EmailSend(_) =>  StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
     fn error_response(&self) -> HttpResponse {
         match self {
-            Error::InternalServerError => {
-                HttpResponse::InternalServerError().json(json!({
-                    "error": "Internal server error"
-                }))
-            }
-            Error::BadRequest(v)
+            Error::InternalServerError => HttpResponse::InternalServerError().json(json!({
+                "error": "Internal server error"
+            })),
+            | Error::BadRequest(v)
             | Error::Unauthorized(v)
             | Error::Forbidden(v)
             | Error::NotFound(v)
-            | Error::UnprocessableEntity(v) => {
-                HttpResponse::build(self.status_code()).json(v)
+            | Error::UnprocessableEntity(v) => HttpResponse::build(self.status_code()).json(v),
+            | Error::EmailAlreadyExists => HttpResponse::Conflict().json(json!({
+                "error": "Email already exists"
+            })),
+            | Error::EmailSend(v) => {
+                HttpResponse::InternalServerError().json(v)
             }
         }
     }
@@ -146,6 +156,15 @@ impl From<DbErr> for Error {
     }
 }
 
+impl From<TransactionError<Error>> for Error {
+    fn from(err: TransactionError<Error>) -> Self {
+        match err {
+            TransactionError::Connection(e) => Error::from(e), // Uses your existing From<DbErr>
+            TransactionError::Transaction(e) => e,            // Your app error
+        }
+    }
+}
+
 /* ----- VALIDATOR ----- */
 
 impl From<ValidationErrors> for Error {
@@ -153,14 +172,23 @@ impl From<ValidationErrors> for Error {
         let mut map = JsonMap::new();
 
         for (field, errs) in errors.field_errors() {
-            let messages: Vec<JsonValue> =
-                errs.iter().map(|e| json!(e.message)).collect();
+            let messages: Vec<JsonValue> = errs.iter().map(|e| json!(e.message)).collect();
 
             map.insert(field.to_string(), json!(messages));
         }
 
         Error::UnprocessableEntity(json!({
             "errors": map
+        }))
+    }
+}
+
+/* ----- Hasher ----- */
+
+impl From<libreauth::pass::Error> for Error {
+    fn from(err: libreauth::pass::Error) -> Self {
+        Error::UnprocessableEntity(json!({
+            "error": format!("Password hashing error: {}", err)
         }))
     }
 }

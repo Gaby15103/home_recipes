@@ -34,7 +34,7 @@ pub enum Error {
     NotFound(JsonValue),
 
     // 422
-    #[error("Unprocessable entities")]
+    #[error("Unprocessable entity")]
     UnprocessableEntity(JsonValue),
 
     // 500

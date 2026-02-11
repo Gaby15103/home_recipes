@@ -36,3 +36,10 @@ docker-compose -f docker-compose.prod.yaml up
 
 to start debuggin in the container use gdb:
 gdbserver :2345 target/debug/backend
+
+
+### sea orm migrations:
+```bash 
+sea-orm-cli generate entity -o backend-sea-orm/entity/src --lib
+```
+

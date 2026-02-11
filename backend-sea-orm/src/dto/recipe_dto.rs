@@ -3,7 +3,7 @@ use uuid::Uuid;
 use crate::dto::ingredient_dto::{IngredientDto, IngredientGroupDto};
 use crate::dto::step_dto::{StepDto, StepGroupDto};
 use crate::dto::tag_dto::TagDto;
-use crate::entities::{recipe_translations, recipes};
+use entity::{recipe_translations, recipes};
 use utoipa::ToSchema;
 
 #[derive(Serialize, ToSchema)]
