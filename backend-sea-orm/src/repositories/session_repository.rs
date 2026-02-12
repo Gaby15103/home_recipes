@@ -1,8 +1,9 @@
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, RelationTrait, QuerySelect, Set, ActiveModelTrait};
-use entity::{sessions, users};
 use chrono::Utc;
+use entity::{sessions, users};
 use sea_orm::prelude::DateTimeWithTimeZone;
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, QueryFilter, QuerySelect, RelationTrait, Set};
 use uuid::Uuid;
+use crate::errors::Error;
 
 pub async fn find_valid_session_with_user(
     db: &DatabaseConnection,
@@ -18,9 +19,7 @@ pub async fn find_valid_session_with_user(
         .await?;
 
     // Map the nested Option safely
-    Ok(result.and_then(|(session, user_opt)| {
-        user_opt.map(|user| (session, user))
-    }))
+    Ok(result.and_then(|(session, user_opt)| user_opt.map(|user| (session, user))))
 }
 pub async fn get_user_sessions(
     db: &DatabaseConnection,
@@ -33,6 +32,18 @@ pub async fn get_user_sessions(
         .filter(sessions::Column::ExpiresAt.gt(Utc::now()))
         .all(db)
         .await
+}
+pub async fn find_by_id(
+    db: &DatabaseConnection,
+    session_id: Uuid,
+)-> Result<Option<sessions::Model>, sea_orm::DbErr> {
+    sessions::Entity::find_by_id(session_id).one(db).await
+}
+pub async fn delete_session_by_id(
+    db: &DatabaseConnection,
+    session_id: Uuid,
+)-> Result<DeleteResult, sea_orm::DbErr> {
+    sessions::Entity::delete_by_id(session_id).exec(db).await
 }
 
 pub async fn update_last_active(
@@ -72,4 +83,58 @@ pub async fn create(
     };
 
     new_session.insert(db).await
+}
+
+pub async fn delete_session_by_token(
+    db: &DatabaseConnection,
+    token: &str,
+) -> Result<DeleteResult, Error> {
+    let result = sessions::Entity::delete_many()
+        .filter(sessions::Column::Token.eq(token))
+        .exec(db)
+        .await?;
+    Ok(result)
+}
+
+pub async fn delete_all_other_sessions(
+    db: &DatabaseConnection,
+    user_id: i32,
+    current_token: &str,
+) -> Result<DeleteResult, Error> {
+    let result = sessions::Entity::delete_many()
+        .filter(sessions::Column::UserId.eq(user_id))
+        .filter(sessions::Column::Token.ne(current_token))
+        .exec(db)
+        .await?;
+    Ok(result)
+}
+pub async fn delete_all_user_sessions(db: &DatabaseConnection, user_id: Uuid) -> Result<(), Error> {
+    sessions::Entity::delete_many()
+        .filter(sessions::Column::UserId.eq(user_id))
+        .exec(db)
+        .await?;
+    Ok(())
+}
+
+pub async fn refresh_session(
+    db: &DatabaseConnection,
+    session_id: Uuid,
+    new_token: String,
+    new_expires_at: DateTimeWithTimeZone,
+) -> Result<String, Error> {
+    // 1. Fetch the existing session
+    let session = sessions::Entity::find_by_id(session_id)
+        .one(db)
+        .await?
+        .ok_or(Error::Unauthorized("Session invalid or expired".to_string().parse().unwrap()))?;
+
+    // 2. Map to ActiveModel and update fields
+    let mut session: sessions::ActiveModel = session.into();
+    session.token = Set(new_token.clone());
+    session.expires_at = Set(new_expires_at);
+
+    // 3. Save back to DB
+    session.update(db).await?;
+
+    Ok(new_token)
 }

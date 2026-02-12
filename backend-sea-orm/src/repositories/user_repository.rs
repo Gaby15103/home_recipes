@@ -1,15 +1,16 @@
 use crate::domain::user::NewUser;
 use crate::dto::user_dto::UpdateUserDto;
 use crate::errors::Error;
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use entity::prelude::{EmailVerificationTokens, Users};
 use entity::users::Model;
-use entity::{email_verification_tokens, roles, user_roles, users};
-use sea_orm::QueryFilter;
+use entity::{email_verification_tokens, password_reset_tokens, roles, user_roles, users};
+use sea_orm::{DeleteResult, QueryFilter};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, Set, TransactionTrait};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use serde_json::json;
 use uuid::Uuid;
+use migration::Expr;
 
 pub async fn create(
     db: &DatabaseConnection,
@@ -106,7 +107,7 @@ pub async fn update_user_profile(
     db: &DatabaseConnection,
     user_id: Uuid,
     data: UpdateUserDto,
-) -> Result<users::Model, Error> {
+) -> Result<entity::users::Model, Error> {
     let user = users::Entity::find_by_id(user_id)
         .one(db)
         .await?
@@ -129,4 +130,61 @@ pub async fn update_user_profile(
     }
 
     Ok(active_user.update(db).await?)
+}
+
+pub async fn confirm_email(
+    db: &DatabaseConnection,
+    token: Uuid,
+)-> Result<(), Error> {
+    let token_record = email_verification_tokens::Entity::find()
+        .filter(email_verification_tokens::Column::Token.eq(token))
+        .one(db)
+        .await?;
+    if let Some(record) = token_record {
+        users::Entity::update_many()
+            .col_expr(users::Column::EmailVerified, Expr::value(true))
+            .filter(users::Column::Id.eq(record.user_id))
+            .exec(db)
+            .await?;
+
+        email_verification_tokens::Entity::delete_by_id(record.id)
+            .exec(db)
+            .await?;
+    }
+
+    Ok(())
+}
+pub async fn create_reset_token(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    token: Uuid
+) -> Result<(), DbErr> {
+    // Set expiration for 1 hour from now
+    let expires_at = Utc::now() + Duration::hours(1);
+
+    let new_token = password_reset_tokens::ActiveModel {
+        user_id: Set(user_id),
+        token: Set(token),
+        expires_at: Set(expires_at.naive_utc()),
+        ..Default::default()
+    };
+
+    password_reset_tokens::Entity::insert(new_token).exec(db).await?;
+    Ok(())
+}
+pub async fn find_reset_token_by_token(
+    db: &DatabaseConnection,
+    token: Uuid
+) -> Result<Option<entity::password_reset_tokens::Model>, Error> {
+    let token = password_reset_tokens::Entity::find()
+        .filter(password_reset_tokens::Column::Token.eq(token))
+        .one(db)
+    .await?;
+    Ok(token)
+}
+pub async fn delete_reset_token_by_id(
+    db: &DatabaseConnection,
+    token_id: Uuid
+)-> Result<DeleteResult, DbErr> {
+    password_reset_tokens::Entity::delete_by_id(token_id).exec(db).await
 }

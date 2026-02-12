@@ -11,8 +11,10 @@ export interface User {
     avatar_url: string;
     preferences: UserPreferences;
     email_verified: boolean;
+    last_login: Date;
+    created_at: Date;
+    updated_at: Date;
     roles: Role[]
-    token?: string;
 }
 export interface Role {
     name: string;

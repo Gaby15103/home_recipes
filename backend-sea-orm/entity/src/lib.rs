@@ -9,6 +9,7 @@ pub mod ingredient_groups;
 pub mod ingredient_translations;
 pub mod ingredients;
 pub mod languages;
+pub mod password_reset_tokens;
 pub mod recipe_analytics;
 pub mod recipe_comments;
 pub mod recipe_ingredient_translations;

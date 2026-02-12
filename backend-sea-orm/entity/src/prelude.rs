@@ -7,6 +7,7 @@ pub use super::ingredient_groups::Entity as IngredientGroups;
 pub use super::ingredient_translations::Entity as IngredientTranslations;
 pub use super::ingredients::Entity as Ingredients;
 pub use super::languages::Entity as Languages;
+pub use super::password_reset_tokens::Entity as PasswordResetTokens;
 pub use super::recipe_analytics::Entity as RecipeAnalytics;
 pub use super::recipe_comments::Entity as RecipeComments;
 pub use super::recipe_ingredient_translations::Entity as RecipeIngredientTranslations;

@@ -22,6 +22,23 @@ pub async fn get_active_sessions(
         .collect())
 }
 
+pub async fn revoke_session(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    session_id: Uuid,
+) -> Result<(), Error> {
+
+    let session = session_repository::find_by_id(db, session_id).await?
+        .ok_or(Error::NotFound(json!({"error": "Session not found"})))?;
+
+    if session.user_id != user_id {
+        return Err(Error::Unauthorized("You do not own this session".into()));
+    }
+
+    session_repository::delete_session_by_id(db, session_id).await?;
+    Ok(())
+}
+
 pub async fn update_user(
     db: &DatabaseConnection,
     user_id: Uuid,

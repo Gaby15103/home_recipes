@@ -21,4 +21,4 @@ await authStore.loadUser();
 console.log(authStore.user)
 
 app.use(i18n);
-app.mount("#services");
+app.mount("#app");

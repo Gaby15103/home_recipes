@@ -11,6 +11,7 @@ use crate::dto::role_dto::RoleResponseDto;
 pub struct UserResponseDto {
     pub id: Uuid,
     pub email: String,
+    pub username: String,
     pub first_name: String,
     pub last_name: String,
     pub avatar_url: String,
@@ -62,6 +63,7 @@ impl From<(users::Model, Vec<roles::Model>)> for UserResponseDto {
         Self {
             id: user.id,
             email: user.email,
+            username: user.username,
             // Fixed typo: was user.email, now user.first_name
             first_name: user.first_name,
             last_name: user.last_name,

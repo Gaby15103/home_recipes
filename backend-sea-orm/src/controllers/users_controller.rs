@@ -1,8 +1,12 @@
 use actix_web::{web, HttpResponse};
+use actix_web::web::Data;
+use serde_json::json;
+use uuid::Uuid;
 use crate::app::state::AppState;
 use crate::controllers::auth_controller::{confirm_email, forgot_password, login, logout, refresh, register, reset_password};
 use crate::domain::user::AuthenticatedUser;
 use crate::dto::user_dto::{UpdatePasswordDto, UpdateUserDto, UserResponseDto};
+use crate::errors::Error;
 use crate::services::user_service;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -18,7 +22,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 pub async fn get_me(
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, crate::errors::Error> {
-
     let user_dto = UserResponseDto::from((auth.user, auth.roles));
     Ok(HttpResponse::Ok().json(user_dto))
 }
@@ -29,6 +32,20 @@ pub async fn get_sessions(
 ) -> Result<HttpResponse, crate::errors::Error> {
     let sessions = user_service::get_active_sessions(&state.db, auth.user.id, auth.active_session.id).await?;
     Ok(HttpResponse::Ok().json(sessions))
+}
+
+pub async fn terminate_session(
+    state: Data<AppState>,
+    auth: AuthenticatedUser,
+    path: web::Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let target_session_id = path.into_inner();
+
+    // The service should verify the session belongs to the auth.user.id 
+    // before deleting it (Security check!)
+    user_service::revoke_session(&state.db, auth.user.id, target_session_id).await?;
+
+    Ok(HttpResponse::Ok().json(json!({ "message": "Session terminated" })))
 }
 
 pub async fn change_password(

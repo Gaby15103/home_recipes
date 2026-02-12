@@ -8,8 +8,8 @@ export const AuthRoutes = {
 };
 
 export const UserRoutes = {
-    me: () => `${API_ROOT}/users/me`,
-    updateMe: () => `${API_ROOT}/users/me`,
+    me: () => `${API_ROOT}/user/me`,
+    updateMe: () => `${API_ROOT}/user/me`,
 };
 
 export const TagRoutes = {

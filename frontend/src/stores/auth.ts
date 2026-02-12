@@ -3,6 +3,7 @@ import {getCurrentUser, login, logout} from "@/api/auth";
 import type {User} from "@/models/User";
 import {useRouter} from "vue-router";
 import {ROUTES} from "@/router/routes.ts";
+
 const router = useRouter()
 
 export const useAuthStore = defineStore("auth", {
@@ -23,8 +24,7 @@ export const useAuthStore = defineStore("auth", {
         async loadUser(): Promise<User | null> {
             this.loading = true;
             try {
-                let res = await getCurrentUser()
-                this.user = res.user;
+                this.user = await getCurrentUser();
             } catch {
                 this.user = null;
             } finally {

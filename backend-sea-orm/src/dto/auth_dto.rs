@@ -1,4 +1,5 @@
 use serde_derive::Deserialize;
+use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Validate, Deserialize)]
@@ -26,4 +27,19 @@ pub struct LoginRequestDto {
 
     #[validate(length(min = 8, max = 72))]
     pub password: String,
+}
+#[derive(Debug, Validate, Deserialize)]
+pub struct ForgotPasswordDto {
+    #[validate(email)]
+    pub email: String,
+}
+#[derive(Debug, Validate, Deserialize)]
+pub struct ResetPasswordDto {
+    pub token: Uuid,
+    #[validate(length(min = 8, max = 72))]
+    pub new_password: String,
+}
+#[derive(Debug, Validate, Deserialize)]
+pub struct ConfirmEmailQuery {
+    pub token: Uuid,
 }
