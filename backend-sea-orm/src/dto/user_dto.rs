@@ -30,6 +30,17 @@ pub struct LoginResponseDto {
     pub two_factor_token: Option<Uuid>,
 }
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct VerifyTwoFactorResult {
+    pub user: UserResponseDto,
+    pub session_token: String,
+}
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct TwoFactorStatusResponse {
+    pub enabled: bool,
+    pub requires_confirmation: bool,
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateUserDto {
     pub first_name: Option<String>,

@@ -1,8 +1,8 @@
 use crate::app::state::AppState;
 use crate::domain::user::NewUser;
-use crate::dto::auth_dto::{LoginRequestDto, RegisterRequestDto, ResetPasswordDto};
+use crate::dto::auth_dto::{LoginRequestDto, QrCodeResponse, RegisterRequestDto, ResetPasswordDto, VerifyTwoFactorRequest};
 use crate::dto::preferences_dto::UserPreferences;
-use crate::dto::user_dto::{LoginResponseDto, UpdatePasswordDto, UserResponseDto};
+use crate::dto::user_dto::{LoginResponseDto, TwoFactorStatusResponse, UpdatePasswordDto, UserResponseDto, VerifyTwoFactorResult};
 use crate::errors::Error;
 use crate::repositories::{role_repository, session_repository, user_repository};
 use crate::utils::email_service::{send_email_confirmation, send_password_reset};
@@ -18,7 +18,10 @@ use rand::distr::Alphanumeric;
 use sea_orm::prelude::DateTimeWithTimeZone;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, Iden, Set};
 use std::ops::Deref;
+use qrcode::QrCode;
+use serde_json::json;
 use uuid::Uuid;
+use crate::utils::two_factor::{generate_new_secret, verify_totp};
 
 pub async fn register(
     db: &DatabaseConnection,
@@ -168,4 +171,105 @@ pub async fn reset_password(
     user_repository::delete_reset_token_by_id(db, reset_token.id).await?;
 
     Ok(())
+}
+pub async fn get_or_create_2fa_secret(db: &DatabaseConnection, user: &users::Model) -> Result<(), Error> {
+    if user.two_factor_secret.is_none() {
+        let new_secret = generate_new_secret();
+        user_repository::update_2fa_secret_if_null(db, user.id, new_secret).await?;
+    }
+    Ok(())
+}
+
+pub async fn generate_qr_code(user: &users::Model) -> Result<QrCodeResponse, Error> {
+    let secret = user.two_factor_secret.as_ref()
+        .ok_or(Error::BadRequest(json!({"error": "Secret not set"})))?;
+
+    let otp_auth_url = format!(
+        "otpauth://totp/HomeRecipes:{}?secret={}&issuer=HomeRecipes",
+        user.email, secret
+    );
+
+    let code = QrCode::new(otp_auth_url.clone()).map_err(|_| Error::InternalServerError)?;
+    let svg = code.render::<char>().min_dimensions(200, 200).build();
+
+    Ok(QrCodeResponse { svg, url: otp_auth_url })
+}
+
+pub async fn verify_2fa_login(
+    db: &DatabaseConnection,
+    payload: VerifyTwoFactorRequest,
+    user_agent: Option<String>,
+    ip_address: Option<String>,
+) -> Result<VerifyTwoFactorResult, Error> {
+    // 1. Repository: Find the user
+    let user = user_repository::find_user_by_2fa_token(db, payload.token).await?;
+
+    let secret = user.two_factor_secret.as_ref()
+        .ok_or(Error::Unauthorized(serde_json::json!({"error": "2FA not enabled"})))?;
+
+    // 2. Utils/Repository: Verify logic
+    let is_valid = if let Some(code) = payload.code {
+        verify_totp(secret, &code)?
+    } else if let Some(recovery) = payload.recovery_code {
+        user_repository::consume_recovery_code(db, user.id, &recovery).await?
+    } else {
+        false
+    };
+
+    if !is_valid {
+        return Err(Error::Unauthorized(serde_json::json!({"error": "Invalid code"})));
+    }
+
+    // 3. Repository: Cleanup
+    user_repository::clear_2fa_token(db, user.id).await?;
+
+    // 4. Session/Role Repository: Complete the login
+    let token: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(64)
+        .map(char::from)
+        .collect();
+
+    let expires_at = (chrono::Utc::now() + chrono::Duration::days(30)).into();
+
+    let session =
+        session_repository::create(db, user.id, token, expires_at, user_agent, ip_address).await?;
+    let roles = role_repository::get_roles_for_user(db, user.id).await?;
+
+    Ok(VerifyTwoFactorResult {
+        user: UserResponseDto::from((user, roles)),
+        session_token: session.token,
+    })
+}
+
+pub async fn get_recovery_codes(db: &DatabaseConnection, user: &users::Model) -> Result<serde_json::Value, Error> {
+    if let Some(existing) = &user.two_factor_recovery_codes {
+        return Ok(existing.clone());
+    }
+
+    let new_codes: Vec<String> = (0..8).map(|_| {
+        rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect()
+    }).collect();
+
+    let json_codes = serde_json::to_value(new_codes).map_err(|_| Error::InternalServerError)?;
+    user_repository::update_recovery_codes(db, user.id, json_codes.clone()).await?;
+
+    Ok(json_codes)
+}
+pub async fn get_2fa_status(user: &users::Model) -> Result<TwoFactorStatusResponse, Error> {
+    let enabled = user.two_factor_secret.is_some();
+    let requires_confirmation = enabled && user.two_factor_confirmed_at.is_none();
+
+    Ok(TwoFactorStatusResponse {
+        enabled,
+        requires_confirmation,
+    })
+}
+
+pub async fn enable_2fa(db: &DatabaseConnection, user_id: Uuid) -> Result<(), Error> {
+    user_repository::set_2fa_status(db, user_id, true).await
+}
+
+pub async fn disable_2fa_complete(db: &DatabaseConnection, user_id: Uuid) -> Result<(), Error> {
+    user_repository::disable_2fa(db, user_id).await
 }

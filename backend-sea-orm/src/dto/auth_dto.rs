@@ -1,4 +1,4 @@
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -42,4 +42,18 @@ pub struct ResetPasswordDto {
 #[derive(Debug, Validate, Deserialize)]
 pub struct ConfirmEmailQuery {
     pub token: Uuid,
+}
+#[derive(Debug, Deserialize, Validate)]
+pub struct VerifyTwoFactorRequest {
+    pub token: Uuid,
+
+    #[validate(length(min = 6, max = 6))]
+    pub code: Option<String>,
+
+    pub recovery_code: Option<String>,
+}
+#[derive(Debug, Deserialize, Validate, Serialize)]
+pub struct QrCodeResponse {
+    pub svg: String,
+    pub url: String,
 }

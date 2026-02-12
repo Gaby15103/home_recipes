@@ -49,11 +49,11 @@ export const DebugRoutes = {
 };
 
 export const TwoFactorRoutes = {
-    qrCode: () => `${API_ROOT}/two-factor/qr-code`,          // GET
-    secretKey: () => `${API_ROOT}/two-factor/secret-key`,   // GET
-    recoveryCodes: () => `${API_ROOT}/two-factor/recovery-codes`, // GET
-    enable: () => `${API_ROOT}/two-factor/enable`,          // POST
-    disable: () => `${API_ROOT}/two-factor/disable`,        // POST
-    status: () => `${API_ROOT}/two-factor/status`,          // GET
-    verify: () => `${API_ROOT}/two-factor/verify`,          // GET
+    qrCode: () => `${API_ROOT}/auth/two-factor/qr-code`,          // GET
+    secretKey: () => `${API_ROOT}/auth/two-factor/secret-key`,   // GET
+    recoveryCodes: () => `${API_ROOT}/auth/two-factor/recovery-codes`, // GET
+    enable: () => `${API_ROOT}/auth/two-factor/enable`,          // POST
+    disable: () => `${API_ROOT}/auth/two-factor/disable`,        // POST
+    status: () => `${API_ROOT}/auth/two-factor/status`,          // GET
+    verify: () => `${API_ROOT}/auth/two-factor/verify`,          // GET
 };

@@ -1,12 +1,12 @@
 use crate::app::state::AppState;
 use crate::domain::user::AuthenticatedUser;
-use crate::dto::auth_dto::{ConfirmEmailQuery, ForgotPasswordDto, LoginRequestDto, RegisterRequestDto, ResetPasswordDto};
+use crate::dto::auth_dto::{ConfirmEmailQuery, ForgotPasswordDto, LoginRequestDto, RegisterRequestDto, ResetPasswordDto, VerifyTwoFactorRequest};
 use crate::dto::user_dto::{LoginResponseDto, UserResponseDto};
 use crate::errors::Error;
 use crate::services::auth_service;
 use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Cookie, SameSite};
-use actix_web::web::Data;
+use actix_web::web::{service, Data};
 use actix_web::web::Json;
 use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::json;
@@ -15,13 +15,25 @@ use validator::Validate;
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/auth")
+            // Auth Routes
             .route("/register", web::post().to(register))
             .route("/login", web::post().to(login))
             .route("/logout", web::post().to(logout))
             .route("/refresh", web::post().to(refresh))
             .route("/confirm_email", web::post().to(confirm_email))
             .route("/forgot_password", web::post().to(forgot_password))
-            .route("/reset_password", web::post().to(reset_password)),
+            .route("/reset_password", web::post().to(reset_password))
+            // Nested 2FA Scope: This results in /auth/two-factor/...
+            .service(
+                web::scope("/two-factor") // Changed to hyphen to match your example
+                    .route("/qr-code", web::get().to(qr_code)) // Fixed typo "qr-cod"
+                    .route("/secret-key", web::get().to(secret_key))
+                    .route("/recovery-codes", web::get().to(recovery_codes))
+                    .route("/enable", web::post().to(enable))
+                    .route("/disable", web::post().to(disable))
+                    .route("/status", web::get().to(status))
+                    .route("/verify", web::post().to(verify))
+            )
     );
 }
 
@@ -154,4 +166,74 @@ pub async fn reset_password(
     form.validate()?;
     auth_service::reset_password(&state.db, form.into_inner()).await?;
     Ok(HttpResponse::Ok().json(json!({ "message": "Password updated successfully" })))
+}
+
+pub async fn secret_key(
+    state: Data<AppState>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    auth_service::get_or_create_2fa_secret(&state.db, &auth.user).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+pub async fn qr_code(
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    let res = auth_service::generate_qr_code(&auth.user).await?;
+    Ok(HttpResponse::Ok().json(res))
+}
+
+pub async fn verify(
+    state: Data<AppState>,
+    req: HttpRequest,
+    form: Json<VerifyTwoFactorRequest>,
+) -> Result<HttpResponse, Error> {
+    let user_agent = req
+        .headers()
+        .get("User-Agent")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
+    let ip_address = req
+        .connection_info()
+        .realip_remote_addr()
+        .map(|s| s.to_string());
+    let res = auth_service::verify_2fa_login(&state.db, form.into_inner(),user_agent,ip_address).await?;
+
+    let cookie = Cookie::build("session_token", res.session_token)
+        .path("/")
+        .http_only(true)
+        .max_age(actix_web::cookie::time::Duration::days(30))
+        .finish();
+
+    Ok(HttpResponse::Ok().cookie(cookie).json(res.user))
+}
+pub async fn recovery_codes(
+    state: Data<AppState>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    let codes = auth_service::get_recovery_codes(&state.db, &auth.user).await?;
+    Ok(HttpResponse::Ok().json(codes))
+}
+pub async fn enable(
+    state: Data<AppState>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    auth_service::enable_2fa(&state.db, auth.user.id).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+pub async fn disable(
+    state: Data<AppState>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    auth_service::disable_2fa_complete(&state.db, auth.user.id).await?;
+    Ok(HttpResponse::Ok().finish())
+}
+
+pub async fn status(
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    let res = auth_service::get_2fa_status(&auth.user).await?;
+    Ok(HttpResponse::Ok().json(res))
 }

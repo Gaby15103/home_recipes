@@ -4,7 +4,7 @@ import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useClipboard } from '@vueuse/core';
-import { Check, Copy, ScanLine } from 'lucide-vue-next';
+import { Check, Copy } from 'lucide-vue-next';
 import QRCode from 'qrcode'
 
 interface Props {
@@ -15,7 +15,7 @@ interface Props {
 const props = defineProps<Props>();
 const isOpen = defineModel<boolean>('isOpen');
 
-const { qrCodeSvg, manualSetupKey, fetchSetupData, clearSetupData, errors } = useTwoFactorAuth();
+const { qrCode, manualSetupKey, fetchSetupData, clearSetupData, errors } = useTwoFactorAuth();
 const showVerificationStep = ref(false);
 const code = ref('');
 const pinInputContainerRef = ref<HTMLElement | null>(null);
@@ -46,19 +46,13 @@ const modalConfig = computed(() => {
   };
 });
 
-const otpauth = computed(() =>
-    manualSetupKey.value
-        ? `otpauth://totp/MyApp:user?secret=${manualSetupKey.value}&issuer=MyApp`
-        : null
-)
-
-watch(otpauth, async (uri) => {
-  if (!uri) {
+watch(qrCode, async (qrCode) => {
+  if (!qrCode) {
     qrSvg.value = null
     return
   }
 
-  qrSvg.value = await QRCode.toString(uri, {
+  qrSvg.value = await QRCode.toString(qrCode.url, {
     type: 'svg',
     margin: 1,
     width: 256,
@@ -88,7 +82,7 @@ const resetModalState = () => {
 
 watch(isOpen, async (val) => {
   if (!val) return resetModalState();
-  if (!qrCodeSvg.value) await fetchSetupData();
+  if (!qrCode.value) await fetchSetupData();
 });
 
 onUnmounted(() => clearSetupData());
