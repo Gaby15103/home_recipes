@@ -1,6 +1,7 @@
 use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
+use crate::dto::user_dto::UserResponseDto;
 
 #[derive(Debug, Validate, Deserialize)]
 pub struct RegisterRequestDto {
@@ -56,4 +57,12 @@ pub struct VerifyTwoFactorRequest {
 pub struct QrCodeResponse {
     pub svg: String,
     pub url: String,
+}
+#[derive(Debug, Deserialize, Validate, Serialize)]
+pub struct SecretKeyResponse {
+    pub secret_key: String,
+}
+#[derive(Debug, Deserialize, Validate, Serialize)]
+pub struct VerifyTwoFactorResponse {
+    pub user: UserResponseDto,
 }

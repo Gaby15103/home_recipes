@@ -1,13 +1,13 @@
 use crate::app::state::AppState;
 use crate::domain::user::AuthenticatedUser;
-use crate::dto::auth_dto::{ConfirmEmailQuery, ForgotPasswordDto, LoginRequestDto, RegisterRequestDto, ResetPasswordDto, VerifyTwoFactorRequest};
+use crate::dto::auth_dto::{ConfirmEmailQuery, ForgotPasswordDto, LoginRequestDto, RegisterRequestDto, ResetPasswordDto, SecretKeyResponse, VerifyTwoFactorRequest, VerifyTwoFactorResponse};
 use crate::dto::user_dto::{LoginResponseDto, UserResponseDto};
 use crate::errors::Error;
 use crate::services::auth_service;
 use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Cookie, SameSite};
-use actix_web::web::{service, Data};
 use actix_web::web::Json;
+use actix_web::web::{Data, service};
 use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::json;
 use validator::Validate;
@@ -32,8 +32,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
                     .route("/enable", web::post().to(enable))
                     .route("/disable", web::post().to(disable))
                     .route("/status", web::get().to(status))
-                    .route("/verify", web::post().to(verify))
-            )
+                    .route("/verify", web::post().to(verify)),
+            ),
     );
 }
 
@@ -172,13 +172,11 @@ pub async fn secret_key(
     state: Data<AppState>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
-    auth_service::get_or_create_2fa_secret(&state.db, &auth.user).await?;
-    Ok(HttpResponse::Ok().finish())
+    let secret = auth_service::get_or_create_2fa_secret(&state.db, &auth.user).await?;
+    Ok(HttpResponse::Ok().json(SecretKeyResponse { secret_key: secret }))
 }
 
-pub async fn qr_code(
-    auth: AuthenticatedUser,
-) -> Result<HttpResponse, Error> {
+pub async fn qr_code(auth: AuthenticatedUser) -> Result<HttpResponse, Error> {
     let res = auth_service::generate_qr_code(&auth.user).await?;
     Ok(HttpResponse::Ok().json(res))
 }
@@ -198,7 +196,8 @@ pub async fn verify(
         .connection_info()
         .realip_remote_addr()
         .map(|s| s.to_string());
-    let res = auth_service::verify_2fa_login(&state.db, form.into_inner(),user_agent,ip_address).await?;
+    let res = auth_service::verify_2fa_login(&state.db, form.into_inner(), user_agent, ip_address)
+        .await?;
 
     let cookie = Cookie::build("session_token", res.session_token)
         .path("/")
@@ -206,7 +205,7 @@ pub async fn verify(
         .max_age(actix_web::cookie::time::Duration::days(30))
         .finish();
 
-    Ok(HttpResponse::Ok().cookie(cookie).json(res.user))
+    Ok(HttpResponse::Ok().cookie(cookie).json(VerifyTwoFactorResponse { user: res.user }))
 }
 pub async fn recovery_codes(
     state: Data<AppState>,
@@ -215,10 +214,7 @@ pub async fn recovery_codes(
     let codes = auth_service::get_recovery_codes(&state.db, &auth.user).await?;
     Ok(HttpResponse::Ok().json(codes))
 }
-pub async fn enable(
-    state: Data<AppState>,
-    auth: AuthenticatedUser,
-) -> Result<HttpResponse, Error> {
+pub async fn enable(state: Data<AppState>, auth: AuthenticatedUser) -> Result<HttpResponse, Error> {
     auth_service::enable_2fa(&state.db, auth.user.id).await?;
     Ok(HttpResponse::Ok().finish())
 }
@@ -231,9 +227,7 @@ pub async fn disable(
     Ok(HttpResponse::Ok().finish())
 }
 
-pub async fn status(
-    auth: AuthenticatedUser,
-) -> Result<HttpResponse, Error> {
+pub async fn status(auth: AuthenticatedUser) -> Result<HttpResponse, Error> {
     let res = auth_service::get_2fa_status(&auth.user).await?;
     Ok(HttpResponse::Ok().json(res))
 }

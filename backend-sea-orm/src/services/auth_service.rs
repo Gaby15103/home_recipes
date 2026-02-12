@@ -172,12 +172,12 @@ pub async fn reset_password(
 
     Ok(())
 }
-pub async fn get_or_create_2fa_secret(db: &DatabaseConnection, user: &users::Model) -> Result<(), Error> {
+pub async fn get_or_create_2fa_secret(db: &DatabaseConnection, user: &users::Model) -> Result<String, Error> {
+    let new_secret = generate_new_secret();
     if user.two_factor_secret.is_none() {
-        let new_secret = generate_new_secret();
-        user_repository::update_2fa_secret_if_null(db, user.id, new_secret).await?;
+        user_repository::update_2fa_secret_if_null(db, user.id, new_secret.clone()).await?;
     }
-    Ok(())
+    Ok(new_secret)
 }
 
 pub async fn generate_qr_code(user: &users::Model) -> Result<QrCodeResponse, Error> {
