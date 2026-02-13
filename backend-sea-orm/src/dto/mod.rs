@@ -11,4 +11,7 @@ pub mod auth_dto;
 pub mod preferences_dto;
 pub mod session_dto;
 pub mod role_dto;
+pub mod upload_dto;
+pub mod ingredient_group_dto;
+pub mod step_group_dto;
 

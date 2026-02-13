@@ -22,8 +22,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 pub async fn get_me(
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, crate::errors::Error> {
-    let user_dto = UserResponseDto::from((auth.user, auth.roles));
-    Ok(HttpResponse::Ok().json(user_dto))
+    Ok(HttpResponse::Ok().json(auth.user))
 }
 
 pub async fn get_sessions(
@@ -68,5 +67,5 @@ pub async fn update_profile(
 ) -> Result<HttpResponse, crate::errors::Error> {
     // Logic to update user names, avatar, etc.
     let updated_user = user_service::update_user(&state.db, auth.user.id, form.into_inner()).await?;
-    Ok(HttpResponse::Ok().json(UserResponseDto::from((updated_user, auth.roles))))
+    Ok(HttpResponse::Ok().json(UserResponseDto::from((updated_user, auth.user.roles))))
 }

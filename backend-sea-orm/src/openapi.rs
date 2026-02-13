@@ -1,5 +1,5 @@
 use utoipa::OpenApi;
-use crate::dto::recipe_dto::RecipeResponseDto;
+use crate::dto::recipe_dto::RecipeViewDto;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -9,7 +9,7 @@ use crate::dto::recipe_dto::RecipeResponseDto;
         // add other controllers here
     ),
     components(schemas(
-        RecipeResponseDto
+        RecipeViewDto
         // add other DTOs here
     )),
     tags(

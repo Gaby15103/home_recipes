@@ -1,3 +1,4 @@
 pub(crate) mod recipe_service;
 pub(crate) mod auth_service;
 pub(crate) mod user_service;
+pub(crate) mod upload_service;

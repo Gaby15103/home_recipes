@@ -1,0 +1,48 @@
+// crate::repository::step_repository
+
+use sea_orm::{ActiveModelTrait, DatabaseTransaction, Set};
+use uuid::Uuid;
+use entity::{step_translations, steps};
+use crate::dto::step_dto::{StepInput, StepViewDto};
+use crate::errors::Error;
+
+pub async fn create(
+    txn: &DatabaseTransaction,
+    group_id: Uuid,
+    input: StepInput,
+    lang: &str,
+) -> Result<StepViewDto, Error> {
+    // 1. Insert Step base record
+    let step = steps::ActiveModel {
+        step_group_id: Set(group_id),
+        position: Set(input.position),
+        image_url: Set(input.image_url),
+        duration_minutes: Set(input.duration_minutes),
+        ..Default::default()
+    }
+        .insert(txn)
+        .await?;
+
+    // 2. Insert Step Translations
+    let mut display_instruction = String::new();
+    for trans in input.translation {
+        step_translations::ActiveModel {
+            step_id: Set(step.id),
+            language_code: Set(trans.language.clone()),
+            instruction: Set(trans.instruction.clone()),
+            ..Default::default()
+        }
+            .insert(txn)
+            .await?;
+
+        if trans.language == lang {
+            display_instruction = trans.instruction;
+        }
+    }
+
+    Ok(StepViewDto {
+        id: step.id,
+        description: display_instruction,
+        order: step.position,
+    })
+}

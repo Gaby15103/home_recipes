@@ -6,7 +6,7 @@ use entity::{roles, users};
 use crate::dto::preferences_dto::UserPreferences;
 use crate::dto::user_dto::UserResponseDto;
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
 pub struct RoleResponseDto {
     pub id: Uuid,
     pub name: String,

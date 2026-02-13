@@ -32,7 +32,7 @@ actix-cors = "0.7.1"
 # axum things
 env_logger = "0.11.8"
 bigdecimal = { version = "0.4.9", features = ["serde"] }
-actix-multipart = "0.7.2"
+actix-multipart = { version = "0.7.2", features = ["tempfile"] }
 actix-files = "0.6.9"
 time = "0.3.44"
 futures-util = "0.3.31"
@@ -43,12 +43,11 @@ totp-lite = "2.0"
 base32 = "0.4"
 lettre = { version = "0.11", default-features = false, features = ["tokio1-native-tls", "smtp-transport", "builder"] }
 
-
 # redis
 redis = { version = "1.0.2", features = ["tokio-comp"] }
 
 # Swagger / OpenAPI
-utoipa = { version = "5.4.0", features = ["uuid","macros","chrono"] }
+utoipa = { version = "5.4.0", features = ["uuid","macros","chrono","decimal"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
 
 migration = { path = "migration" }

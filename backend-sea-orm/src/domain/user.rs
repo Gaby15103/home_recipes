@@ -1,11 +1,9 @@
-use actix_web::{FromRequest, HttpMessage, HttpRequest};
-use actix_web::dev::Payload;
-use futures_util::future::{ready, Ready};
+use std::fmt;
 use sea_orm::JsonValue;
 use serde_json::json;
 use entity::{roles, sessions, users};
 use crate::dto::auth_dto::RegisterRequestDto;
-use crate::dto::preferences_dto::UserPreferences;
+use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
 use crate::utils::HASHER;
 
@@ -37,21 +35,33 @@ impl TryFrom<RegisterRequestDto> for NewUser {
 }
 #[derive(Clone, Debug)]
 pub struct AuthenticatedUser {
-    pub user: users::Model,
-    pub roles: Vec<roles::Model>,
+    pub user: UserResponseDto,
     pub active_session: sessions::Model,
 }
-impl FromRequest for AuthenticatedUser {
-    type Error = Error;
-    type Future = Ready<Result<Self, Self::Error>>;
+#[derive(Clone, Debug)]
+pub struct RequireRole {
+    pub allowed_roles: Vec<String>,
+}
+#[derive(Clone, Debug)]
+pub struct RequireRoleMiddleware<S> {
+    service: S,
+    allowed_roles: Vec<String>,
+}
+pub enum Role {
+    Admin,
+    User,
+    Moderator,
+    Superuser,
+}
 
-    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        // Look into the extensions bucket where the middleware injected the user
-        match req.extensions().get::<AuthenticatedUser>() {
-            Some(auth_user) => ready(Ok(auth_user.clone())),
-            None => ready(Err(Error::Unauthorized(json!({
-                "error": "Authentication required"
-            })))),
-        }
+impl fmt::Display for Role {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let name = match self {
+            Role::Admin => "ADMIN",
+            Role::User => "USER",
+            Role::Moderator => "MODERATOR",
+            Role::Superuser => "SUPER_ADMIN",
+        };
+        write!(f, "{}", name)
     }
 }

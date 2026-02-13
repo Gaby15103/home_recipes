@@ -172,7 +172,7 @@ pub async fn reset_password(
 
     Ok(())
 }
-pub async fn get_or_create_2fa_secret(db: &DatabaseConnection, user: &users::Model) -> Result<String, Error> {
+pub async fn get_or_create_2fa_secret(db: &DatabaseConnection, user: &UserResponseDto) -> Result<String, Error> {
     let new_secret = generate_new_secret();
     if user.two_factor_secret.is_none() {
         user_repository::update_2fa_secret_if_null(db, user.id, new_secret.clone()).await?;
@@ -180,7 +180,7 @@ pub async fn get_or_create_2fa_secret(db: &DatabaseConnection, user: &users::Mod
     Ok(new_secret)
 }
 
-pub async fn generate_qr_code(user: &users::Model) -> Result<QrCodeResponse, Error> {
+pub async fn generate_qr_code(user: &UserResponseDto) -> Result<QrCodeResponse, Error> {
     let secret = user.two_factor_secret.as_ref()
         .ok_or(Error::BadRequest(json!({"error": "Secret not set"})))?;
 
@@ -242,7 +242,7 @@ pub async fn verify_2fa_login(
     })
 }
 
-pub async fn get_recovery_codes(db: &DatabaseConnection, user: &users::Model) -> Result<serde_json::Value, Error> {
+pub async fn get_recovery_codes(db: &DatabaseConnection, user: &UserResponseDto) -> Result<serde_json::Value, Error> {
     if let Some(existing) = &user.two_factor_recovery_codes {
         return Ok(existing.clone());
     }
@@ -256,7 +256,7 @@ pub async fn get_recovery_codes(db: &DatabaseConnection, user: &users::Model) ->
 
     Ok(json_codes)
 }
-pub async fn get_2fa_status(user: &users::Model) -> Result<TwoFactorStatusResponse, Error> {
+pub async fn get_2fa_status(user: &UserResponseDto) -> Result<TwoFactorStatusResponse, Error> {
     let enabled = user.two_factor_secret.is_some();
     let requires_confirmation = enabled && user.two_factor_confirmed_at.is_none();
 

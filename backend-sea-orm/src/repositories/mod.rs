@@ -4,4 +4,9 @@ pub mod user_repository;
 pub mod two_factor_repository;
 pub mod session_repository;
 pub mod role_repository;
+pub mod tag_repository;
+pub mod ingredient_group_repository;
+pub mod ingredient_repository;
+pub mod step_group_repository;
+pub mod step_repository;
 

@@ -193,6 +193,18 @@ impl From<libreauth::pass::Error> for Error {
     }
 }
 
+/* ----- GENERAL ACTIX ERROR (REQUIRED FOR MULTIPART) ----- */
+
+impl From<actix_web::Error> for Error {
+    fn from(err: actix_web::Error) -> Self {
+        // This catches multipart errors, file size limit errors, etc.
+        Error::BadRequest(json!({
+            "error": "Request error",
+            "details": err.to_string()
+        }))
+    }
+}
+
 /* -------------------------------------------------------------------------- */
 /*                        ACTIX CONFIG ERROR HANDLERS                         */
 /* -------------------------------------------------------------------------- */

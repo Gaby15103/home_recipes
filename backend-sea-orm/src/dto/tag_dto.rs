@@ -6,3 +6,8 @@ pub struct TagDto {
     pub id: Uuid,
     pub name: String,
 }
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub enum InputTag {
+    Existing { id: Uuid },
+    New { name: String },
+}
