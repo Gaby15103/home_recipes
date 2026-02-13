@@ -96,7 +96,8 @@ impl From<(users::Model, Vec<roles::Model>)> for UserResponseDto {
             roles: roles.into_iter().map(RoleResponseDto::from).collect(),
             two_factor_secret: user.two_factor_secret,
             two_factor_recovery_codes: user.two_factor_recovery_codes,
-            two_factor_comfirmed_at: Option::from(DateTime::<Utc>::from_naive_utc_and_offset(user.two_factor_confirmed_at.expect("REASON"), Utc)),
+            two_factor_comfirmed_at: user.two_factor_confirmed_at
+                .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
             two_factor_token: user.two_factor_token,
             two_factor_confirmed_at: user.two_factor_token_expires_at
                 .map(|dt| dt.with_timezone(&Utc)),
@@ -113,13 +114,11 @@ impl From<(users::Model, Vec<RoleResponseDto>)> for UserResponseDto {
             id: user.id,
             email: user.email,
             username: user.username,
-            // Fixed typo: was user.email, now user.first_name
             first_name: user.first_name,
             last_name: user.last_name,
             avatar_url: user.avatar_url,
             preferences,
             email_verified: user.email_verified,
-            // Handle Option<DateTime> safely
             last_login: user.last_login_at
                 .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
                 .unwrap_or_else(|| Utc::now()), // Fallback if never logged in
@@ -128,7 +127,8 @@ impl From<(users::Model, Vec<RoleResponseDto>)> for UserResponseDto {
             roles: roles.into_iter().map(RoleResponseDto::from).collect(),
             two_factor_secret: user.two_factor_secret,
             two_factor_recovery_codes: user.two_factor_recovery_codes,
-            two_factor_comfirmed_at: Option::from(DateTime::<Utc>::from_naive_utc_and_offset(user.two_factor_confirmed_at.expect("REASON"), Utc)),
+            two_factor_comfirmed_at: user.two_factor_confirmed_at
+                .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc)),
             two_factor_token: user.two_factor_token,
             two_factor_confirmed_at: user.two_factor_token_expires_at
                 .map(|dt| dt.with_timezone(&Utc)),

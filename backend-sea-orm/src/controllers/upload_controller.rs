@@ -12,7 +12,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/upload")
             .route("", web::post().to(upload_temp_image))
-            
+
     );
 }
 

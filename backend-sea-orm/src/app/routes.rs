@@ -1,15 +1,15 @@
 use actix_files::Files;
 use actix_web::web;
 
-use crate::controllers::{auth_controller, files_controller, recipes_controller, users_controller};
+use crate::controllers::{auth_controller, files_controller, recipes_controller, users_controller, upload_controller};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
-
     cfg.service(
         web::scope("/api")
             .configure(recipes_controller::configure)
             .configure(auth_controller::configure)
             .configure(users_controller::configure)
-            .configure(files_controller::configure)
-    );
+            .configure(upload_controller::configure),
+    )
+        .configure(files_controller::configure);
 }
