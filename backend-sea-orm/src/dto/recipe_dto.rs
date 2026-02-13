@@ -98,7 +98,8 @@ pub struct GetAllRecipesByPageQuery {
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GetFilter {
-    pub scope: Option<String>,
+    #[serde(default)]
+    pub scope: bool,
 
     pub search: Option<String>,
     pub ingredient: Option<String>,

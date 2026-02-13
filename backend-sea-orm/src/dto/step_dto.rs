@@ -20,8 +20,11 @@ pub struct StepInput {
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct StepViewDto{
     pub id: Uuid,
-    pub description: String,
-    pub order: i32,
+    pub instruction: String,
+    pub step_group_id: Uuid,
+    pub position: i32,
+    pub image_url: Option<String>,
+    pub duration_minutes: Option<i32>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct StepEditorDto {

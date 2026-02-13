@@ -6,8 +6,9 @@ use uuid::Uuid;
 use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
 use actix_web::web::Json;
+use sea_orm::sqlx::query;
 use crate::dto::auth_dto::LoginRequestDto;
-use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, GetFilter, RecipeViewDto};
 use crate::errors::Error;
 
 use crate::services::recipe_service;
@@ -46,12 +47,16 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 )]
 pub async fn list(
     state: web::Data<AppState>,
-    req: HttpRequest
+    req: HttpRequest,
+    query: web::Query<GetFilter>,
+    auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
-
+    if query.scope && auth.is_some() {
+        auth.unwrap().require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
+    }
     let lang_code = extract_language(&req);
 
-    let recipes = recipe_service::get_all(&state.db, lang_code.deref()).await?;
+    let recipes = recipe_service::get_all(&state.db, lang_code.deref(), query.into_inner()).await?;
 
     Ok(HttpResponse::Ok().json(recipes))
 }

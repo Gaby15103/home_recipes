@@ -1,6 +1,21 @@
 import type {Tag} from "@/models/Tag.ts";
 
-export interface Recipe {
+export interface RecipeView {
+    id: string;
+    title: string;
+    description: string;
+    image_url: string;
+    servings: number;
+    prep_time_minutes: number;
+    cook_time_minutes: number;
+    author_id: string|null;
+    author: string|null;
+    is_private: boolean;
+    tags: Tag[];
+    ingredient_groups: IngredientGroupView[];
+    step_groups: StepGroupView[];
+}
+export interface RecipeEditor {
     id: string;
     image_url: string;
     servings: number;
@@ -10,8 +25,8 @@ export interface Recipe {
     author_id: string|null;
     is_private: boolean;
     tags: Tag[];
-    ingredient_groups: IngredientGroup[];
-    step_groups: StepGroup[];
+    ingredient_groups: IngredientGroupEditor[];
+    step_groups: StepGroupEditor[];
     translations: RecipeTranslation[];
 }
 export interface RecipeTranslation{
@@ -19,17 +34,32 @@ export interface RecipeTranslation{
     title: String;
     description: String;
 }
-export interface IngredientGroup {
+export interface IngredientGroupView {
+    id: string;
+    title: string
+    recipe_id: string;
+    position: number;
+    ingredients: IngredientView[];
+}
+export interface IngredientGroupEditor {
     id: string;
     position: number;
-    ingredients: Ingredient[];
+    ingredients: IngredientEditor[];
     translations: IngredientGroupTranslation[]
 }
 export interface IngredientGroupTranslation{
     language_code: String;
     title: String;
 }
-export interface Ingredient {
+export interface IngredientView {
+    id: string;
+    name: string;
+    quantity: number;
+    unit: IngredientUnit;
+    note: string|null;
+    position: number;
+}
+export interface IngredientEditor {
     id: string;
     quantity: number;
     unit: IngredientUnit;
@@ -55,17 +85,32 @@ export enum IngredientUnit {
     Tablespoon = "tablespoon",
     Cup = "cup",
 }
-export interface StepGroup {
+export interface StepGroupView {
+    id: string;
+    title: string;
+    recipe_id: string;
+    position: number;
+    steps: StepView[];
+}
+export interface StepGroupEditor {
     id: string;
     position: number;
-    steps: Step[];
+    steps: StepView[];
     translations: StepGroupTranslation[];
 }
 export interface StepGroupTranslation {
     language_code: String;
     title: String;
 }
-export interface Step {
+export interface StepView {
+    id: string;
+    instruction: string;
+    step_group_id: string;
+    position: number;
+    image_url: string|null;
+    duration_minutes: number|null;
+}
+export interface StepEditor {
     id: string;
     step_group_id: string;
     position: number;
@@ -111,7 +156,7 @@ export interface GetRecipesParams {
     sort?: string;
 }
 export interface PaginatedRecipes {
-    data: Recipe[]
+    data: RecipeView[]
     total: number
     page: number
     perPage: number

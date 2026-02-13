@@ -4,7 +4,7 @@ import { BookOpen, Folder, LockIcon, LockOpen, Plus, Tag } from "lucide-vue-next
 import { Button } from "@/components/ui/button"
 import RecipeTable from "@/pages/Admin/Recipes/RecipeTable.vue"
 import { getAllRecipesByPage } from "@/api/recipe.ts"
-import type { Recipe } from "@/models/Recipe.ts"
+import type { RecipeView } from "@/models/Recipe.ts"
 import router from "@/router";
 import {useI18n} from "vue-i18n";
 const { t,locale } = useI18n()
@@ -21,7 +21,7 @@ const stats = ref([
 ])
 
 // ------------------------- Pagination State -------------------------
-const recipes = ref<Recipe[]>([])
+const recipes = ref<RecipeView[]>([])
 const totalRecipes = ref(0)
 const page = ref(1)
 const perPage = ref(10)

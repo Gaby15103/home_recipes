@@ -2,7 +2,7 @@ import {api} from "./client";
 import {RecipeRoutes} from "./routes";
 import {formDataFromObject} from "./apiHelpers";
 import type {RecipeCommentCreate, RecipeCreate, StepImage} from "@/models/RecipeCreate";
-import type {PaginatedRecipes, Recipe, RecipeComment, RecipeFilter, RecipeRating} from "@/models/Recipe.ts";
+import type {PaginatedRecipes, RecipeView, RecipeComment, RecipeFilter, RecipeRating} from "@/models/Recipe.ts";
 import type {RecipeEdit} from "@/models/RecipeEdit.ts";
 import {editToUpdatePayload} from "@/mappers/recipe.mapper.ts";
 
@@ -12,7 +12,7 @@ export function getAllRecipes(filters?: RecipeFilter, include_private?: boolean)
     if (include_private != null) {
         params.scope = include_private;
     }
-    return api<Recipe[]>(RecipeRoutes.all(), {method: "GET", params});
+    return api<RecipeView[]>(RecipeRoutes.all(), {method: "GET", params});
 }
 
 export function getAllRecipesByPage(
@@ -42,7 +42,7 @@ export function getAllRecipesByPage(
 }
 
 export function getRecipeById(id: string) {
-    return api<Recipe>(RecipeRoutes.get(id), {method: "GET"});
+    return api<RecipeView>(RecipeRoutes.get(id), {method: "GET"});
 }
 
 export async function createRecipe(recipe: RecipeCreate, mainImage?: File, stepImages?: StepImage[]) {
@@ -114,8 +114,8 @@ export function favoriteRecipe(id: string) {
     return api(RecipeRoutes.favorite(id), {method: "POST"});
 }
 
-export function getFavorites(): Promise<Recipe[]> {
-    return api<Recipe[]>(RecipeRoutes.favorites(), {method: "GET"});
+export function getFavorites(): Promise<RecipeView[]> {
+    return api<RecipeView[]>(RecipeRoutes.favorites(), {method: "GET"});
 }
 
 export function rateRecipe(id: string, rating: number) {

@@ -42,7 +42,10 @@ pub async fn create(
 
     Ok(StepViewDto {
         id: step.id,
-        description: display_instruction,
-        order: step.position,
+        instruction: display_instruction,
+        step_group_id: group_id,
+        position: step.position,
+        image_url: step.image_url,
+        duration_minutes: step.duration_minutes,
     })
 }

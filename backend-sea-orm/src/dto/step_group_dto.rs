@@ -20,7 +20,7 @@ pub struct StepGroupTranslationInput {
 #[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 pub struct StepGroupViewDto {
     pub id: Uuid,
-    pub name: String,
+    pub title: String,
     pub recipe_id: Uuid,
     pub position: i32,
     pub steps: Vec<StepViewDto>,

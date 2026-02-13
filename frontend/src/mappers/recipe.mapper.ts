@@ -1,7 +1,7 @@
-﻿import type { Recipe } from "@/models/Recipe"
+﻿import type { RecipeView } from "@/models/Recipe"
 import type { RecipeEdit, RecipeUpdatePayload } from "@/models/RecipeEdit"
 
-export function recipeToEdit(recipe: Recipe): RecipeEdit {
+export function recipeToEdit(recipe: RecipeView): RecipeEdit {
     return {
         id: recipe.id,
         title: recipe.title,

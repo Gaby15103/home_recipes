@@ -1,10 +1,12 @@
-use sea_orm::ColumnTrait;
-use sea_orm::QueryFilter;
-use sea_orm::{ActiveModelTrait, DatabaseTransaction, EntityTrait, Set};
-use uuid::Uuid;
-use entity::{recipe_tags, tags};
 use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::errors::Error;
+use entity::recipes::Model;
+use entity::{recipe_tags, recipes, tags};
+use migration::JoinType;
+use sea_orm::QueryFilter;
+use sea_orm::{ActiveModelTrait, DatabaseTransaction, EntityTrait, Set};
+use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, QuerySelect, RelationTrait};
+use uuid::Uuid;
 
 pub async fn find_or_create_tags(
     txn: &DatabaseTransaction,
@@ -26,12 +28,10 @@ pub async fn find_or_create_tag(
 ) -> Result<TagDto, Error> {
     let tag_model = match tag_input {
         // Case 1: Existing - We need to fetch it to get the name for the DTO
-        InputTag::Existing { id } => {
-            tags::Entity::find_by_id(id)
-                .one(txn)
-                .await?
-                .ok_or_else(|| Error::NotFound(serde_json::json!({"error": "Tag not found"})))?
-        }
+        InputTag::Existing { id } => tags::Entity::find_by_id(id)
+            .one(txn)
+            .await?
+            .ok_or_else(|| Error::NotFound(serde_json::json!({"error": "Tag not found"})))?,
 
         // Case 2: New - Find by name or create
         InputTag::New { name } => {
@@ -50,8 +50,8 @@ pub async fn find_or_create_tag(
                     name: Set(normalized_name),
                     ..Default::default()
                 }
-                    .insert(txn)
-                    .await?
+                .insert(txn)
+                .await?
             }
         }
     };
@@ -62,11 +62,29 @@ pub async fn find_or_create_tag(
         recipe_id: Set(recipe_id),
         tag_id: Set(tag_model.id),
     }
-        .insert(txn)
-        .await?;
+    .insert(txn)
+    .await?;
 
     Ok(TagDto {
         id: tag_model.id,
         name: tag_model.name,
     })
+}
+pub async fn find_by_recipe(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+) -> Result<Vec<TagDto>, DbErr> {
+    let tags = tags::Entity::find()
+        .join(JoinType::InnerJoin, tags::Relation::RecipeTags.def())
+        .filter(recipe_tags::Column::RecipeId.eq(recipe_id))
+        .all(db)
+        .await?;
+    let mut tags_dto: Vec<TagDto> = Vec::new();
+    for tag in tags {
+        tags_dto.push(TagDto {
+            id: tag.id,
+            name: tag.name,
+        })
+    }
+    Ok(tags_dto)
 }

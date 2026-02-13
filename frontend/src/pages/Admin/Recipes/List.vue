@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import {ref, onMounted, watch} from "vue";
-import type {Recipe, RecipeFilter} from "@/models/Recipe.ts";
+import type {RecipeView, RecipeFilter} from "@/models/Recipe.ts";
 import { getAllRecipes } from "@/api/recipe";
 import Filter from "@/components/Recipe/Filter.vue"
 import { debounce } from "lodash-es"
 import {Spinner} from "@/components/ui/spinner";
 import {useI18n} from "vue-i18n";
 const { t, locale } = useI18n()
-const recipes = ref<Recipe[]>([]);
+const recipes = ref<RecipeView[]>([]);
 const loading = ref(true);
 watch(locale, () => {
   applyFilters();

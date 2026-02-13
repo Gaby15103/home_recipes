@@ -1,10 +1,10 @@
-﻿import type { Recipe } from "@/models/Recipe.ts";
+﻿import type { RecipeView } from "@/models/Recipe.ts";
 
 /**
  * Opens a printable window with a recipe.
  * Prompts user if they want step images included.
  */
-export function printRecipe(recipe: Recipe, options: {
+export function printRecipe(recipe: RecipeView, options: {
     includeMainImage?: boolean,
     includeStepImages?: boolean,
     includeTags?: boolean

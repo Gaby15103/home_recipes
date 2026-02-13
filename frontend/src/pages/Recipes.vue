@@ -1,13 +1,13 @@
 ﻿<script setup lang="ts">
 import {ref, onMounted, watch} from "vue";
-import type { Recipe } from "@/models/Recipe.ts";
+import type { RecipeView } from "@/models/Recipe.ts";
 import { getAllRecipes } from "@/api/recipe";
 import {RouterLink} from "vue-router";
 import {Spinner} from "@/components/ui/spinner";
 import { useI18n } from "vue-i18n"
 const { t, locale } = useI18n()
 // State for recipes
-const recipes = ref<Recipe[]>([]);
+const recipes = ref<RecipeView[]>([]);
 const loading = ref(true);
 watch(locale, () => {
   loadRecipes();
@@ -38,7 +38,7 @@ onMounted( () => {
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       <RouterLink
           v-for="recipe in recipes"
-          :key="recipe.translations[0].title + recipe.author_id"
+          :key="recipe.title + recipe.author_id"
           :to="`/recipe/${recipe.id}`"
       >
         <div
@@ -47,9 +47,9 @@ onMounted( () => {
         >
           <img :src="$apiUrl+recipe.image_url" class="h-40 w-full mb-4 flex items-center justify-center">
 
-          <h2 class="text-xl font-semibold mb-2">{{ recipe.translations[0].title }}</h2>
-          <p class="text-gray-600 text-sm mb-2" v-if="recipe.translations[0].description">
-            {{ recipe.translations[0].description }}
+          <h2 class="text-xl font-semibold mb-2">{{ recipe.title }}</h2>
+          <p class="text-gray-600 text-sm mb-2" v-if="recipe.description">
+            {{ recipe.description }}
           </p>
           <p class="text-gray-500 text-xs mb-1">Servings: {{ recipe.servings }}</p>
           <p class="text-gray-500 text-xs">

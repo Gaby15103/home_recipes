@@ -33,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type {Recipe, Tag} from '@/models/Recipe'
+import type {RecipeView, Tag} from '@/models/Recipe'
 import {Badge} from "@/components/ui/badge";
 import {
   Tooltip,
@@ -45,7 +45,7 @@ import {ROUTES} from "@/router/routes.ts";
 import {useI18n} from "vue-i18n";
 const { t } = useI18n()
 const props = defineProps<{
-  recipes: Recipe[]
+  recipes: RecipeView[]
   page: number
   perPage: number
   total: number
@@ -60,7 +60,7 @@ const emit = defineEmits<{
 
 // ------------------------- Reusable dropdown template -------------------------
 const [DefineTemplate, ReuseTemplate] = createReusableTemplate<{
-  recipe: Recipe
+  recipe: RecipeView
   onExpand: () => void
 }>()
 
@@ -69,7 +69,7 @@ function copyId(id: string) {
 }
 
 // ------------------------- Table columns -------------------------
-const columns: ColumnDef<Recipe>[] = [
+const columns: ColumnDef<RecipeView>[] = [
   {
     id: 'select',
     header: ({table}) => h(Checkbox, {
@@ -87,7 +87,7 @@ const columns: ColumnDef<Recipe>[] = [
   },
 
   {
-    accessorFn: (row: Recipe) => row.translations[0]?.title ?? '—',
+    accessorFn: (row: RecipeView) => row.translations[0]?.title ?? '—',
     id: 'title',
     header: t('Admin.table.title'),
     cell: ({row}) => {

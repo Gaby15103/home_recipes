@@ -37,10 +37,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import type { Recipe } from "@/models/Recipe";
+import type { RecipeView } from "@/models/Recipe";
 
 // Props
-const props = defineProps<{ recipe: Recipe }>();
+const props = defineProps<{ recipe: RecipeView }>();
 
 // Modal state
 const open = ref(false);

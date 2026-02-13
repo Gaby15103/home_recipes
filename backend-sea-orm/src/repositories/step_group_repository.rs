@@ -1,6 +1,10 @@
-use sea_orm::{ActiveModelTrait, DatabaseTransaction, Set};
+use std::collections::HashMap;
+use sea_orm::{QueryFilter, QueryOrder, RelationTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, DbErr, EntityTrait, QuerySelect, Set};
 use uuid::Uuid;
-use entity::{step_group_translations, step_groups};
+use entity::{recipe_tags, recipes, step_group_translations, step_groups, step_translations, steps, tags};
+use migration::JoinType;
+use crate::dto::step_dto::StepViewDto;
 use crate::dto::step_group_dto::{StepGroupInput, StepGroupViewDto};
 use crate::errors::Error;
 use crate::repositories::step_repository;
@@ -64,9 +68,74 @@ pub async fn create(
 
     Ok(StepGroupViewDto {
         id: group.id,
-        name: display_name,
+        title: display_name,
         recipe_id: group.recipe_id,
         position: group.position,
         steps: step_dtos,
     })
+}
+pub async fn find_by_recipe(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    lang: &str,
+    default_lang_code: &str,
+) -> Result<Vec<StepGroupViewDto>, Error> {
+
+    let groups_with_trans = step_groups::Entity::find()
+        .filter(step_groups::Column::RecipeId.eq(recipe_id))
+        .order_by_asc(step_groups::Column::Position)
+        .find_with_related(step_group_translations::Entity)
+        .all(db)
+        .await?;
+
+    // 2. Fetch all Steps and their Translations for these groups
+    // We fetch them all at once to avoid a loop
+    let group_ids: Vec<Uuid> = groups_with_trans.iter().map(|(g, _)| g.id).collect();
+
+    let steps_with_trans = steps::Entity::find()
+        .filter(steps::Column::StepGroupId.is_in(group_ids))
+        .order_by_asc(steps::Column::Position)
+        .find_with_related(step_translations::Entity)
+        .all(db)
+        .await?;
+
+    // 3. Map steps into a temporary HashMap grouped by their parent ID
+    let mut steps_map: HashMap<Uuid, Vec<StepViewDto>> = HashMap::new();
+    for (step, translations) in steps_with_trans {
+        let instruction = translations.iter()
+            .find(|t| t.language_code == lang)
+            .or_else(|| translations.iter().find(|t| t.language_code == *default_lang_code))
+            .map(|t| t.instruction.clone())
+            .unwrap_or_default();
+
+        steps_map.entry(step.step_group_id).or_default().push(StepViewDto {
+            id: step.id,
+            instruction,
+            step_group_id: step.step_group_id,
+            position: step.position,
+            image_url: step.image_url,
+            duration_minutes: step.duration_minutes,
+        });
+    }
+
+    // 4. Assemble the final View DTOs
+    let mut results = Vec::new();
+    for (group, translations) in groups_with_trans {
+        let title = translations.iter()
+            .find(|t| t.language_code == lang)
+            .or_else(|| translations.iter().find(|t| t.language_code == *default_lang_code))
+            .map(|t| t.title.clone())
+            .unwrap_or_default();
+
+        let group_id = group.id;
+        results.push(StepGroupViewDto {
+            id: group_id,
+            title,
+            recipe_id: group.recipe_id,
+            position: group.position,
+            steps: steps_map.remove(&group_id).unwrap_or_default(),
+        });
+    }
+
+    Ok(results)
 }

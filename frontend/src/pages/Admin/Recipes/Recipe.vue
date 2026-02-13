@@ -7,14 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Recipe } from "@/models/Recipe";
+import type { RecipeView } from "@/models/Recipe";
 import { ROUTES } from "@/router/routes.ts";
 import {useI18n} from "vue-i18n";
 const { t } = useI18n()
 const route = useRoute();
 const router = useRouter();
 
-const recipe = ref<Recipe | null>(null);
+const recipe = ref<RecipeView | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const { locale } = useI18n();

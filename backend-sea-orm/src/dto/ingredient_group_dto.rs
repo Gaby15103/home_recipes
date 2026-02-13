@@ -23,7 +23,7 @@ pub struct IngredientGroupTranslationInput {
 #[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
 pub struct IngredientGroupViewDto {
     pub id: Uuid,
-    pub name: String,
+    pub title: String,
     pub recipe_id: Uuid,
     pub position: i32,
     pub ingredients: Vec<IngredientViewDto>,
@@ -49,7 +49,7 @@ impl IngredientGroupViewDto {
     ) -> Self {
         Self {
             id: group.id,
-            name,
+            title: name,
             recipe_id: group.recipe_id,
             position: group.position,
             ingredients,
