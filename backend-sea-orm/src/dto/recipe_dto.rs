@@ -84,20 +84,20 @@ pub struct StepImageMeta {
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GetAllRecipes {
-    pub filters: GetFilter,
+    pub filters: RecipeFilter,
     pub include_private: bool,
     pub language_code: String,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GetAllRecipesByPageQuery {
-    pub filters: Option<GetFilter>,
+    pub filters: Option<RecipeFilter>,
     pub include_private: bool,
     pub page: Option<i64>,
     pub per_page: Option<i64>,
     pub lang: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct GetFilter {
+#[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
+pub struct RecipeFilter {
     #[serde(default)]
     pub scope: bool,
 
@@ -116,6 +116,13 @@ pub struct GetFilter {
     pub date_from: Option<chrono::NaiveDate>,
     pub date_to: Option<chrono::NaiveDate>,
     pub lang: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
+pub struct RecipeFilterByPage{
+    pub filters: Option<RecipeFilter>,
+    pub page:  Option<i64>,
+    pub per_page: Option<i64>,
 }
 
 impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {

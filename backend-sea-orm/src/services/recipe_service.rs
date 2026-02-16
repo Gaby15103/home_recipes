@@ -1,4 +1,4 @@
-use crate::dto::recipe_dto::{CreateRecipeInput, GetFilter, RecipeDto, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, RecipeFilter, RecipeDto, RecipeViewDto, RecipeFilterByPage};
 use crate::dto::tag_dto::TagDto;
 use crate::errors::Error;
 use crate::repositories::{
@@ -12,30 +12,28 @@ use uuid::Uuid;
 pub async fn get_all(
     db: &DatabaseConnection,
     lang_code: &str,
-    filter: GetFilter,
+    filter: RecipeFilter,
 ) -> Result<Vec<RecipeViewDto>, Error> {
-    // Get all recipes
     let recipes = recipe_repository::find_by_query(db, filter, lang_code)
-        .await?
-        .unwrap();
-
-    // For each recipe, get the translation
-    let mut dtos = Vec::with_capacity(recipes.len());
-
-    for recipe in recipes {
-        // fetch translation (requested lang, fallback if missing)
-        let translation = recipe_translation_repository::find_by_recipe_and_lang(
-            db,
-            recipe.id,
-            lang_code,
-            recipe.original_language_code.deref(),
-        )
         .await?;
 
-        // convert to DTO using your From impl
-        let dto = RecipeViewDto::from((recipe, translation));
-        dtos.push(dto);
+    let mut dtos = Vec::new();
+
+    if let Some(recipes) = recipes {
+        for recipe in recipes {
+            // fetch translation (requested lang, fallback if missing)
+            let translation = recipe_translation_repository::find_by_recipe_and_lang(
+                db,
+                recipe.id,
+                lang_code,
+                recipe.original_language_code.deref(),
+            )
+                .await?;
+            let dto = RecipeViewDto::from((recipe, translation));
+            dtos.push(dto);
+        }
     }
+
 
     Ok(dtos)
 }
@@ -86,4 +84,31 @@ pub async fn create(
     let inserted_recipe: RecipeViewDto =
         recipe_repository::create(db, new_recipe, preferred_language).await?;
     Ok(inserted_recipe)
+}
+
+pub async fn get_all_by_page(
+    db: &DatabaseConnection,
+    lang_code: &str,
+    filter: RecipeFilterByPage
+)->Result<Vec<RecipeViewDto>, Error> {
+    let recipes = recipe_repository::find_by_query_by_page(db, filter, lang_code)
+        .await?;
+
+    let mut dtos = Vec::new();
+
+    if let Some(recipes) = recipes {
+        for recipe in recipes {
+            // fetch translation (requested lang, fallback if missing)
+            let translation = recipe_translation_repository::find_by_recipe_and_lang(
+                db,
+                recipe.id,
+                lang_code,
+                recipe.original_language_code.deref(),
+            )
+                .await?;
+            let dto = RecipeViewDto::from((recipe, translation));
+            dtos.push(dto);
+        }
+    }
+    Ok(dtos)
 }

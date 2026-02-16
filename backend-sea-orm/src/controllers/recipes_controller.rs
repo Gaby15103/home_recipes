@@ -1,6 +1,7 @@
 use std::ops::Deref;
 use actix_multipart::form::{MultipartForm};
 use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web::http::header::q;
 use actix_web::web::Query;
 use uuid::Uuid;
 use crate::app::state::AppState;
@@ -8,7 +9,7 @@ use crate::domain::user::{AuthenticatedUser, Role};
 use actix_web::web::Json;
 use sea_orm::sqlx::query;
 use crate::dto::auth_dto::LoginRequestDto;
-use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, GetFilter, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
 use crate::errors::Error;
 
 use crate::services::recipe_service;
@@ -48,7 +49,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 pub async fn list(
     state: web::Data<AppState>,
     req: HttpRequest,
-    query: web::Query<GetFilter>,
+    query: web::Query<RecipeFilter>,
     auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
     if query.scope && auth.is_some() {
@@ -87,11 +88,21 @@ pub async fn get(
 
 pub async fn get_by_page(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    req: HttpRequest,
+    query: web::Query<RecipeFilterByPage>,
+    auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
+    if let Some(filters) = &query.filters{
+        if filters.scope && auth.is_some() {
+            auth.unwrap().require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
+        }
+    }
 
-    Ok(HttpResponse::Ok().json({}))
+    let lang_code = extract_language(&req);
+
+    let recipes = recipe_service::get_all_by_page(&state.db, lang_code.deref(), query.into_inner()).await?;
+
+    Ok(HttpResponse::Ok().json(recipes))
 }
 pub async fn create(
     state: web::Data<AppState>,
