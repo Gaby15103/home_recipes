@@ -57,3 +57,6 @@ export const TwoFactorRoutes = {
     status: () => `${API_ROOT}/auth/two-factor/status`,          // GET
     verify: () => `${API_ROOT}/auth/two-factor/verify`,          // GET
 };
+export const IngredientRoutes = {
+    list: () => `${API_ROOT}/ingredient/list`,          // GET
+}

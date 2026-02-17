@@ -1,11 +1,15 @@
 // crate::repository::ingredient_repository
 
+use sea_orm::{QueryFilter, QueryOrder};
 use std::ops::Deref;
 use std::str::FromStr;
-use sea_orm::{ActiveModelTrait, DatabaseTransaction, Set};
+use actix_web::web::BufMut;
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QuerySelect, RelationTrait, Set};
 use uuid::Uuid;
-use entity::{ingredient_translations, ingredients, recipe_ingredient_translations, recipe_ingredients};
-use crate::dto::ingredient_dto::{IngredientInput, IngredientViewDto};
+use entity::{ingredient_groups, ingredient_translations, ingredients, recipe_ingredient_translations, recipe_ingredients, recipes};
+use migration::JoinType;
+use crate::dto::ingredient_dto::{IngredientInput, IngredientRecipeViewDto, IngredientViewDto};
+use crate::errors::Error;
 use crate::utils::unit::IngredientUnit;
 
 pub async fn create_and_link(
@@ -13,7 +17,7 @@ pub async fn create_and_link(
     group_id: Uuid,
     input: IngredientInput,
     lang: &str,
-) -> Result<IngredientViewDto, crate::errors::Error> {
+) -> Result<IngredientRecipeViewDto, crate::errors::Error> {
     // 1. Create the Master Ingredient record
     // Note: If you want to prevent duplicates, implement the "Find or Create" logic here
     let master_ingredient = ingredients::ActiveModel {
@@ -74,7 +78,7 @@ pub async fn create_and_link(
     }
 
     // 5. Return the View DTO
-    Ok(IngredientViewDto {
+    Ok(IngredientRecipeViewDto {
         id: master_ingredient.id,
         name: display_name,
         quantity: link.quantity,
@@ -82,4 +86,72 @@ pub async fn create_and_link(
         note: display_note.expect("REASON"),
         position: link.position,
     })
+}
+pub async fn get_all(
+    db: &DatabaseConnection,
+    search: Option<String>,
+    limit: i32,
+    lang_code: &str,
+) -> Result<Vec<IngredientViewDto>, Error> {
+    // 1. Start by finding Translations that match the search
+    let mut trans_query = ingredient_translations::Entity::find()
+        .find_also_related(ingredients::Entity);
+
+    // 2. Filter by search text (if provided)
+    if let Some(s) = search.as_ref().filter(|s| !s.trim().is_empty()) {
+        let pattern = format!("%{}%", s);
+        trans_query = trans_query.filter(ingredient_translations::Column::Name.ilike(pattern));
+    }
+
+    // 3. Execute query to get unique Ingredients
+    // We limit and fetch to find the "Top 25" matching ingredients
+    let results = trans_query
+        .limit(limit as u64)
+        .all(db)
+        .await
+        .map_err(|e| {
+            eprintln!("Search Query Error: {:?}", e);
+            Error::InternalServerError
+        })?;
+
+    if results.is_empty() {
+        return Ok(vec![]);
+    }
+
+    // Collect the IDs of ingredients we found
+    let ingredient_ids: Vec<Uuid> = results
+        .iter()
+        .filter_map(|(_, ing)| ing.as_ref().map(|i| i.id))
+        .collect();
+
+    // 4. Fetch the FULL data for these ingredients (all translations for fallback)
+    // find_with_related gets us (Ingredient, Vec<Translations>)
+    let full_data = ingredients::Entity::find()
+        .filter(ingredients::Column::Id.is_in(ingredient_ids))
+        .find_with_related(ingredient_translations::Entity)
+        .all(db)
+        .await?;
+
+    // 5. Map to DTO with Fallback
+    let dto_list = full_data
+        .into_iter()
+        .map(|(ing, translations)| {
+            let name = translations.iter()
+                .find(|t| t.language_code == lang_code)
+                .or_else(|| {
+                    let def = ing.default_language.as_deref().unwrap_or("en");
+                    translations.iter().find(|t| t.language_code == def)
+                })
+                .or_else(|| translations.first())
+                .map(|t| t.name.clone())
+                .unwrap_or_else(|| "Unknown".to_string());
+
+            IngredientViewDto {
+                id: ing.id,
+                name,
+            }
+        })
+        .collect();
+
+    Ok(dto_list)
 }

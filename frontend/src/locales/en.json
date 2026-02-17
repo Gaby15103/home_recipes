@@ -7,6 +7,7 @@
   "Logout": "Disconnect",
   "Profile": "Profile",
   "Admin Dashboard": "Admin Dashboard",
+  "Loading": "loading...",
   "theme": {
     "toggle": "Change theme",
     "light": "Clear",
@@ -138,6 +139,13 @@
     "Item": {
       "Reply": "Reply"
     }
+  },
+  "Ingredients": {
+    "search_placeholder": "Search ingredients...",
+    "suggestions": "Suggestions",
+    "selected_count": "{count} ingredients selected",
+    "selected_title": "Selected Ingredients",
+    "no_match": "No ingredients found."
   },
   "Admin": {
     "common": {

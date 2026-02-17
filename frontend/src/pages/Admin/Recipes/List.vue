@@ -18,8 +18,8 @@ onMounted(() => {
 
 
 const filters = ref<RecipeFilter>({
-  search: "",
-  ingredient: "",
+  search: null,
+  ingredient: [],
   tags: [],
   minPrep: null,
   maxPrep: null,
@@ -68,9 +68,9 @@ async function applyFilters() {
       >
         <img :src="$apiUrl+recipe.image_url" class="h-40 w-full mb-4 flex items-center justify-center">
 
-        <h2 class="text-xl font-semibold mb-2">{{ recipe.translations[0].title }}</h2>
-        <p class="text-gray-600 text-sm mb-2" v-if="recipe.translations[0].description">
-          {{ recipe.translations[0].description }}
+        <h2 class="text-xl font-semibold mb-2">{{ recipe.title }}</h2>
+        <p class="text-gray-600 text-sm mb-2" v-if="recipe.description">
+          {{ recipe.description }}
         </p>
         <p class="text-gray-500 text-xs mb-1">{{ t('Admin.recipe.list.servings') }}: {{ recipe.servings }}</p>
         <p class="text-gray-500 text-xs">

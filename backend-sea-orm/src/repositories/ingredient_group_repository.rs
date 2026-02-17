@@ -4,7 +4,7 @@ use std::str::FromStr;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseTransaction, EntityTrait, Set};
 use uuid::Uuid;
 use entity::{ingredient_group_translations, ingredient_groups, ingredient_translations, ingredients, recipe_ingredient_translations, recipe_ingredients};
-use crate::dto::ingredient_dto::IngredientViewDto;
+use crate::dto::ingredient_dto::IngredientRecipeViewDto;
 use crate::dto::ingredient_group_dto::{IngredientGroupInput, IngredientGroupViewDto};
 use crate::errors::Error;
 use crate::repositories::ingredient_repository;
@@ -118,7 +118,7 @@ pub async fn find_by_recipe(
         .await?;
 
     // 4. Map everything into IngredientViewDtos
-    let mut ingredients_map: HashMap<Uuid, Vec<IngredientViewDto>> = HashMap::new();
+    let mut ingredients_map: HashMap<Uuid, Vec<IngredientRecipeViewDto>> = HashMap::new();
 
     for (rel, notes) in recipe_ingredients_with_notes {
         // Find best name from name_translations vector
@@ -137,7 +137,7 @@ pub async fn find_by_recipe(
 
         let unit = IngredientUnit::from_str(&rel.unit).unwrap_or(IngredientUnit::Gram);
 
-        ingredients_map.entry(rel.ingredient_group_id).or_default().push(IngredientViewDto {
+        ingredients_map.entry(rel.ingredient_group_id).or_default().push(IngredientRecipeViewDto {
             id: rel.ingredient_id,
             name,
             quantity: rel.quantity,

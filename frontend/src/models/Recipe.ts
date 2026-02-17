@@ -39,7 +39,7 @@ export interface IngredientGroupView {
     title: string
     recipe_id: string;
     position: number;
-    ingredients: IngredientView[];
+    ingredients: IngredientRecipeView[];
 }
 export interface IngredientGroupEditor {
     id: string;
@@ -51,13 +51,17 @@ export interface IngredientGroupTranslation{
     language_code: String;
     title: String;
 }
-export interface IngredientView {
+export interface IngredientRecipeView {
     id: string;
     name: string;
     quantity: number;
     unit: IngredientUnit;
     note: string|null;
     position: number;
+}
+export interface IngredientView {
+    id: string;
+    name: string;
 }
 export interface IngredientEditor {
     id: string;
@@ -126,7 +130,7 @@ export interface StepTranslation {
 
 export interface RecipeFilter {
     search: string | null,            // name / description
-    ingredient: string | null,
+    ingredient: IngredientRecipeView[],
     tags: Tag[],
     minPrep: number | null,
     maxPrep: number | null,
@@ -159,7 +163,7 @@ export interface PaginatedRecipes {
     data: RecipeView[]
     total: number
     page: number
-    perPage: number
+    per_page: number
 }
 export interface RecipeComment {
     id: string;

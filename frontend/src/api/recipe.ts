@@ -8,7 +8,8 @@ import {editToUpdatePayload} from "@/mappers/recipe.mapper.ts";
 
 export function getAllRecipes(filters?: RecipeFilter, include_private?: boolean) {
     const params: Record<string, any> = { ...filters };
-
+    if (filters?.search == "")
+        filters.search = null
     if (include_private != null) {
         params.scope = include_private;
     }
@@ -21,9 +22,9 @@ export function getAllRecipesByPage(
     filters?: RecipeFilter
 ) {
     const params: Record<string, any> = {page, pageSize};
-
-    params.include_private = true;
-
+    if (filters?.search == "")
+        filters.search = null
+    params.scope = true;
     if (filters) {
         if (filters.search) params.search = filters.search;
         if (filters.ingredient) params.ingredient = filters.ingredient;

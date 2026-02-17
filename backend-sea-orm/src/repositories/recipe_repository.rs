@@ -26,56 +26,57 @@ pub async fn find_by_query(
 ) -> Result<Option<Vec<recipes::Model>>, Error> {
     let mut query = recipes::Entity::find();
 
-    // 1. MANDATORY JOIN: You are filtering by translations, so you MUST join them.
-    // We use LeftJoin so recipes without translations (if any) still show up.
-    query = query
-        .join(JoinType::LeftJoin, recipes::Relation::RecipeTranslations.def())
-        // Ensure we only get the translation for the requested language
-        .filter(recipe_translations::Column::LanguageCode.eq(lang_code));
+    // 1. The Scope Logic Check
+    // Assuming filter.scope = true means "Public" and IsPrivate = true means "Private"
+    // Adjust the '!' based on your specific UI logic
+    query = query.filter(recipes::Column::IsPrivate.eq(!filter.scope));
 
-    // 2. Scope Filter
-    query = query.filter(recipes::Column::IsPrivate.eq(filter.scope));
-
-    // 3. Search Text - FIXED: Check if string is not empty
-    if let Some(search_text) = filter.search.filter(|s| !s.is_empty()) {
-        let pattern = format!("%{}%", search_text);
-        query = query.filter(
-            recipe_translations::Column::Title
-                .like(&pattern)
-                .or(recipe_translations::Column::Description.like(&pattern)),
-        );
+    // 2. Search Text (Only join and filter if search is NOT empty)
+    if let Some(s) = &filter.search {
+        if !s.trim().is_empty() {
+            let pattern = format!("%{}%", s);
+            query = query
+                .join(JoinType::LeftJoin, recipes::Relation::RecipeTranslations.def())
+                .filter(
+                    recipe_translations::Column::LanguageCode.eq(lang_code)
+                        .and(recipe_translations::Column::Title.like(&pattern)
+                            .or(recipe_translations::Column::Description.like(&pattern)))
+                );
+        }
     }
 
-    // 4. Time range filters
-    if let Some(max_p) = filter.max_prep {
-        query = query.filter(recipes::Column::PrepTimeMinutes.lte(max_p));
-    }
-    if let Some(max_c) = filter.max_cook {
-        query = query.filter(recipes::Column::CookTimeMinutes.lte(max_c));
-    }
-
-    // 5. Ingredient Search - FIXED: Check if string is not empty
-    if let Some(ing_search) = filter.ingredient.filter(|s| !s.is_empty()) {
-        let pattern = format!("%{}%", ing_search);
-        query = query
-            .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
-            .join(JoinType::InnerJoin, ingredient_groups::Relation::RecipeIngredients.def())
-            .join(JoinType::InnerJoin, recipe_ingredients::Relation::Ingredients.def())
-            .join(JoinType::InnerJoin, ingredients::Relation::IngredientTranslations.def())
-            .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
-            .filter(ingredient_translations::Column::Name.like(pattern));
+    // 3. Ingredient Search (Only join if search is NOT empty)
+    // Using InnerJoin here is fine ONLY if a search term exists.
+    if let Some(i) = &filter.ingredient {
+        if !i.trim().is_empty() {
+            let pattern = format!("%{}%", i);
+            query = query
+                .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
+                .join(JoinType::InnerJoin, ingredient_groups::Relation::RecipeIngredients.def())
+                .join(JoinType::InnerJoin, recipe_ingredients::Relation::Ingredients.def())
+                .join(JoinType::InnerJoin, ingredients::Relation::IngredientTranslations.def())
+                .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
+                .filter(ingredient_translations::Column::Name.like(pattern));
+        }
     }
 
-    // 6. Grouping: Essential when joining multiple tables to avoid duplicates
+    // 4. Grouping & Execution
+    // Grouping by ID is vital to avoid duplicates from the joins
     query = query
         .group_by(recipes::Column::Id)
         .order_by_desc(recipes::Column::CreatedAt);
 
-    // Execute
     let results = query.all(db).await
-        .map_err(|e| Error::InternalServerError)?;
+        .map_err(|e| {
+            eprintln!("Database Error: {:?}", e);
+            Error::InternalServerError
+        })?;
 
-    Ok(if results.is_empty() { None } else { Some(results) })
+    if results.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(results))
+    }
 }
 
 pub async fn find_by_id(db: &DatabaseConnection, id: Uuid) -> Result<recipes::Model, Error> {
@@ -168,54 +169,49 @@ pub async fn create(
 }
 pub async fn find_by_query_by_page(
     db: &DatabaseConnection,
-    filter_dto: RecipeFilterByPage,
+    filter: RecipeFilterByPage,
     lang_code: &str,
 ) -> Result<Option<Vec<recipes::Model>>, Error> {
     let mut query = recipes::Entity::find();
 
-    query = query
-        .join(JoinType::InnerJoin, recipes::Relation::RecipeTranslations.def())
-        .filter(recipe_translations::Column::LanguageCode.eq(lang_code));
-
-    if let Some(f) = filter_dto.filters {
-        query = query.filter(recipes::Column::IsPrivate.eq(f.scope));
-
-        if let Some(search_text) = f.search {
-            let pattern = format!("%{}%", search_text);
-            query = query.filter(
-                recipe_translations::Column::Title
-                    .like(&pattern)
-                    .or(recipe_translations::Column::Description.like(&pattern)),
-            );
+    if let Some(filter) = filter.filters {
+        query = query.filter(recipes::Column::IsPrivate.eq(!filter.scope));
+        if let Some(s) = &filter.search {
+            if !s.trim().is_empty() {
+                let pattern = format!("%{}%", s);
+                query = query
+                    .join(JoinType::LeftJoin, recipes::Relation::RecipeTranslations.def())
+                    .filter(
+                        recipe_translations::Column::LanguageCode.eq(lang_code)
+                            .and(recipe_translations::Column::Title.like(&pattern)
+                                .or(recipe_translations::Column::Description.like(&pattern)))
+                    );
+            }
         }
 
-        if let Some(min) = f.min_prep { query = query.filter(recipes::Column::PrepTimeMinutes.gte(min)); }
-        if let Some(max) = f.max_prep { query = query.filter(recipes::Column::PrepTimeMinutes.lte(max)); }
-        if let Some(min) = f.min_cook { query = query.filter(recipes::Column::CookTimeMinutes.gte(min)); }
-        if let Some(max) = f.max_cook { query = query.filter(recipes::Column::CookTimeMinutes.lte(max)); }
-
-        if let Some(from) = f.date_from { query = query.filter(recipes::Column::CreatedAt.gte(from)); }
-        if let Some(to) = f.date_to { query = query.filter(recipes::Column::CreatedAt.lte(to)); }
-
-        if let Some(ing_search) = f.ingredient {
-            let pattern = format!("%{}%", ing_search);
-            query = query
-                .join_rev(JoinType::InnerJoin, ingredient_groups::Relation::Recipes.def())
-                .join(JoinType::InnerJoin, ingredient_groups::Relation::RecipeIngredients.def())
-                .join(JoinType::InnerJoin, recipe_ingredients::Relation::Ingredients.def())
-                .join(JoinType::InnerJoin, ingredients::Relation::IngredientTranslations.def())
-                .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
-                .filter(ingredient_translations::Column::Name.like(pattern));
+        if let Some(i) = &filter.ingredient {
+            if !i.trim().is_empty() {
+                let pattern = format!("%{}%", i);
+                query = query
+                    .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
+                    .join(JoinType::InnerJoin, ingredient_groups::Relation::RecipeIngredients.def())
+                    .join(JoinType::InnerJoin, recipe_ingredients::Relation::Ingredients.def())
+                    .join(JoinType::InnerJoin, ingredients::Relation::IngredientTranslations.def())
+                    .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
+                    .filter(ingredient_translations::Column::Name.like(pattern));
+            }
         }
     }
+
+
 
 
     query = query
         .group_by(recipes::Column::Id)
         .order_by_desc(recipes::Column::CreatedAt);
 
-    let page = filter_dto.page.unwrap_or(1);
-    let per_page = filter_dto.per_page.unwrap_or(10);
+    let page = filter.page.unwrap_or(1);
+    let per_page = filter.per_page.unwrap_or(10);
 
     let paginator = query.paginate(db, per_page as u64);
     let results = paginator.fetch_page((page - 1) as u64).await?;

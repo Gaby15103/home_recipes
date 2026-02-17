@@ -7,6 +7,7 @@
   "Logout": "Déconnexion",
   "Profile": "Profil",
   "Admin Dashboard": "Tableau d'administration",
+  "Loading": "chargement...",
   "theme": {
     "toggle": "Changer le thème",
     "light": "Clair",
@@ -138,6 +139,13 @@
     "Item": {
       "Reply": "Répondre"
     }
+  },
+  "Ingredients": {
+    "no_match": "aucun ingredients trouvée",
+    "search_placeholder": "Search ingredients...",
+    "suggestions": "Suggestions",
+    "selected_count": "{count} ingredients selectionné",
+    "selected_title": "Ingredients selectionné"
   },
   "Admin": {
     "common": {

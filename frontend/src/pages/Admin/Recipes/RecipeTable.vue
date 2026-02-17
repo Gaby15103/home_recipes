@@ -69,6 +69,7 @@ function copyId(id: string) {
 }
 
 // ------------------------- Table columns -------------------------
+// ------------------------- Table columns -------------------------
 const columns: ColumnDef<RecipeView>[] = [
   {
     id: 'select',
@@ -87,11 +88,11 @@ const columns: ColumnDef<RecipeView>[] = [
   },
 
   {
-    accessorFn: (row: RecipeView) => row.translations[0]?.title ?? '—',
-    id: 'title',
+    // Updated: Uses direct key from your JSON
+    accessorKey: 'title',
     header: t('Admin.table.title'),
     cell: ({row}) => {
-      const title = row.getValue('title') as string
+      const title = row.getValue('title') as string || '—'
 
       return h(
           TooltipProvider,
@@ -136,7 +137,11 @@ const columns: ColumnDef<RecipeView>[] = [
   {
     accessorKey: 'cook_time_minutes',
     header: t('Admin.table.cookTime'),
-    cell: ({row}) => `${row.getValue('cook_time_minutes')} ${t('recipe.meta.minutes')}`,
+    // Added safety check for 0 or null
+    cell: ({row}) => {
+      const time = row.getValue('cook_time_minutes')
+      return time !== undefined ? `${time} ${t('recipe.meta.minutes')}` : '—'
+    },
   },
 
   {
@@ -197,12 +202,18 @@ const columns: ColumnDef<RecipeView>[] = [
 
 
 const table = useVueTable({
+  // Use a getter with a fallback array
   get data() {
-    return props.recipes
+    return props.recipes ?? []
   },
   columns,
   manualPagination: true,
-  pageCount: Math.ceil(props.total / props.perPage),
+
+  // CRITICAL: Ensure this never returns NaN
+  get pageCount() {
+    if (!props.total || !props.perPage) return 0
+    return Math.ceil(props.total / props.perPage)
+  },
 
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
@@ -212,8 +223,9 @@ const table = useVueTable({
   state: {
     get pagination() {
       return {
-        pageIndex: props.page - 1,
-        pageSize: props.perPage,
+        // Page is 1-indexed from props, but 0-indexed in TanStack
+        pageIndex: Math.max(0, props.page - 1),
+        pageSize: props.perPage || 10,
       }
     },
   },

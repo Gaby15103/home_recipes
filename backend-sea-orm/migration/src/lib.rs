@@ -26,6 +26,7 @@ mod m20260211_015007_create_recipe_translations_table;
 mod m20260211_015044_move_steps_to_translations_table;
 mod m20260211_015117_move_ingredients_to_translations_table;
 mod m20260212_014801_create_password_reset_tokens;
+mod m20260217_014849_add_default_language_to_ingredients;
 
 pub struct Migrator;
 
@@ -59,6 +60,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260211_015044_move_steps_to_translations_table::Migration),
             Box::new(m20260211_015117_move_ingredients_to_translations_table::Migration),
             Box::new(m20260212_014801_create_password_reset_tokens::Migration),
+            Box::new(m20260217_014849_add_default_language_to_ingredients::Migration),
         ]
     }
 }

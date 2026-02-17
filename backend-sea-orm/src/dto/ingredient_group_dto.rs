@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 use entity::{ingredient_group_translations, ingredient_groups, ingredients};
-use crate::dto::ingredient_dto::{IngredientEditorDto, IngredientInput, IngredientViewDto};
+use crate::dto::ingredient_dto::{IngredientEditorDto, IngredientInput, IngredientRecipeViewDto};
 
 #[derive(Debug, Validate, Deserialize, Serialize)]
 pub struct IngredientGroupInput {
@@ -26,7 +26,7 @@ pub struct IngredientGroupViewDto {
     pub title: String,
     pub recipe_id: Uuid,
     pub position: i32,
-    pub ingredients: Vec<IngredientViewDto>,
+    pub ingredients: Vec<IngredientRecipeViewDto>,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct IngredientGroupEditorDto {
@@ -45,7 +45,7 @@ impl IngredientGroupViewDto {
     pub fn build(
         group: ingredient_groups::Model,
         name: String,
-        ingredients: Vec<IngredientViewDto>
+        ingredients: Vec<IngredientRecipeViewDto>
     ) -> Self {
         Self {
             id: group.id,

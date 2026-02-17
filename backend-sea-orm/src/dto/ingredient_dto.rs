@@ -27,7 +27,7 @@ pub struct IngredientInput {
     pub position: i32,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
-pub struct IngredientViewDto {
+pub struct IngredientRecipeViewDto {
     pub id: Uuid,
     pub name: String,
     pub unit: IngredientUnit,
@@ -35,6 +35,12 @@ pub struct IngredientViewDto {
     pub note: Option<String>,
     pub position: i32,
 }
+#[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
+pub struct IngredientViewDto {
+    pub id: Uuid,
+    pub name: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct IngredientEditorDto {
     pub id: Uuid,
@@ -53,4 +59,9 @@ pub struct IngredientNoteTranslationsDto {
     pub id: Uuid,
     pub language_code: String,
     pub note: String,
+}
+#[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
+pub struct IngredientList{
+    pub search: Option<String>,
+    pub limit: i32,
 }

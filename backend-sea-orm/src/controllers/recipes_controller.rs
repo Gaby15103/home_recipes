@@ -9,7 +9,7 @@ use crate::domain::user::{AuthenticatedUser, Role};
 use actix_web::web::Json;
 use sea_orm::sqlx::query;
 use crate::dto::auth_dto::LoginRequestDto;
-use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeViewDto};
 use crate::errors::Error;
 
 use crate::services::recipe_service;
@@ -99,10 +99,17 @@ pub async fn get_by_page(
     }
 
     let lang_code = extract_language(&req);
+    let page = query.page.unwrap_or(1);
+    let per_page = query.per_page.unwrap_or(10);
 
-    let recipes = recipe_service::get_all_by_page(&state.db, lang_code.deref(), query.into_inner()).await?;
+    let recipes = recipe_service::get_all_by_page(&state.db, lang_code.deref(), query.into_inner().clone()).await?;
 
-    Ok(HttpResponse::Ok().json(recipes))
+    Ok(HttpResponse::Ok().json(RecipePagination {
+        data: recipes.clone(),
+        total: recipes.len() as i32,
+        page,
+        per_page,
+    }))
 }
 pub async fn create(
     state: web::Data<AppState>,

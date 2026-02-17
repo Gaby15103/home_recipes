@@ -33,6 +33,7 @@ async function fetchRecipes() {
     loading.value = true
 
     const res = await getAllRecipesByPage(page.value, perPage.value)
+    console.log('API Response:', res)
 
     recipes.value = res.data
     totalRecipes.value = res.total

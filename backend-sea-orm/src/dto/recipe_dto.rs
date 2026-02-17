@@ -21,7 +21,7 @@ pub struct RecipeTranslationDto {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
 pub struct RecipeViewDto {
     pub id: Uuid,
     pub title: String,
@@ -121,8 +121,15 @@ pub struct RecipeFilter {
 #[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
 pub struct RecipeFilterByPage{
     pub filters: Option<RecipeFilter>,
-    pub page:  Option<i64>,
-    pub per_page: Option<i64>,
+    pub page:  Option<i32>,
+    pub per_page: Option<i32>,
+}
+#[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
+pub struct RecipePagination{
+    pub data: Vec<RecipeViewDto>,
+    pub total: i32,
+    pub page: i32,
+    pub per_page: i32,
 }
 
 impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {
