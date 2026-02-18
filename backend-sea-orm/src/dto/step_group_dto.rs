@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 use crate::dto::step_dto::{StepEditorDto, StepInput, StepViewDto};
-#[derive(Debug, Validate, Deserialize, Serialize)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct StepGroupInput {
     pub position: i32,
     pub translations: Vec<StepGroupTranslationInput>,

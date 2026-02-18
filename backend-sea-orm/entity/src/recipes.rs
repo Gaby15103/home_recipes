@@ -13,7 +13,7 @@ pub struct Model {
     pub prep_time_minutes: i32,
     pub cook_time_minutes: i32,
     #[sea_orm(column_type = "Text")]
-    pub author: String,
+    pub author: Option<String>,
     pub author_id: Option<Uuid>,
     pub is_private: bool,
     pub created_at: Option<DateTimeWithTimeZone>,

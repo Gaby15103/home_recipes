@@ -188,7 +188,9 @@
         "prepTime": "Temps de préparation (min)",
         "cookTime": "Temps de cuisson (min)",
         "image": "Image de la recette",
-        "private": "Recette privée"
+        "private": "Recette privée",
+        "primaryLanguage": "Langage Principale",
+        "switchLanguage": "Changer de langue"
       },
 
       "placeholders": {
@@ -221,6 +223,7 @@
       "groupTitle": "Titre du groupe",
       "addIngredient": "Ajouter ingrédient",
       "name": "Nom",
+      "unit": "Unité",
       "quantity": "Quantité",
       "note": "Note (optionnel)",
       "remove": "Retirer",

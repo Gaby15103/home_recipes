@@ -9,4 +9,5 @@ pub mod ingredient_group_repository;
 pub mod ingredient_repository;
 pub mod step_group_repository;
 pub mod step_repository;
+pub mod language_repository;
 

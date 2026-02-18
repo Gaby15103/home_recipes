@@ -46,7 +46,6 @@ pub async fn find_or_create_tag(
                 t
             } else {
                 tags::ActiveModel {
-                    id: Set(Uuid::new_v4()),
                     name: Set(normalized_name),
                     ..Default::default()
                 }
@@ -87,4 +86,50 @@ pub async fn find_by_recipe(
         })
     }
     Ok(tags_dto)
+}
+pub async fn get_all(
+    db: &DatabaseConnection,
+)->Result<Vec<TagDto>, Error> {
+    let tags = tags::Entity::find().all(db).await?;
+    let tags_dto: Vec<TagDto> = tags.into_iter().map(TagDto::from).collect();
+    Ok(tags_dto)
+}
+pub async fn create(
+    db: &DatabaseConnection,
+    new_tag: InputTag,
+) -> Result<TagDto, Error> {
+    let tag_model = match new_tag {
+        InputTag::New { name } => {
+            tags::ActiveModel {
+                id: Set(Uuid::new_v4()),
+                name: Set(name),
+                ..Default::default()
+            }
+                .insert(db)
+                .await?
+        }
+        _ => return Err(Error::BadRequest(serde_json::json!({"error": "Expected a new tag name"}))),
+    };
+
+    Ok(TagDto::from(tag_model))
+}
+pub async fn update(
+    db: &DatabaseConnection,
+    updated_tag: TagDto,
+) -> Result<TagDto, Error> {
+    let existing = tags::Entity::find_by_id(updated_tag.id)
+        .one(db)
+        .await?
+        .ok_or(Error::NotFound(serde_json::json!({"error": "Tag not found"})))?;
+
+    if existing.name == updated_tag.name {
+        return Ok(TagDto::from(existing));
+    }
+
+    let mut tag: tags::ActiveModel = existing.into();
+    tag.name = Set(updated_tag.name);
+
+    let updated_model = tag.update(db).await?;
+
+    Ok(TagDto::from(updated_model))
 }

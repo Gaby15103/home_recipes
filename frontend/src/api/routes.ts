@@ -60,3 +60,9 @@ export const TwoFactorRoutes = {
 export const IngredientRoutes = {
     list: () => `${API_ROOT}/ingredient/list`,          // GET
 }
+export const LanguageRoutes = {
+    list: () => `${API_ROOT}/language/list`,          // GET
+}
+export const UploadRoutes = {
+    single: () => `${API_ROOT}/upload`
+}

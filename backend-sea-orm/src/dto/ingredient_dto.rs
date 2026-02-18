@@ -5,19 +5,19 @@ use validator::Validate;
 use migration::prelude::Decimal;
 use crate::utils::unit::IngredientUnit;
 
-#[derive(Debug, Validate, Deserialize, Serialize, Clone)]
+#[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
 pub struct IngredientTranslationInput {
     #[validate(length(min = 2, max = 5))]
-    pub language: String,
+    pub language_code: String,
     #[validate(length(min = 1, max = 50))]
     pub name: String,
 }
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct IngredientNoteTranslationInput {
     pub language_code: String,
     pub note: Option<String>,
 }
-#[derive(Debug, Validate, Deserialize, Serialize)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct IngredientInput {
     #[validate(nested)]
     pub translations: Vec<IngredientTranslationInput>,

@@ -1,10 +1,11 @@
 import {api} from "./client";
 import {RecipeRoutes} from "./routes";
-import {formDataFromObject} from "./apiHelpers";
 import type {RecipeCommentCreate, RecipeCreate, StepImage} from "@/models/RecipeCreate";
 import type {PaginatedRecipes, RecipeView, RecipeComment, RecipeFilter, RecipeRating} from "@/models/Recipe.ts";
 import type {RecipeEdit} from "@/models/RecipeEdit.ts";
 import {editToUpdatePayload} from "@/mappers/recipe.mapper.ts";
+import {uploadSingleFile} from "@/api/upload.ts";
+
 
 export function getAllRecipes(filters?: RecipeFilter, include_private?: boolean) {
     const params: Record<string, any> = { ...filters };
@@ -46,15 +47,23 @@ export function getRecipeById(id: string) {
     return api<RecipeView>(RecipeRoutes.get(id), {method: "GET"});
 }
 
-export async function createRecipe(recipe: RecipeCreate, mainImage?: File, stepImages?: StepImage[]) {
-    const payload: any = {recipe};
-    if (mainImage) payload.mainImage = mainImage;
-    if (stepImages) payload.stepImages = stepImages;
+export async function createRecipe(recipe: RecipeCreate): Promise<RecipeView> {
+    if (recipe.image_url instanceof File){
+        let res = await uploadSingleFile(recipe.image_url)
+        recipe.image_url = res.temp_id
+    }
+    for(let step_group of recipe.step_groups){
+        for(let step of step_group.steps){
+            if (step.image_url instanceof File){
+                let res = await uploadSingleFile(step.image_url)
+                step.image_url = res.temp_id
+            }
+        }
+    }
 
-    return api(RecipeRoutes.create(), {
+    return api<RecipeView>(RecipeRoutes.create(), {
         method: "POST",
-        data: formDataFromObject(payload),
-        headers: {"Content-Type": "multipart/form-data"},
+        data: recipe,
     });
 }
 

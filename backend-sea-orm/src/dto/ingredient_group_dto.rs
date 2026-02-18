@@ -5,7 +5,7 @@ use validator::Validate;
 use entity::{ingredient_group_translations, ingredient_groups, ingredients};
 use crate::dto::ingredient_dto::{IngredientEditorDto, IngredientInput, IngredientRecipeViewDto};
 
-#[derive(Debug, Validate, Deserialize, Serialize)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct IngredientGroupInput {
     pub translations: Vec<IngredientGroupTranslationInput>,
     pub position: i32,

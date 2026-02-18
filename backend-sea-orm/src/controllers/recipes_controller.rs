@@ -8,11 +8,12 @@ use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
 use actix_web::web::Json;
 use sea_orm::sqlx::query;
+use validator::Validate;
 use crate::dto::auth_dto::LoginRequestDto;
 use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeViewDto};
 use crate::errors::Error;
 
-use crate::services::recipe_service;
+use crate::services::{recipe_service, user_service};
 use crate::utils::header_extractor::extract_language;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -119,30 +120,54 @@ pub async fn create(
 ) -> Result<HttpResponse, Error> {
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
     let new_recipe = input.into_inner();
-    let res: RecipeViewDto = recipe_service::create(&state.db, new_recipe, auth.user.preferences.language.unwrap().deref()).await?;
+    let lang_code = extract_language(&req);
+    let res: RecipeViewDto = recipe_service::create(&state.db, new_recipe, lang_code.deref()).await?;
 
     Ok(HttpResponse::Ok().json(res))
 }
 pub async fn get_favorites(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().json({}))
+    if let Some(auth) = auth {
+        let favorites = user_service::get_favorites(&state.db, auth.user).await?;
+        return Ok(HttpResponse::Ok().json(favorites));
+    }
+
+    Ok(HttpResponse::NoContent().finish())
 }
 pub async fn update(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    req: HttpRequest,
+    auth: AuthenticatedUser,
+    input: Json<CreateRecipeInput>,
+    path: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
+    auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
+
+    let updated_recipe = input.into_inner();
+
+    updated_recipe.validate()?;
+
+    let recipe_id = path.into_inner();
+
+    let lang_code = extract_language(&req);
+
+    let result = recipe_service::update(&state.db, updated_recipe, recipe_id, lang_code.deref()).await?;
+
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn delete(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
+    auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().json({}))
+    auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
+    let recipe_id = path.into_inner();
+    if !recipe_service::delete(&state.db, recipe_id).await?{
+        return Ok(HttpResponse::NotFound().finish());
+    }
+    Ok(HttpResponse::Ok().finish())
 }
 pub async fn analytics(
     state: web::Data<AppState>,

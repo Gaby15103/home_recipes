@@ -1,3 +1,4 @@
+use std::io;
 use actix::MailboxError;
 use actix_web::{
     HttpResponse,
@@ -180,6 +181,28 @@ impl From<ValidationErrors> for Error {
         Error::UnprocessableEntity(json!({
             "errors": map
         }))
+    }
+}
+
+/* ----- fs ----- */
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Self {
+        match err.kind() {
+            io::ErrorKind::NotFound => Error::NotFound(json!({
+                "error": "File or directory not found",
+                "details": err.to_string()
+            })),
+            io::ErrorKind::PermissionDenied => Error::Forbidden(json!({
+                "error": "Storage permission denied",
+                "details": err.to_string()
+            })),
+            _ => {
+                // Log the actual error here if you have a logger
+                // e.g., log::error!("Filesystem error: {}", err);
+                Error::InternalServerError
+            }
+        }
     }
 }
 

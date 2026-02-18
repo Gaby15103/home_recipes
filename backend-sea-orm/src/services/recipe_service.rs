@@ -1,21 +1,25 @@
-use crate::dto::recipe_dto::{CreateRecipeInput, RecipeFilter, RecipeDto, RecipeViewDto, RecipeFilterByPage};
+use crate::dto::recipe_dto::{
+    CreateRecipeInput, RecipeDto, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
+};
 use crate::dto::tag_dto::TagDto;
 use crate::errors::Error;
 use crate::repositories::{
     ingredient_group_repository, recipe_repository, recipe_translation_repository,
     step_group_repository, step_repository, tag_repository,
 };
+use actix_web::HttpResponse;
 use sea_orm::DatabaseConnection;
+use std::fs;
 use std::ops::Deref;
 use uuid::Uuid;
+use crate::utils::file_upload::move_file_to_recipes;
 
 pub async fn get_all(
     db: &DatabaseConnection,
     lang_code: &str,
     filter: RecipeFilter,
 ) -> Result<Vec<RecipeViewDto>, Error> {
-    let recipes = recipe_repository::find_by_query(db, filter, lang_code)
-        .await?;
+    let recipes = recipe_repository::find_by_query(db, filter, lang_code).await?;
 
     let mut dtos = Vec::new();
 
@@ -28,12 +32,11 @@ pub async fn get_all(
                 lang_code,
                 recipe.original_language_code.deref(),
             )
-                .await?;
+            .await?;
             let dto = RecipeViewDto::from((recipe, translation));
             dtos.push(dto);
         }
     }
-
 
     Ok(dtos)
 }
@@ -78,9 +81,26 @@ pub async fn get_by_id(
 
 pub async fn create(
     db: &DatabaseConnection,
-    new_recipe: CreateRecipeInput,
+    mut new_recipe: CreateRecipeInput,
     preferred_language: &str,
 ) -> Result<RecipeViewDto, Error> {
+    let target_dir = "assets/recipes";
+
+    // 1. Ensure the destination directory exists
+    fs::create_dir_all(target_dir)?;
+
+    // 2. Move Main Recipe Image
+    new_recipe.image_url = move_file_to_recipes(&new_recipe.image_url, target_dir)?;
+
+    // 3. Move Step Images
+    for group in &mut new_recipe.step_groups {
+        for step in &mut group.steps {
+            if let Some(temp_path) = &step.image_url {
+                step.image_url = Some(move_file_to_recipes(temp_path, target_dir)?);
+            }
+        }
+    }
+
     let inserted_recipe: RecipeViewDto =
         recipe_repository::create(db, new_recipe, preferred_language).await?;
     Ok(inserted_recipe)
@@ -89,10 +109,9 @@ pub async fn create(
 pub async fn get_all_by_page(
     db: &DatabaseConnection,
     lang_code: &str,
-    filter: RecipeFilterByPage
-)->Result<Vec<RecipeViewDto>, Error> {
-    let recipes = recipe_repository::find_by_query_by_page(db, filter, lang_code)
-        .await?;
+    filter: RecipeFilterByPage,
+) -> Result<Vec<RecipeViewDto>, Error> {
+    let recipes = recipe_repository::find_by_query_by_page(db, filter, lang_code).await?;
 
     let mut dtos = Vec::new();
 
@@ -105,10 +124,23 @@ pub async fn get_all_by_page(
                 lang_code,
                 recipe.original_language_code.deref(),
             )
-                .await?;
+            .await?;
             let dto = RecipeViewDto::from((recipe, translation));
             dtos.push(dto);
         }
     }
     Ok(dtos)
+}
+pub async fn delete(db: &DatabaseConnection, id: Uuid) -> Result<bool, Error> {
+    let result = recipe_repository::delete(db, id).await?;
+    Ok(result.rows_affected > 0)
+}
+pub async fn update(
+    db: &DatabaseConnection,
+    updated_recipe: CreateRecipeInput,
+    recipe_id: Uuid,
+    lang_code: &str,
+) -> Result<RecipeViewDto, Error> {
+    let result = recipe_repository::update(db, updated_recipe, recipe_id, lang_code).await?;
+    Ok(result)
 }

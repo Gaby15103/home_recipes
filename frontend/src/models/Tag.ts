@@ -4,5 +4,5 @@
 }
 
 export type InputTag =
-    | { type: 'existing'; id: string }
-    | { type: 'new'; name: string }
+    | { type: 'Existing'; id: string }
+    | { type: 'New'; name: string }

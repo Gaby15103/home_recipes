@@ -6,15 +6,15 @@ use validator::Validate;
 
 #[derive(Debug, Validate, Serialize, Deserialize, ToSchema, Clone)]
 pub struct StepTranslationInput {
-    pub language: String,
+    pub language_code: String,
     pub instruction: String,
 }
-#[derive(Debug, Validate, Deserialize, Serialize)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct StepInput {
     pub position: i32,
     pub image_url: Option<String>,
     #[validate(nested)]
-    pub translation: Vec<StepTranslationInput>,
+    pub translations: Vec<StepTranslationInput>,
     pub duration_minutes: Option<i32>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]

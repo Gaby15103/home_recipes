@@ -3,14 +3,14 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct UserPreferences {
-    pub language: Option<String>,
-    pub theme: Option<String>,
+    pub language: String,
+    pub theme: String,
 }
 impl Default for UserPreferences {
     fn default() -> Self {
         Self {
-            language: Some("en".to_string()),
-            theme: Some("dark".to_string()),
+            language: "en".to_string(),
+            theme: "dark".to_string(),
         }
     }
 }

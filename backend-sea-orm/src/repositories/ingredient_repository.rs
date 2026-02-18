@@ -33,14 +33,14 @@ pub async fn create_and_link(
     for trans in input.translations {
         ingredient_translations::ActiveModel {
             ingredient_id: Set(master_ingredient.id),
-            language_code: Set(trans.language.clone()),
+            language_code: Set(trans.language_code.clone()),
             name: Set(trans.name.clone()),
             ..Default::default()
         }
             .insert(txn)
             .await?;
 
-        if trans.language == lang {
+        if trans.language_code == lang {
             display_name = trans.name;
         }
     }

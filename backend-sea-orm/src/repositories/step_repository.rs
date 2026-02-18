@@ -25,17 +25,17 @@ pub async fn create(
 
     // 2. Insert Step Translations
     let mut display_instruction = String::new();
-    for trans in input.translation {
+    for trans in input.translations {
         step_translations::ActiveModel {
             step_id: Set(step.id),
-            language_code: Set(trans.language.clone()),
+            language_code: Set(trans.language_code.clone()),
             instruction: Set(trans.instruction.clone()),
             ..Default::default()
         }
             .insert(txn)
             .await?;
 
-        if trans.language == lang {
+        if trans.language_code == lang {
             display_instruction = trans.instruction;
         }
     }

@@ -1,12 +1,18 @@
-use sea_orm::{DatabaseConnection, Set, ActiveModelTrait};
-use uuid::Uuid;
-use crate::dto::user_dto::{UserResponseDto, UpdateUserDto, UpdatePasswordDto};
-use crate::repositories::{user_repository, session_repository, role_repository};
-use crate::errors::Error;
-use entity::{users, roles};
-use serde_json::json;
+use std::ops::Deref;
+use crate::dto::recipe_dto::RecipeViewDto;
 use crate::dto::session_dto::SessionResponseDto;
+use crate::dto::user_dto::{UpdatePasswordDto, UpdateUserDto, UserResponseDto};
+use crate::errors::Error;
+use crate::repositories::{
+    recipe_repository, recipe_translation_repository, role_repository, session_repository,
+    user_repository,
+};
 use crate::utils::HASHER;
+use entity::prelude::Users;
+use entity::{recipes, roles, users};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
+use serde_json::json;
+use uuid::Uuid;
 
 pub async fn get_active_sessions(
     db: &DatabaseConnection,
@@ -27,8 +33,8 @@ pub async fn revoke_session(
     user_id: Uuid,
     session_id: Uuid,
 ) -> Result<(), Error> {
-
-    let session = session_repository::find_by_id(db, session_id).await?
+    let session = session_repository::find_by_id(db, session_id)
+        .await?
         .ok_or(Error::NotFound(json!({"error": "Session not found"})))?;
 
     if session.user_id != user_id {
@@ -59,4 +65,27 @@ pub async fn change_password(
 
     let new_hash = HASHER.hash(&data.new_password)?;
     user_repository::reset_password(db, user_id, new_hash).await
+}
+
+pub async fn get_favorites(
+    db: &DatabaseConnection,
+    user: UserResponseDto,
+) -> Result<Vec<RecipeViewDto>, Error> {
+    let recipes = recipe_repository::get_favorites(db, user.id.clone()).await?;
+
+    let mut dtos = Vec::new();
+
+    for recipe in recipes {
+        let translation = recipe_translation_repository::find_by_recipe_and_lang(
+            db,
+            recipe.id,
+            user.preferences.language.deref(),
+            recipe.original_language_code.deref(),
+        )
+        .await?;
+        let dto = RecipeViewDto::from((recipe, translation));
+        dtos.push(dto);
+    }
+
+    Ok(dtos)
 }

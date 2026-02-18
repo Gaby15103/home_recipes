@@ -30,8 +30,8 @@ pub struct RecipeViewDto {
     pub servings: i32,
     pub prep_time_minutes: i32,
     pub cook_time_minutes: i32,
-    pub author_id: Uuid,
-    pub author: String,
+    pub author_id: Option<Uuid>,
+    pub author: Option<String>,
     pub is_private: bool,
     pub tags: Vec<TagDto>,
     pub ingredient_groups: Vec<IngredientGroupViewDto>,
@@ -52,7 +52,7 @@ pub struct RecipeEditorDto {
     pub ingredient_groups: Vec<IngredientGroupViewDto>,
     pub step_groups: Vec<Vec<StepGroupEditorDto>>,
 }
-#[derive(Debug, Validate, Deserialize, Serialize)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct CreateRecipeInput {
     pub primary_language: String,
     #[validate(nested)]
@@ -61,8 +61,8 @@ pub struct CreateRecipeInput {
     pub servings: i32,
     pub prep_time_minutes: i32,
     pub cook_time_minutes: i32,
-    pub author_id: Uuid,
-    pub author: String,
+    pub author_id: Option<Uuid>,
+    pub author: Option<String>,
     pub is_private: bool,
     pub tags: Vec<InputTag>,
     #[validate(nested)]
@@ -70,7 +70,7 @@ pub struct CreateRecipeInput {
     #[validate(nested)]
     pub step_groups: Vec<StepGroupInput>,
 }
-#[derive(Debug, Serialize, Deserialize, Validate, Clone)]
+#[derive(Debug, Serialize, Deserialize, Validate, Clone, ToSchema)]
 pub struct RecipeTranslationInput {
     pub language_code: String,
     pub title: String,
@@ -142,7 +142,7 @@ impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {
             servings: recipe.servings,
             prep_time_minutes: recipe.prep_time_minutes,
             cook_time_minutes: recipe.cook_time_minutes,
-            author_id: recipe.author_id.expect("REASON"),
+            author_id: recipe.author_id,
             author: recipe.author,
             is_private: recipe.is_private,
             tags: vec![], // load from repository if needed
@@ -167,7 +167,7 @@ impl RecipeViewDto {
             servings: recipe.servings,
             prep_time_minutes: recipe.prep_time_minutes,
             cook_time_minutes: recipe.cook_time_minutes,
-            author_id: recipe.author_id.unwrap_or_default(),
+            author_id: recipe.author_id,
             author: recipe.author,
             is_private: recipe.is_private,
             tags,

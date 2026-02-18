@@ -3,3 +3,5 @@ pub(crate) mod auth_service;
 pub(crate) mod user_service;
 pub(crate) mod upload_service;
 pub(crate) mod ingredient_service;
+pub(crate) mod tag_service;
+pub(crate) mod language_service;
