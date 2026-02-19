@@ -1,4 +1,5 @@
-﻿use libreauth::pass::{Algorithm, HashBuilder, Hasher};
+﻿use lazy_static::lazy_static;
+use libreauth::pass::{Algorithm, HashBuilder, Hasher};
 
 pub const PWD_ALGORITHM: Algorithm = Algorithm::Argon2;
 pub const PWD_SCHEME_VERSION: usize = 1;

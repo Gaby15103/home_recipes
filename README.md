@@ -40,6 +40,6 @@ gdbserver :2345 target/debug/backend
 
 ### sea orm migrations:
 ```bash 
-sea-orm-cli generate entity -o backend-sea-orm/entity/src --lib
+sea-orm-cli generate entity -o backend/entity/src --lib
 ```
 
