@@ -12,10 +12,7 @@ use entity::{
     recipe_ingredients, recipe_tags, recipe_translations, recipes,
 };
 use migration::JoinType;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, Set,
-    TransactionTrait,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, SelectExt, Set, TransactionTrait};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
@@ -446,4 +443,32 @@ pub async fn add_view(
         .await?;
     };
     Ok(())
+}
+
+pub async fn toogle_favorite(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Uuid,
+)-> Result<bool, Error> {
+    let favorited = favorites::Entity::find()
+    .filter(favorites::Column::RecipeId.eq(recipe_id))
+    .filter(favorites::Column::UserId.eq(user_id))
+        .exists(db)
+        .await?;
+    if favorited {
+        let res = favorites::Entity::delete_many()
+            .filter(favorites::Column::RecipeId.eq(recipe_id))
+            .filter(favorites::Column::UserId.eq(user_id))
+            .exec(db)
+            .await?;
+        Ok(!(res.rows_affected > 0))
+    }else {
+        favorites::ActiveModel{
+            user_id: Set(user_id),
+            recipe_id: Set(recipe_id),
+            ..Default::default()
+        }.save(db)
+            .await?;
+        Ok(true)
+    }
 }

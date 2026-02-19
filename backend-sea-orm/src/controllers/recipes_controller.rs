@@ -201,9 +201,12 @@ pub async fn track_view(
 }
 pub async fn favorite(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
+    auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    let user_id = auth.user.id.clone();
+    let favorited = recipe_service::toogle_favorite(&state.db, recipe_id, user_id).await?;
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn rate(

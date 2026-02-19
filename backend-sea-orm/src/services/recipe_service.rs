@@ -7,6 +7,7 @@ use actix_web::HttpResponse;
 use sea_orm::DatabaseConnection;
 use std::fs;
 use std::ops::Deref;
+use actix::fut::ok;
 use uuid::Uuid;
 use crate::dto::user_dto::UserResponseDto;
 
@@ -188,4 +189,11 @@ pub async fn add_view(
 )->Result<(), Error> {
     recipe_repository::add_view(db, recipe_id, user_id).await?;
     Ok(())
+}
+pub async fn toogle_favorite(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Uuid,
+)->Result<bool, Error> {
+    recipe_repository::toogle_favorite(db, recipe_id, user_id).await
 }
