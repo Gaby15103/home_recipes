@@ -466,7 +466,7 @@ pub async fn toogle_favorite(
             recipe_id: Set(recipe_id),
             ..Default::default()
         }
-        .save(db)
+        .insert(db)
         .await?;
         Ok(true)
     }

@@ -213,7 +213,7 @@ pub async fn favorite(
     let recipe_id = path.into_inner();
     let user_id = auth.user.id.clone();
     let favorited = recipe_service::toogle_favorite(&state.db, recipe_id, user_id).await?;
-    Ok(HttpResponse::Ok().json({}))
+    Ok(HttpResponse::Ok().json(favorited))
 }
 pub async fn rate(
     state: web::Data<AppState>,
