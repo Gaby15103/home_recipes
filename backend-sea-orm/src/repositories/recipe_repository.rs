@@ -21,6 +21,7 @@ use sea_orm::{DatabaseConnection, EntityTrait};
 use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
 use std::ops::Deref;
+use chrono::DateTime;
 use uuid::Uuid;
 
 pub async fn find_all(db: &DatabaseConnection) -> Result<Vec<recipes::Model>, Error> {
@@ -523,6 +524,16 @@ pub async fn get_rating(db: &DatabaseConnection, recipe_id: Uuid) -> Result<f32,
 
     Ok(res.unwrap_or(0.0) as f32)
 }
+pub async fn get_comment(
+    db: &DatabaseConnection,
+    comment_id: Uuid,
+) -> Result<CommentDto, Error> {
+    let res = recipe_comments::Entity::find_by_id(comment_id)
+        .one(db)
+        .await?;
+    let dto = CommentDto::from(res.unwrap());
+    Ok(dto)
+}
 pub async fn get_comments(
     db: &DatabaseConnection,
     recipe_id: Uuid,
@@ -550,4 +561,21 @@ pub async fn add_comment(
     }.insert(db).await?;
     let dto = CommentDto::from(res);
     Ok(dto)
+}
+pub async fn delete_comment(
+    db: &DatabaseConnection,
+    comment_id: Uuid,
+)->Result<CommentDto, Error> {
+    let res = recipe_comments::Entity::find_by_id(comment_id).one(db).await?;
+    if let Some(model) = res {
+        let mut active: recipe_comments::ActiveModel = model.into();
+        active.deleted_at = Set(Some(chrono::Utc::now().into()));
+        let updated_model = active.update(db).await?;
+        Ok(CommentDto::from(updated_model))
+    }else {
+        Err(Error::NotFound(serde_json::json!({
+            "error": "Comment not found",
+            "id": comment_id
+        })))
+    }
 }

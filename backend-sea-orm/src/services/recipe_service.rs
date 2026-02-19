@@ -9,6 +9,7 @@ use std::fs;
 use std::ops::Deref;
 use actix::fut::ok;
 use uuid::Uuid;
+use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::user_dto::UserResponseDto;
 
@@ -232,4 +233,13 @@ pub async fn add_comment(
     user_id: Uuid,
 )->Result<CommentDto, Error> {
     recipe_repository::add_comment(db,new_comment, recipe_id, user_id).await
+}
+pub async fn delete_comment(
+    db: &DatabaseConnection,
+    comment_id: Uuid,
+    auth: AuthenticatedUser
+)->Result<CommentDto, Error> {
+    let comment = recipe_repository::get_comment(db, comment_id).await?;
+    auth.require_owner_or_roles(comment.user_id,&[Role::Admin,Role::Moderator,Role::Superuser])?;
+    recipe_repository::delete_comment(db, comment_id).await
 }

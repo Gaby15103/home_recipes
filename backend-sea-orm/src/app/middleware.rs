@@ -7,6 +7,7 @@ use actix_web::middleware::Next;
 use actix_web::web::Data;
 use futures_util::future::{ready, Ready};
 use serde_json::json;
+use uuid::Uuid;
 use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::user_dto::UserResponseDto;
@@ -74,6 +75,30 @@ impl AuthenticatedUser {
                 "error": "Access denied",
                 "message": format!("One of these roles required: {:?}", allowed_names)
             })))
+        }
+    }
+    pub fn require_owner_or_roles(
+        &self,
+        owner_id: Uuid,
+        allowed: &[Role]
+    ) -> Result<(), crate::errors::Error> {
+        // 1. Check if user is the owner
+        if self.user.id == owner_id {
+            return Ok(());
+        }
+
+        // 2. If not owner, check roles (reusing your existing logic)
+        let has_role = self.user.roles.iter().any(|user_role| {
+            allowed.iter().any(|a| a.to_string() == user_role.name)
+        });
+
+        if has_role {
+            Ok(())
+        } else {
+            Err(crate::errors::Error::Forbidden(serde_json::json!({
+            "error": "Access denied",
+            "message": "You must be the owner or have an authorized role to perform this action."
+        })))
         }
     }
 }

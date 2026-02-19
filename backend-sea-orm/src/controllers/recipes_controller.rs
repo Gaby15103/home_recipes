@@ -262,9 +262,11 @@ pub async fn add_comment(
 }
 pub async fn delete_comment(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
+    auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
+    let comment_id = path.into_inner();
+    recipe_service::delete_comment(&state.db, comment_id, auth).await?;
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn edit_comment(
