@@ -17,4 +17,5 @@ pub mod step_group_dto;
 pub mod language_dto;
 pub mod comment_dto;
 pub mod recipe_version_dto;
+pub mod recipe_rating_dto;
 

@@ -11,6 +11,7 @@ use actix::fut::ok;
 use uuid::Uuid;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
+use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::dto::recipe_version_dto::RecipeVersionDto;
 use crate::dto::user_dto::UserResponseDto;
 
@@ -218,8 +219,9 @@ pub async fn unrate(
 pub async fn get_rating(
     db: &DatabaseConnection,
     recipe_id: Uuid,
-)->Result<f32, Error> {
-    recipe_repository::get_rating(db, recipe_id).await
+    user_id: Option<Uuid>
+)->Result<RecipeRatingDto, Error> {
+    recipe_repository::get_rating(db, recipe_id, user_id).await
 }
 pub async fn get_comments(
     db: &DatabaseConnection,

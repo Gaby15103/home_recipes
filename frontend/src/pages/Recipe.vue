@@ -86,10 +86,12 @@ async function loadComment(){
 
   }
 }
-onMounted(() => {
-  loadRecipe()
-  loadData()
-  loadComment()
+onMounted(async () => {
+  await loadRecipe()
+  await Promise.all([
+    loadData(),
+    loadComment()
+  ])
 });
 
 watch(
@@ -136,7 +138,7 @@ async function toggleFavorite() {
 async function postComment() {
   if (!recipe.value || !newComment.value.content.trim() || !authStore.user) return;
   newComment.value.user_id = authStore.user.id;
-  console.log("fuck you")
+  newComment.value.recipe_id = recipe.value.id;
   const added = await addComment(recipe.value.id, newComment.value);
   comments.value.push(added);
   newComment.value = {

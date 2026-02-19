@@ -13,6 +13,7 @@ use validator::Validate;
 use crate::dto::auth_dto::LoginRequestDto;
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
+use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
 
@@ -239,9 +240,11 @@ pub async fn unrate(
 pub async fn get_rating(
     state: web::Data<AppState>,
     path: web::Path<Uuid>,
+    auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
-    let rating = recipe_service::get_rating(&state.db, recipe_id).await?;
+    let user_id = auth.map(|a| a.user.id);
+    let rating:RecipeRatingDto = recipe_service::get_rating(&state.db, recipe_id, user_id).await?;
     Ok(HttpResponse::Ok().json(rating))
 }
 pub async fn get_comments(
@@ -249,8 +252,8 @@ pub async fn get_comments(
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
-    recipe_service::get_comments(&state.db, recipe_id).await?;
-    Ok(HttpResponse::Ok().json({}))
+    let comments = recipe_service::get_comments(&state.db, recipe_id).await?;
+    Ok(HttpResponse::Ok().json(comments))
 }
 pub async fn add_comment(
     state: web::Data<AppState>,
@@ -261,8 +264,8 @@ pub async fn add_comment(
     let new_comment = body.into_inner();
     let recipe_id = path.into_inner();
     let user_id = auth.user.id.clone();
-    recipe_service::add_comment(&state.db, new_comment, recipe_id, user_id).await?;
-    Ok(HttpResponse::Ok().json({}))
+    let comment = recipe_service::add_comment(&state.db, new_comment, recipe_id, user_id).await?;
+    Ok(HttpResponse::Ok().json(comment))
 }
 pub async fn delete_comment(
     state: web::Data<AppState>,
@@ -270,8 +273,8 @@ pub async fn delete_comment(
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let comment_id = path.into_inner();
-    recipe_service::delete_comment(&state.db, comment_id, auth).await?;
-    Ok(HttpResponse::Ok().json({}))
+    let comment = recipe_service::delete_comment(&state.db, comment_id, auth).await?;
+    Ok(HttpResponse::Ok().json(comment))
 }
 pub async fn edit_comment(
     state: web::Data<AppState>,
@@ -281,8 +284,8 @@ pub async fn edit_comment(
 ) -> Result<HttpResponse, Error> {
     let comment_id = path.into_inner();
     let edit_comment = body.into_inner();
-    recipe_service::edit_comment(&state.db, comment_id, auth,edit_comment).await?;
-    Ok(HttpResponse::Ok().json({}))
+    let comment = recipe_service::edit_comment(&state.db, comment_id, auth,edit_comment).await?;
+    Ok(HttpResponse::Ok().json(comment))
 }
 pub async fn get_versions(
     state: web::Data<AppState>,
@@ -291,8 +294,8 @@ pub async fn get_versions(
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
-    recipe_service::get_versions(&state.db, recipe_id).await?;
-    Ok(HttpResponse::Ok().json({}))
+    let versions = recipe_service::get_versions(&state.db, recipe_id).await?;
+    Ok(HttpResponse::Ok().json(versions))
 }
 pub async fn get_version(
     state: web::Data<AppState>,
@@ -301,8 +304,8 @@ pub async fn get_version(
 ) -> Result<HttpResponse, Error> {
     let (recipe_id, version_id) = path.into_inner();
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
-    recipe_service::get_version(&state.db, recipe_id,version_id).await?;
-    Ok(HttpResponse::Ok().json({}))
+    let version = recipe_service::get_version(&state.db, recipe_id,version_id).await?;
+    Ok(HttpResponse::Ok().json(version))
 }
 pub async fn restore_version(
     state: web::Data<AppState>,
