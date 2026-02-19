@@ -241,9 +241,10 @@ pub async fn get_rating(
 }
 pub async fn get_comments(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    recipe_service::get_comments(&state.db, recipe_id).await?;
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn add_comment(

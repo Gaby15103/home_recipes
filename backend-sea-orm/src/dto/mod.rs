@@ -15,4 +15,5 @@ pub mod upload_dto;
 pub mod ingredient_group_dto;
 pub mod step_group_dto;
 pub mod language_dto;
+pub mod domment_dto;
 

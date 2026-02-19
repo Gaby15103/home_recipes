@@ -1,3 +1,4 @@
+use crate::dto::domment_dto::CommentDto;
 use crate::dto::ingredient_group_dto::IngredientGroupViewDto;
 use crate::dto::recipe_dto::{
     CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
@@ -7,9 +8,15 @@ use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
 use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
-use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_ingredients, recipe_ratings, recipe_tags, recipe_translations, recipes};
+use entity::{
+    favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics,
+    recipe_comments, recipe_ingredients, recipe_ratings, recipe_tags, recipe_translations, recipes,
+};
 use migration::JoinType;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, SelectExt, Set, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, SelectExt, Set,
+    TransactionTrait,
+};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
@@ -446,10 +453,10 @@ pub async fn toogle_favorite(
     db: &DatabaseConnection,
     recipe_id: Uuid,
     user_id: Uuid,
-)-> Result<bool, Error> {
+) -> Result<bool, Error> {
     let favorited = favorites::Entity::find()
-    .filter(favorites::Column::RecipeId.eq(recipe_id))
-    .filter(favorites::Column::UserId.eq(user_id))
+        .filter(favorites::Column::RecipeId.eq(recipe_id))
+        .filter(favorites::Column::UserId.eq(user_id))
         .exists(db)
         .await?;
     if favorited {
@@ -459,13 +466,14 @@ pub async fn toogle_favorite(
             .exec(db)
             .await?;
         Ok(!(res.rows_affected > 0))
-    }else {
-        favorites::ActiveModel{
+    } else {
+        favorites::ActiveModel {
             user_id: Set(user_id),
             recipe_id: Set(recipe_id),
             ..Default::default()
-        }.save(db)
-            .await?;
+        }
+        .save(db)
+        .await?;
         Ok(true)
     }
 }
@@ -474,7 +482,7 @@ pub async fn rate(
     recipe_id: Uuid,
     user_id: Uuid,
     rating: i32,
-)-> Result<(), Error> {
+) -> Result<(), Error> {
     let existing_rating = recipe_ratings::Entity::find()
         .filter(recipe_ratings::Column::RecipeId.eq(recipe_id))
         .filter(recipe_ratings::Column::UserId.eq(user_id))
@@ -484,21 +492,19 @@ pub async fn rate(
         let mut active: recipe_ratings::ActiveModel = model.into();
         active.rating = Set(rating);
         active.insert(db).await?;
-    }else {
-        recipe_ratings::ActiveModel{
+    } else {
+        recipe_ratings::ActiveModel {
             recipe_id: Set(recipe_id),
             user_id: Set(user_id),
             rating: Set(rating),
             ..Default::default()
-        }.insert(db).await?;
+        }
+        .insert(db)
+        .await?;
     }
     Ok(())
 }
-pub async fn unrate(
-    db: &DatabaseConnection,
-    recipe_id: Uuid,
-    user_id: Uuid,
-)-> Result<(), Error> {
+pub async fn unrate(db: &DatabaseConnection, recipe_id: Uuid, user_id: Uuid) -> Result<(), Error> {
     let res = recipe_ratings::Entity::delete_many()
         .filter(recipe_ratings::Column::RecipeId.eq(recipe_id))
         .filter(recipe_ratings::Column::UserId.eq(user_id))
@@ -506,10 +512,7 @@ pub async fn unrate(
         .await?;
     Ok(())
 }
-pub async fn get_rating(
-    db: &DatabaseConnection,
-    recipe_id: Uuid,
-)->Result<f32, Error> {
+pub async fn get_rating(db: &DatabaseConnection, recipe_id: Uuid) -> Result<f32, Error> {
     let res: Option<f64> = recipe_ratings::Entity::find()
         .select_only()
         .column_as(recipe_ratings::Column::Rating.avg(), "avg_rating")
@@ -519,4 +522,16 @@ pub async fn get_rating(
         .await?;
 
     Ok(res.unwrap_or(0.0) as f32)
+}
+pub async fn get_comments(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+) -> Result<Vec<CommentDto>, Error> {
+    let comments = recipe_comments::Entity::find()
+        .filter(recipe_comments::Column::RecipeId.eq(recipe_id))
+        .order_by_asc(recipe_comments::Column::CreatedAt)
+        .all(db)
+        .await?;
+    let dtos = comments.into_iter().map(CommentDto::from).collect();
+    Ok(dtos)
 }

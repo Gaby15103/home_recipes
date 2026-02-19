@@ -9,6 +9,7 @@ use std::fs;
 use std::ops::Deref;
 use actix::fut::ok;
 use uuid::Uuid;
+use crate::dto::domment_dto::CommentDto;
 use crate::dto::user_dto::UserResponseDto;
 
 pub async fn get_all(
@@ -217,4 +218,10 @@ pub async fn get_rating(
     recipe_id: Uuid,
 )->Result<f32, Error> {
     recipe_repository::get_rating(db, recipe_id).await
+}
+pub async fn get_comments(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+)->Result<Vec<CommentDto>, Error> {
+    recipe_repository::get_comments(db, recipe_id).await
 }
