@@ -20,15 +20,21 @@ pub struct CreateCommentDto {
     pub recipe_id: Uuid,
     pub user_id: Uuid,
     pub parent_id: Option<Uuid>,
+    pub content: String,
 }
 impl From<recipe_comments::Model> for CommentDto {
     fn from(value: recipe_comments::Model) -> Self {
+        let display_content = if value.deleted_at.is_some() {
+            "This comment has been deleted.".to_string()
+        } else {
+            value.content
+        };
         Self {
             id: value.id,
             recipe_id: value.recipe_id,
             user_id: value.user_id.unwrap_or_else(Uuid::nil),
             parent_id: value.parent_id,
-            content: value.content,
+            content: display_content,
             created_at: value.created_at.with_timezone(&Utc),
             edited_at: value.edited_at
                 .map(|dt| dt.with_timezone(&Utc))

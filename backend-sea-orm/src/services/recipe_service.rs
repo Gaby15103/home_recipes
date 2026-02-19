@@ -9,7 +9,7 @@ use std::fs;
 use std::ops::Deref;
 use actix::fut::ok;
 use uuid::Uuid;
-use crate::dto::domment_dto::CommentDto;
+use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::user_dto::UserResponseDto;
 
 pub async fn get_all(
@@ -224,4 +224,12 @@ pub async fn get_comments(
     recipe_id: Uuid,
 )->Result<Vec<CommentDto>, Error> {
     recipe_repository::get_comments(db, recipe_id).await
+}
+pub async fn add_comment(
+    db: &DatabaseConnection,
+    new_comment: CreateCommentDto,
+    recipe_id: Uuid,
+    user_id: Uuid,
+)->Result<CommentDto, Error> {
+    recipe_repository::add_comment(db,new_comment, recipe_id, user_id).await
 }

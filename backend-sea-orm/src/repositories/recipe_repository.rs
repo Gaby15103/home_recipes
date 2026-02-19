@@ -1,4 +1,4 @@
-use crate::dto::domment_dto::CommentDto;
+use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::ingredient_group_dto::IngredientGroupViewDto;
 use crate::dto::recipe_dto::{
     CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
@@ -534,4 +534,20 @@ pub async fn get_comments(
         .await?;
     let dtos = comments.into_iter().map(CommentDto::from).collect();
     Ok(dtos)
+}
+pub async fn add_comment(
+    db: &DatabaseConnection,
+    new_comment: CreateCommentDto,
+    recipe_id: Uuid,
+    user_id: Uuid,
+)->Result<CommentDto, Error> {
+    let res = recipe_comments::ActiveModel{
+        recipe_id: Set(recipe_id),
+        user_id: Set(Some(user_id)),
+        parent_id: Set(new_comment.parent_id),
+        content: Set(new_comment.content),
+        ..Default::default()
+    }.insert(db).await?;
+    let dto = CommentDto::from(res);
+    Ok(dto)
 }

@@ -11,6 +11,7 @@ use sea_orm::sqlx::query;
 use tokio::count;
 use validator::Validate;
 use crate::dto::auth_dto::LoginRequestDto;
+use crate::dto::comment_dto::CreateCommentDto;
 use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
@@ -248,6 +249,25 @@ pub async fn get_comments(
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn add_comment(
+    state: web::Data<AppState>,
+    path: web::Path<Uuid>,
+    body: web::Json<CreateCommentDto>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    let new_comment = body.into_inner();
+    let recipe_id = path.into_inner();
+    let user_id = auth.user.id.clone();
+    recipe_service::add_comment(&state.db, new_comment, recipe_id, user_id).await?;
+    Ok(HttpResponse::Ok().json({}))
+}
+pub async fn delete_comment(
+    state: web::Data<AppState>,
+    query: Query<GetAllRecipesByPageQuery>,
+    req: HttpRequest
+) -> Result<HttpResponse, Error> {
+    Ok(HttpResponse::Ok().json({}))
+}
+pub async fn edit_comment(
     state: web::Data<AppState>,
     query: Query<GetAllRecipesByPageQuery>,
     req: HttpRequest
