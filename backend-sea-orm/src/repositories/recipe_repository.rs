@@ -7,10 +7,7 @@ use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
 use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
-use entity::{
-    favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics,
-    recipe_ingredients, recipe_tags, recipe_translations, recipes,
-};
+use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_ingredients, recipe_ratings, recipe_tags, recipe_translations, recipes};
 use migration::JoinType;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, SelectExt, Set, TransactionTrait};
 use sea_orm::{DatabaseConnection, EntityTrait};
@@ -471,4 +468,29 @@ pub async fn toogle_favorite(
             .await?;
         Ok(true)
     }
+}
+pub async fn rate(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Uuid,
+    rating: i32,
+)-> Result<(), Error> {
+    let existing_rating = recipe_ratings::Entity::find()
+        .filter(recipe_ratings::Column::RecipeId.eq(recipe_id))
+        .filter(recipe_ratings::Column::UserId.eq(user_id))
+        .one(db)
+        .await?;
+    if let Some(model) = existing_rating {
+        let mut active: recipe_ratings::ActiveModel = model.into();
+        active.rating = Set(rating);
+        active.insert(db).await?;
+    }else {
+        recipe_ratings::ActiveModel{
+            recipe_id: Set(recipe_id),
+            user_id: Set(user_id),
+            rating: Set(rating),
+            ..Default::default()
+        }.insert(db).await?;
+    }
+    Ok(())
 }

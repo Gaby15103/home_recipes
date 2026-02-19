@@ -197,3 +197,11 @@ pub async fn toogle_favorite(
 )->Result<bool, Error> {
     recipe_repository::toogle_favorite(db, recipe_id, user_id).await
 }
+pub async fn rate(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Uuid,
+    rating: i32
+)->Result<(), Error> {
+    recipe_repository::rate(db,recipe_id, user_id, rating).await
+}

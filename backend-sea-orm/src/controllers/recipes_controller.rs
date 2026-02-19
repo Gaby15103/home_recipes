@@ -211,9 +211,14 @@ pub async fn favorite(
 }
 pub async fn rate(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
+    auth: AuthenticatedUser,
+    body: Json<i32>,
 ) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    let user_id = auth.user.id.clone();
+    let rating = body.into_inner();
+    recipe_service::rate(&state.db,recipe_id, user_id, rating).await?;
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn unrate(
