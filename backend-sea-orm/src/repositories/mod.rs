@@ -10,4 +10,5 @@ pub mod ingredient_repository;
 pub mod step_group_repository;
 pub mod step_repository;
 pub mod language_repository;
+pub mod recipe_version_repository;
 

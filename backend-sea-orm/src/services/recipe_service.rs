@@ -1,16 +1,14 @@
 use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, RecipeDto, RecipeEditorDto, RecipeFilter, RecipeFilterByPage, RecipeResponse, RecipeViewDto};
 use crate::dto::tag_dto::TagDto;
 use crate::errors::Error;
-use crate::repositories::{
-    ingredient_group_repository, recipe_repository, recipe_translation_repository,
-    step_group_repository, step_repository, tag_repository,
-};
+use crate::repositories::{ingredient_group_repository, recipe_repository, recipe_translation_repository, recipe_version_repository, step_group_repository, step_repository, tag_repository};
 use crate::utils::file_upload::move_file_to_recipes;
 use actix_web::HttpResponse;
 use sea_orm::DatabaseConnection;
 use std::fs;
 use std::ops::Deref;
 use uuid::Uuid;
+use crate::dto::user_dto::UserResponseDto;
 
 pub async fn get_all(
     db: &DatabaseConnection,
@@ -155,11 +153,22 @@ pub async fn update(
     updated_recipe: EditRecipeInput,
     recipe_id: Uuid,
     lang_code: &str,
+    user: UserResponseDto
 ) -> Result<RecipeViewDto, Error> {
+    let original = get_by_id(db, recipe_id, lang_code, true).await?;
     recipe_repository::update(db, updated_recipe, recipe_id, lang_code).await?;
+    match original {
+        RecipeResponse::View(_) =>{} ,
+        RecipeResponse::Editor(original) => {
+            recipe_version_repository::create(db, original, user.id).await?;
+
+        }
+    }
     let result = get_by_id(db, recipe_id, lang_code, false).await?;
     match result {
-        RecipeResponse::View(recipe_view) => Ok(recipe_view),
+        RecipeResponse::View(recipe_view) =>{
+            Ok(recipe_view)
+        } ,
         RecipeResponse::Editor(_) => {
             Err(Error::InternalServerError)
         }

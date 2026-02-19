@@ -162,7 +162,7 @@ pub async fn update(
 
     let lang_code = extract_language(&req);
 
-    let result = recipe_service::update(&state.db, updated_recipe, recipe_id, lang_code.deref()).await?;
+    let result = recipe_service::update(&state.db, updated_recipe, recipe_id, lang_code.deref(), auth.user).await?;
 
     Ok(HttpResponse::Ok().json(result))
 }

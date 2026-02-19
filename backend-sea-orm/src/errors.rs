@@ -206,6 +206,22 @@ impl From<io::Error> for Error {
     }
 }
 
+/* ----- serde ----- */
+
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Self {
+        if err.is_data() || err.is_syntax() {
+            Error::BadRequest(json!({
+                "error": "Malformed JSON data",
+                "detail": err.to_string()
+            }))
+        } else {
+            Error::InternalServerError
+        }
+    }
+}
+
 /* ----- Hasher ----- */
 
 impl From<libreauth::pass::Error> for Error {
