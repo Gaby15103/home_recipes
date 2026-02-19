@@ -7,7 +7,19 @@ import {useRoute} from "vue-router";
 const route = useRoute();
 
 const breadcrumbs = computed(() => {
-  return (route.meta.breadcrumb as BreadcrumbItem[]) ?? []
+  const metaBreadcrumbs = route.meta.breadcrumb as BreadcrumbItem[] || []
+
+  return metaBreadcrumbs.map(item => {
+    let title = item.title
+
+    // Check if the title is a param placeholder like :id
+    if (title.startsWith(':')) {
+      const paramName = title.substring(1) // gets "id"
+      title = route.params[paramName] || title
+    }
+
+    return { ...item, title }
+  })
 })
 
 </script>

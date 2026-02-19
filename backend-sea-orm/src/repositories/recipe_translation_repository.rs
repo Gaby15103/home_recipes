@@ -3,6 +3,7 @@ use sea_orm::{EntityTrait, QueryFilter};
 use sea_orm::{DatabaseConnection};
 use uuid::Uuid;
 use entity::{recipe_translations, recipes};
+use crate::dto::recipe_dto::RecipeTranslationDto;
 use crate::errors::Error;
 
 pub async fn find_all(
@@ -21,7 +22,7 @@ pub async fn find_by_id(
         .await?
         .ok_or(sea_orm::DbErr::RecordNotFound("Recipe not found".into()))
 }
-pub async fn find_by_recipe_and_lang(
+pub async fn find_translation(
     db: &DatabaseConnection,
     recipe_id: Uuid,
     requested_lang: &str,
@@ -47,4 +48,15 @@ pub async fn find_by_recipe_and_lang(
         })))?;
 
     Ok(fallback)
+}
+pub async fn find_translations(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+) -> Result<Vec<RecipeTranslationDto>, Error> {
+    let translations = recipe_translations::Entity::find()
+        .filter(recipe_translations::Column::RecipeId.eq(recipe_id))
+        .all(db)
+        .await?;
+    let translations:Vec<RecipeTranslationDto> = translations.into_iter().map(|t| t.into()).collect();
+    Ok(translations)
 }

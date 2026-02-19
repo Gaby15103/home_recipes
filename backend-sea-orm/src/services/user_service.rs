@@ -76,7 +76,7 @@ pub async fn get_favorites(
     let mut dtos = Vec::new();
 
     for recipe in recipes {
-        let translation = recipe_translation_repository::find_by_recipe_and_lang(
+        let translation = recipe_translation_repository::find_translation(
             db,
             recipe.id,
             user.preferences.language.deref(),

@@ -6,6 +6,8 @@ import Filter from "@/components/Recipe/Filter.vue"
 import { debounce } from "lodash-es"
 import {Spinner} from "@/components/ui/spinner";
 import {useI18n} from "vue-i18n";
+import {RouterLink} from "vue-router";
+import {ROUTES} from "@/router/routes.ts";
 const { t, locale } = useI18n()
 const recipes = ref<RecipeView[]>([]);
 const loading = ref(true);
@@ -61,23 +63,26 @@ async function applyFilters() {
     </div>
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      <div
+      <RouterLink
           v-for="recipe in recipes"
           :key="recipe.title + recipe.author_id"
-          class="border rounded shadow hover:shadow-lg transition p-4 flex flex-col"
+          :to="ROUTES.ADMIN.RECIPE.VIEW(recipe.id)"
       >
-        <img :src="$apiUrl+recipe.image_url" class="h-40 w-full mb-4 flex items-center justify-center">
+        <div
+            class="border rounded shadow hover:shadow-lg transition p-4 flex flex-col"
+        >
+          <img :src="$apiUrl+recipe.image_url" class="h-40 w-full mb-4 flex items-center justify-center">
 
-        <h2 class="text-xl font-semibold mb-2">{{ recipe.title }}</h2>
-        <p class="text-gray-600 text-sm mb-2" v-if="recipe.description">
-          {{ recipe.description }}
-        </p>
-        <p class="text-gray-500 text-xs mb-1">{{ t('Admin.recipe.list.servings') }}: {{ recipe.servings }}</p>
-        <p class="text-gray-500 text-xs">
-          {{ t('Admin.recipe.list.prep') }}: {{ recipe.prep_time_minutes }} min | {{ t('Admin.recipe.list.cook') }}: {{ recipe.cook_time_minutes }} min
-        </p>
+          <h2 class="text-xl font-semibold mb-2">{{ recipe.title }}</h2>
+          <p class="text-gray-600 text-sm mb-2" v-if="recipe.description">
+            {{ recipe.description }}
+          </p>
+          <p class="text-gray-500 text-xs mb-1">{{ t('Admin.recipe.list.servings') }}: {{ recipe.servings }}</p>
+          <p class="text-gray-500 text-xs">
+            {{ t('Admin.recipe.list.prep') }}: {{ recipe.prep_time_minutes }} min | {{ t('Admin.recipe.list.cook') }}: {{ recipe.cook_time_minutes }} min
+          </p>
 
-        <div class="mt-2 flex flex-wrap gap-1">
+          <div class="mt-2 flex flex-wrap gap-1">
           <span
               v-for="tag in recipe.tags"
               :key="tag.id"
@@ -85,8 +90,9 @@ async function applyFilters() {
           >
             {{ tag.name }}
           </span>
+          </div>
         </div>
-      </div>
+      </RouterLink>
     </div>
   </div>
 </template>

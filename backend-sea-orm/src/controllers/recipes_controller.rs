@@ -10,7 +10,7 @@ use actix_web::web::Json;
 use sea_orm::sqlx::query;
 use validator::Validate;
 use crate::dto::auth_dto::LoginRequestDto;
-use crate::dto::recipe_dto::{CreateRecipeInput, GetAllRecipesByPageQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
 use crate::errors::Error;
 
 use crate::services::{recipe_service, user_service};
@@ -77,14 +77,23 @@ pub async fn list(
 pub async fn get(
     state: web::Data<AppState>,
     id: web::Path<Uuid>,
+    query: Query<GetRecipeQuery>,
     req: HttpRequest
 ) -> Result<HttpResponse, Error> {
 
+    let include_translations = query.include_translations;
+
     let lang_code = extract_language(&req);
 
-    let recipe = recipe_service::get_by_id(&state.db, id.into_inner(),lang_code.deref()).await?;
-
-    Ok(HttpResponse::Ok().json(recipe))
+    let recipe = recipe_service::get_by_id(&state.db, id.into_inner(),lang_code.deref(),include_translations.unwrap_or_else(|| false)).await?;
+    match recipe {
+        RecipeResponse::View(view_data) => {
+            Ok(HttpResponse::Ok().json(view_data))
+        }
+        RecipeResponse::Editor(view_data) => {
+            Ok(HttpResponse::Ok().json(view_data))
+        }
+    }
 }
 
 pub async fn get_by_page(
@@ -140,7 +149,7 @@ pub async fn update(
     state: web::Data<AppState>,
     req: HttpRequest,
     auth: AuthenticatedUser,
-    input: Json<CreateRecipeInput>,
+    input: Json<EditRecipeInput>,
     path: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
@@ -155,7 +164,7 @@ pub async fn update(
 
     let result = recipe_service::update(&state.db, updated_recipe, recipe_id, lang_code.deref()).await?;
 
-    Ok(HttpResponse::Ok().json({}))
+    Ok(HttpResponse::Ok().json(result))
 }
 pub async fn delete(
     state: web::Data<AppState>,

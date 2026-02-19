@@ -4,8 +4,8 @@ use crate::dto::tag_dto::{InputTag, TagDto};
 use entity::{recipe_translations, recipes};
 use utoipa::ToSchema;
 use validator::Validate;
-use crate::dto::ingredient_group_dto::{IngredientGroupInput, IngredientGroupViewDto};
-use crate::dto::step_group_dto::{StepGroupEditorDto, StepGroupInput, StepGroupViewDto};
+use crate::dto::ingredient_group_dto::{EditIngredientGroupInput, IngredientGroupEditorDto, IngredientGroupInput, IngredientGroupViewDto};
+use crate::dto::step_group_dto::{EditStepGroupInput, StepGroupEditorDto, StepGroupInput, StepGroupViewDto};
 
 #[derive(Serialize, ToSchema)]
 pub struct RecipeDto {
@@ -16,6 +16,7 @@ pub struct RecipeDto {
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RecipeTranslationDto {
+    pub id: Uuid,
     pub language_code: String,
     pub title: String,
     pub description: Option<String>,
@@ -40,17 +41,18 @@ pub struct RecipeViewDto {
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RecipeEditorDto {
     pub id: Uuid,
-    pub translations: RecipeTranslationDto,
-    pub image_url: Option<String>,
-    pub servings: Option<i32>,
-    pub prep_time_minutes: Option<i32>,
-    pub cook_time_minutes: Option<i32>,
-    pub author_id: Uuid,
-    pub author: String,
+    pub primary_language: String,
+    pub translations: Vec<RecipeTranslationDto>,
+    pub image_url: String,
+    pub servings: i32,
+    pub prep_time_minutes: i32,
+    pub cook_time_minutes: i32,
+    pub author_id: Option<Uuid>,
+    pub author: Option<String>,
     pub is_private: bool,
     pub tags: Vec<TagDto>,
-    pub ingredient_groups: Vec<IngredientGroupViewDto>,
-    pub step_groups: Vec<Vec<StepGroupEditorDto>>,
+    pub ingredient_groups: Vec<IngredientGroupEditorDto>,
+    pub step_groups: Vec<StepGroupEditorDto>,
 }
 #[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct CreateRecipeInput {
@@ -70,8 +72,34 @@ pub struct CreateRecipeInput {
     #[validate(nested)]
     pub step_groups: Vec<StepGroupInput>,
 }
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+pub struct EditRecipeInput {
+    pub id: Uuid,
+    pub primary_language: String,
+    #[validate(nested)]
+    pub translations: Vec<EditRecipeTranslationInput>,
+    pub image_url: String,
+    pub servings: i32,
+    pub prep_time_minutes: i32,
+    pub cook_time_minutes: i32,
+    pub author_id: Option<Uuid>,
+    pub author: Option<String>,
+    pub is_private: bool,
+    pub tags: Vec<InputTag>,
+    #[validate(nested)]
+    pub ingredient_groups: Vec<EditIngredientGroupInput>,
+    #[validate(nested)]
+    pub step_groups: Vec<EditStepGroupInput>,
+}
 #[derive(Debug, Serialize, Deserialize, Validate, Clone, ToSchema)]
 pub struct RecipeTranslationInput {
+    pub language_code: String,
+    pub title: String,
+    pub description: String,
+}
+#[derive(Debug, Serialize, Deserialize, Validate, Clone, ToSchema)]
+pub struct EditRecipeTranslationInput {
+    pub id: Option<Uuid>,
     pub language_code: String,
     pub title: String,
     pub description: String,
@@ -131,7 +159,16 @@ pub struct RecipePagination{
     pub page: i32,
     pub per_page: i32,
 }
-
+#[derive(Deserialize)]
+pub struct GetRecipeQuery {
+    pub include_translations: Option<bool>,
+}
+#[derive(Serialize, ToSchema)]
+#[serde(untagged)] // This makes the JSON look like the DTO itself, not { "View": { ... } }
+pub enum RecipeResponse {
+    View(RecipeViewDto),
+    Editor(RecipeEditorDto),
+}
 impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {
     fn from((recipe, translation): (recipes::Model, recipe_translations::Model)) -> Self {
         Self {
@@ -151,6 +188,16 @@ impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {
         }
     }
 }
+impl From<recipe_translations::Model> for RecipeTranslationDto {
+    fn from(model: recipe_translations::Model) -> Self {
+        Self {
+            id: model.id,
+            language_code: model.language_code,
+            title: model.title,
+            description: Option::from(model.description),
+        }
+    }
+}
 impl RecipeViewDto {
     pub fn build(
         recipe: recipes::Model,
@@ -163,6 +210,31 @@ impl RecipeViewDto {
             id: recipe.id,
             title: translation.title,
             description: translation.description,
+            image_url: recipe.image_url,
+            servings: recipe.servings,
+            prep_time_minutes: recipe.prep_time_minutes,
+            cook_time_minutes: recipe.cook_time_minutes,
+            author_id: recipe.author_id,
+            author: recipe.author,
+            is_private: recipe.is_private,
+            tags,
+            ingredient_groups,
+            step_groups,
+        }
+    }
+}
+impl RecipeEditorDto {
+    pub fn build_full(
+        recipe: recipes::Model,
+        translation: Vec<RecipeTranslationDto>,
+        tags: Vec<TagDto>,
+        ingredient_groups: Vec<IngredientGroupEditorDto>,
+        step_groups: Vec<StepGroupEditorDto>,
+    ) -> Self {
+        Self {
+            id: recipe.id,
+            primary_language: recipe.original_language_code,
+            translations: translation,
             image_url: recipe.image_url,
             servings: recipe.servings,
             prep_time_minutes: recipe.prep_time_minutes,

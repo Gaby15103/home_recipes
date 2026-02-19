@@ -104,7 +104,7 @@ const routes = [
                     breadcrumb: [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
                         {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
-                        {title: "Edit"},
+                        {title: ":id"},
                     ],
                 },
             },

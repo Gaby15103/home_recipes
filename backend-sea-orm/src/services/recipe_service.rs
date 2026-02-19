@@ -1,18 +1,16 @@
-use crate::dto::recipe_dto::{
-    CreateRecipeInput, RecipeDto, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
-};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, RecipeDto, RecipeEditorDto, RecipeFilter, RecipeFilterByPage, RecipeResponse, RecipeViewDto};
 use crate::dto::tag_dto::TagDto;
 use crate::errors::Error;
 use crate::repositories::{
     ingredient_group_repository, recipe_repository, recipe_translation_repository,
     step_group_repository, step_repository, tag_repository,
 };
+use crate::utils::file_upload::move_file_to_recipes;
 use actix_web::HttpResponse;
 use sea_orm::DatabaseConnection;
 use std::fs;
 use std::ops::Deref;
 use uuid::Uuid;
-use crate::utils::file_upload::move_file_to_recipes;
 
 pub async fn get_all(
     db: &DatabaseConnection,
@@ -26,7 +24,7 @@ pub async fn get_all(
     if let Some(recipes) = recipes {
         for recipe in recipes {
             // fetch translation (requested lang, fallback if missing)
-            let translation = recipe_translation_repository::find_by_recipe_and_lang(
+            let translation = recipe_translation_repository::find_translation(
                 db,
                 recipe.id,
                 lang_code,
@@ -45,38 +43,55 @@ pub async fn get_by_id(
     db: &DatabaseConnection,
     id: Uuid,
     lang_code: &str,
-) -> Result<RecipeViewDto, Error> {
+    include_translations: bool,
+) -> Result<RecipeResponse, Error> {
     let recipe = recipe_repository::find_by_id(db, id).await?;
-    let recipe_translation = recipe_translation_repository::find_by_recipe_and_lang(
-        db,
-        recipe.id,
-        lang_code,
-        recipe.original_language_code.deref(),
-    )
-    .await?;
     let tags = tag_repository::find_by_recipe(db, recipe.id).await?;
-    let step_group = step_group_repository::find_by_recipe(
-        db,
-        recipe.id,
-        lang_code,
-        &recipe.original_language_code,
-    )
-    .await?;
-    let ingredient_group = ingredient_group_repository::find_by_recipe(
-        db,
-        recipe.id,
-        lang_code,
-        &recipe.original_language_code,
-    )
-    .await?;
 
-    Ok(RecipeViewDto::build(
-        recipe,
-        recipe_translation,
-        tags,
-        ingredient_group,
-        step_group,
-    ))
+    if include_translations {
+        let all_translations = recipe_translation_repository::find_translations(db, id).await?;
+        let step_groups = step_group_repository::find_all_by_recipe(db, id).await?;
+        let ingredient_groups = ingredient_group_repository::find_all_by_recipe(db, id).await?;
+        Ok(RecipeResponse::Editor(RecipeEditorDto::build_full(
+            recipe,
+            all_translations,
+            tags,
+            ingredient_groups,
+            step_groups,
+        )))
+    } else {
+        let recipe_translation = recipe_translation_repository::find_translation(
+            db,
+            recipe.id,
+            lang_code,
+            &recipe.original_language_code,
+        )
+        .await?;
+
+        let step_groups = step_group_repository::find_by_recipe(
+            db,
+            recipe.id,
+            lang_code,
+            &recipe.original_language_code,
+        )
+        .await?;
+
+        let ingredient_groups = ingredient_group_repository::find_by_recipe(
+            db,
+            recipe.id,
+            lang_code,
+            &recipe.original_language_code,
+        )
+        .await?;
+
+        Ok(RecipeResponse::View(RecipeViewDto::build(
+            recipe,
+            recipe_translation,
+            tags,
+            ingredient_groups,
+            step_groups,
+        )))
+    }
 }
 
 pub async fn create(
@@ -118,7 +133,7 @@ pub async fn get_all_by_page(
     if let Some(recipes) = recipes {
         for recipe in recipes {
             // fetch translation (requested lang, fallback if missing)
-            let translation = recipe_translation_repository::find_by_recipe_and_lang(
+            let translation = recipe_translation_repository::find_translation(
                 db,
                 recipe.id,
                 lang_code,
@@ -137,10 +152,16 @@ pub async fn delete(db: &DatabaseConnection, id: Uuid) -> Result<bool, Error> {
 }
 pub async fn update(
     db: &DatabaseConnection,
-    updated_recipe: CreateRecipeInput,
+    updated_recipe: EditRecipeInput,
     recipe_id: Uuid,
     lang_code: &str,
 ) -> Result<RecipeViewDto, Error> {
-    let result = recipe_repository::update(db, updated_recipe, recipe_id, lang_code).await?;
-    Ok(result)
+    recipe_repository::update(db, updated_recipe, recipe_id, lang_code).await?;
+    let result = get_by_id(db, recipe_id, lang_code, false).await?;
+    match result {
+        RecipeResponse::View(recipe_view) => Ok(recipe_view),
+        RecipeResponse::Editor(_) => {
+            Err(Error::InternalServerError)
+        }
+    }
 }

@@ -1,35 +1,57 @@
 ﻿<script setup lang="ts">
 import {ref, onMounted, watch} from "vue";
-import type { RecipeView } from "@/models/Recipe.ts";
+import type {RecipeFilter, RecipeView} from "@/models/Recipe.ts";
 import { getAllRecipes } from "@/api/recipe";
 import {RouterLink} from "vue-router";
 import {Spinner} from "@/components/ui/spinner";
 import { useI18n } from "vue-i18n"
+import {debounce} from "lodash-es";
+import Filter from "@/components/Recipe/Filter.vue";
 const { t, locale } = useI18n()
 // State for recipes
 const recipes = ref<RecipeView[]>([]);
 const loading = ref(true);
 watch(locale, () => {
-  loadRecipes();
+  applyFilters();
 });
-async function loadRecipes(){
+
+const filters = ref<RecipeFilter>({
+  search: null,
+  ingredient: [],
+  tags: [],
+  minPrep: null,
+  maxPrep: null,
+  minCook: null,
+  maxCook: null,
+  minSteps: null,
+  maxSteps: null,
+  dateFrom: null,
+  dateTo: null,
+})
+
+async function applyFilters() {
+  loading.value = true
   try {
-    recipes.value = await getAllRecipes();
+    recipes.value = await getAllRecipes(filters.value, false)
   } catch (err) {
-    console.error("Failed to fetch recipes:", err);
+    console.error("Failed to fetch recipes:", err)
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
+const debouncedApply = debounce(applyFilters, 400)
+watch(filters, debouncedApply, { deep: true })
 // Fetch recipes on mount
 onMounted( () => {
-  loadRecipes()
+  applyFilters()
 });
 </script>
 
 <template>
   <div class="container mx-auto p-4">
     <h1 class="text-3xl font-bold mb-6">{{ t('RecipeList.Title') }}</h1>
+
+    <Filter v-model="filters" />
 
     <div v-if="loading" class="flex justify-center items-center h-32">
       <Spinner />

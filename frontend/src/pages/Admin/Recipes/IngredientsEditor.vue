@@ -50,7 +50,7 @@ function addIngredient(group: IngredientGroupCreate) {
     translations: [],
     quantity: 0,
     unit: IngredientUnit.Gram,
-    note_translations: [],
+    note: [],
     position: group.ingredients.length
   });
   emit("update:modelValue", [...props.modelValue]);
@@ -66,11 +66,11 @@ function getGroupTrans(group: IngredientGroupCreate, langCode: string) {
 
 // Logic to handle the note_translations (which IS an array in your model)
 function getNote(ing: IngredientCreate, lang: string) {
-  if (!ing.note_translations) ing.note_translations = [];
-  let note = ing.note_translations.find(n => n.language_code === lang);
+  if (!ing.note) ing.note = [];
+  let note = ing.note.find(n => n.language_code === lang);
   if (!note) {
     note = { language_code: lang, note: "" };
-    ing.note_translations.push(note);
+    ing.note.push(note);
   }
   return note;
 }
@@ -113,7 +113,7 @@ function syncLang(obj: any) {
         <div class="col-span-5">
           <Label class="text-xs">{{ t('Admin.ingredients.name') }}</Label>
           <Input
-              v-model="getIngTrans(ing, currentLang).title"
+              v-model="getIngTrans(ing, currentLang).name"
               @input="syncLang(ing)"
               :placeholder="`Name in ${currentLang}`"
           />

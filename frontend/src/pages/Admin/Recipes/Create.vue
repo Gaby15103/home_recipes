@@ -18,6 +18,8 @@ import {useI18n} from "vue-i18n";
 import type {Language} from "@/models/Language.ts";
 import {getAllLanguage} from "@/api/Language.ts";
 import {Select, SelectTrigger, SelectValue, SelectItem, SelectGroup, SelectContent} from "@/components/ui/select";
+import {RecipeRoutes} from "@/api";
+import {ROUTES} from "@/router/routes.ts";
 const { t } = useI18n()
 
 const recipe = ref<RecipeCreate>({
@@ -58,7 +60,7 @@ async function submit() {
   console.log("Recipe payload:", recipe.value)
   try {
     const res = await createRecipe(recipe.value)
-    await router.push("/recipe/" + res.id)
+    await router.push(ROUTES.ADMIN.RECIPE.VIEW(res.id))
   } catch (e: any) {
     console.error(e)
   }

@@ -5,7 +5,7 @@
     REGISTER: "/register",
     EMAIL_CONFIRMATION: "/verify",
     RECIPES: "/recipes",
-    RECIPE: (id: string | number) => `/recipe/${id}`,
+    RECIPE: (id: string ) => `/recipe/${id}`,
 
     // Admin
     ADMIN: {
@@ -15,8 +15,8 @@
             BASE: "/admin/recipe",
             LIST: "/admin/recipe/list",
             CREATE: "/admin/recipe/create",
-            VIEW: (id: string | number) =>  `/admin/recipe/${id}`,
-            EDIT: (id: string | number) => `/admin/recipe/edit/${id}`,
+            VIEW: (id: string ) =>  `/admin/recipe/${id}`,
+            EDIT: (id: string ) => `/admin/recipe/edit/${id}`,
             CATEGORIES: "/admin/recipe/categories",
         },
         USER: {

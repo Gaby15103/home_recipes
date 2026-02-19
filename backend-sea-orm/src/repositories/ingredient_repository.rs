@@ -60,7 +60,7 @@ pub async fn create_and_link(
 
     // 4. Handle Note Translations (Specific to this recipe instance)
     let mut display_note = None;
-    if let Some(notes) = input.note_translations {
+    if let Some(notes) = input.note {
         for note_input in notes {
             recipe_ingredient_translations::ActiveModel {
                 recipe_ingredient_id: Set(link.id),
@@ -79,7 +79,8 @@ pub async fn create_and_link(
 
     // 5. Return the View DTO
     Ok(IngredientRecipeViewDto {
-        id: master_ingredient.id,
+        id: link.id,
+        ingredient_id:  master_ingredient.id,
         name: display_name,
         quantity: link.quantity,
         unit: IngredientUnit::from_str(link.unit.deref()).unwrap(),

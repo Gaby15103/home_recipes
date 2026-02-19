@@ -1,10 +1,10 @@
 use crate::dto::ingredient_group_dto::IngredientGroupViewDto;
-use crate::dto::recipe_dto::{CreateRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
 use crate::dto::step_group_dto::StepGroupViewDto;
-use crate::dto::tag_dto::TagDto;
+use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::errors::Error;
 use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
-use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_ingredients, recipe_translations, recipes};
+use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_ingredients, recipe_tags, recipe_translations, recipes};
 use migration::JoinType;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, DeleteResult, PaginatorTrait, Set, TransactionTrait};
 use sea_orm::{DatabaseConnection, EntityTrait};
@@ -23,10 +23,12 @@ pub async fn find_by_query(
 ) -> Result<Option<Vec<recipes::Model>>, Error> {
     let mut query = recipes::Entity::find();
 
-    // 1. The Scope Logic Check
-    // Assuming filter.scope = true means "Public" and IsPrivate = true means "Private"
-    // Adjust the '!' based on your specific UI logic
-    query = query.filter(recipes::Column::IsPrivate.eq(!filter.scope));
+    // 1. Correct Scope Handling
+    // Scope = true (Admin/All), Scope = false (Public Only)
+    if !filter.scope {
+        // If scope is false, we strictly only show public recipes
+        query = query.filter(recipes::Column::IsPrivate.eq(false));
+    }
 
     // 2. Search Text (Only join and filter if search is NOT empty)
     if let Some(s) = &filter.search {
@@ -240,45 +242,43 @@ pub async fn get_favorites(
 }
 pub async fn update(
     db: &DatabaseConnection,
-    updated_recipe: CreateRecipeInput,
+    updated_recipe: EditRecipeInput,
     recipe_id: Uuid,
     lang_code: &str,
-) -> Result<RecipeViewDto, Error> {
+) -> Result<(), Error> {
     // FIX: Clone the borrowed reference into an owned String
     let lang_code_owned = lang_code.to_string();
 
-    db.transaction::<_, RecipeViewDto, Error>(|txn| {
+    db.transaction::<_, (), Error>(|txn| {
         // Clone for use inside the move block
         let lang_code = lang_code_owned.clone();
 
         Box::pin(async move {
-            // 1. Fetch existing base recipe
-            let existing = recipes::Entity::find_by_id(recipe_id)
+            let original_recipe = recipes::Entity::find_by_id(recipe_id)
                 .one(txn)
                 .await?
                 .ok_or(Error::NotFound(json!({"error": "Recipe not found"})))?;
 
-            // 2. Base Recipe: Update ONLY if different
-            let mut active_model: recipes::ActiveModel = existing.clone().into();
+            let mut active_model: recipes::ActiveModel = original_recipe.clone().into();
             let mut base_changed = false;
 
-            if existing.image_url != updated_recipe.image_url {
+            if original_recipe.image_url != updated_recipe.image_url {
                 active_model.image_url = Set(updated_recipe.image_url);
                 base_changed = true;
             }
-            if existing.servings != updated_recipe.servings {
+            if original_recipe.servings != updated_recipe.servings {
                 active_model.servings = Set(updated_recipe.servings);
                 base_changed = true;
             }
-            if existing.prep_time_minutes != updated_recipe.prep_time_minutes {
+            if original_recipe.prep_time_minutes != updated_recipe.prep_time_minutes {
                 active_model.prep_time_minutes = Set(updated_recipe.prep_time_minutes);
                 base_changed = true;
             }
-            if existing.cook_time_minutes != updated_recipe.cook_time_minutes {
+            if original_recipe.cook_time_minutes != updated_recipe.cook_time_minutes {
                 active_model.cook_time_minutes = Set(updated_recipe.cook_time_minutes);
                 base_changed = true;
             }
-            if existing.is_private != updated_recipe.is_private {
+            if original_recipe.is_private != updated_recipe.is_private {
                 active_model.is_private = Set(updated_recipe.is_private);
                 base_changed = true;
             }
@@ -286,34 +286,34 @@ pub async fn update(
             let recipe_model = if base_changed {
                 active_model.update(txn).await?
             } else {
-                existing
+                original_recipe
             };
 
-            // 3. Translations: Sync and Cleanup
-            // Collect incoming codes to know what to keep
-            let incoming_codes: Vec<String> = updated_recipe.translations
+            let incoming_ids: Vec<Uuid> = updated_recipe.translations
                 .iter()
-                .map(|t| t.language_code.clone())
+                .filter_map(|t| t.id)
                 .collect();
 
-            // Delete translations no longer present in the input
             recipe_translations::Entity::delete_many()
                 .filter(recipe_translations::Column::RecipeId.eq(recipe_id))
-                .filter(recipe_translations::Column::LanguageCode.is_not_in(incoming_codes))
+                .filter(recipe_translations::Column::Id.is_not_in(incoming_ids))
                 .exec(txn)
                 .await?;
 
             for trans_input in updated_recipe.translations {
-                let existing_trans = recipe_translations::Entity::find()
-                    .filter(recipe_translations::Column::RecipeId.eq(recipe_id))
-                    .filter(recipe_translations::Column::LanguageCode.eq(&trans_input.language_code))
-                    .one(txn)
-                    .await?;
+                match trans_input.id {
+                    Some(existing_id) => {
+                        let existing_trans = recipe_translations::Entity::find_by_id(existing_id)
+                            .one(txn)
+                            .await?
+                            .ok_or(Error::NotFound(json!({"error": "Translation not found"})))?;
 
-                match existing_trans {
-                    Some(et) => {
-                        if et.title != trans_input.title || et.description != trans_input.description {
-                            let mut trans_active: recipe_translations::ActiveModel = et.into();
+                        if existing_trans.title != trans_input.title
+                            || existing_trans.description != trans_input.description
+                            || existing_trans.language_code != trans_input.language_code
+                        {
+                            let mut trans_active: recipe_translations::ActiveModel = existing_trans.into();
+                            trans_active.language_code = Set(trans_input.language_code);
                             trans_active.title = Set(trans_input.title);
                             trans_active.description = Set(trans_input.description);
                             trans_active.update(txn).await?;
@@ -321,6 +321,7 @@ pub async fn update(
                     }
                     None => {
                         recipe_translations::ActiveModel {
+                            id: Set(Uuid::new_v4()),
                             recipe_id: Set(recipe_id),
                             language_code: Set(trans_input.language_code),
                             title: Set(trans_input.title),
@@ -334,31 +335,33 @@ pub async fn update(
             }
 
             // 4. Sync Tags, Ingredients, and Steps
+            let incoming_existing_tag_ids: Vec<Uuid> = updated_recipe.tags.iter()
+                .filter_map(|t| if let InputTag::Existing { id } = t { Some(*id) } else { None })
+                .collect();
+
+            recipe_tags::Entity::delete_many()
+                .filter(recipe_tags::Column::RecipeId.eq(recipe_id))
+                .filter(recipe_tags::Column::TagId.is_not_in(incoming_existing_tag_ids))
+                .exec(txn).await?;
+
             let inserted_tags = tag_repository::find_or_create_tags(txn, updated_recipe.tags, recipe_id).await?;
 
-            let inserted_ingredient_group = ingredient_group_repository::create_multiple(
-                txn, recipe_id, updated_recipe.ingredient_groups, &recipe_model.original_language_code
+            let incoming_group_ids: Vec<Uuid> = updated_recipe.ingredient_groups.iter().filter_map(|g| g.id).collect();
+
+            ingredient_groups::Entity::delete_many()
+                .filter(ingredient_groups::Column::RecipeId.eq(recipe_id))
+                .filter(ingredient_groups::Column::Id.is_not_in(incoming_group_ids))
+                .exec(txn).await?;
+
+            ingredient_group_repository::update(
+                txn, recipe_id, updated_recipe.ingredient_groups
             ).await?;
 
-            let inserted_step_group = step_group_repository::create_multiple(
-                txn, recipe_id, updated_recipe.step_groups, &recipe_model.original_language_code
+            step_group_repository::update(
+                txn, recipe_id, updated_recipe.step_groups
             ).await?;
 
-            // 5. Return the DTO using the now-owned lang_code
-            let final_trans = recipe_translations::Entity::find()
-                .filter(recipe_translations::Column::RecipeId.eq(recipe_id))
-                .filter(recipe_translations::Column::LanguageCode.eq(&lang_code))
-                .one(txn)
-                .await?
-                .ok_or(Error::InternalServerError)?;
-
-            Ok(RecipeViewDto::build(
-                recipe_model,
-                final_trans,
-                inserted_tags,
-                inserted_ingredient_group,
-                inserted_step_group,
-            ))
+            Ok(())
         })
     })
         .await

@@ -11,7 +11,13 @@ import type {
 } from "@/models/RecipeCreate"
 import { useI18n } from "vue-i18n";
 import type { Language } from "@/models/Language.ts";
+import { getCurrentInstance } from 'vue'
 
+// 1. Get the instance
+const instance = getCurrentInstance()
+
+// 2. Access the property
+const apiUrl = instance?.proxy?.$apiUrl
 const { t } = useI18n()
 
 const props = defineProps<{
@@ -147,6 +153,9 @@ function getImageUrl(step: StepCreate): string | null {
   if (!step.image_url) return null;
   if (step.image_url instanceof File) {
     return URL.createObjectURL(step.image_url);
+  }
+  if (step.image_url.includes("/assets/")){
+    return apiUrl+step.image_url
   }
   return step.image_url as string;
 }

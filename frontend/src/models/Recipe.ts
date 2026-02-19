@@ -1,4 +1,4 @@
-import type {Tag} from "@/models/Tag.ts";
+import type {InputTag, Tag} from "@/models/Tag.ts";
 
 export interface RecipeView {
     id: string;
@@ -17,19 +17,21 @@ export interface RecipeView {
 }
 export interface RecipeEditor {
     id: string;
-    image_url: string;
+    primary_language: string;
+    image_url: string | File | null;
     servings: number;
     prep_time_minutes: number;
     cook_time_minutes: number;
     author: string|null;
     author_id: string|null;
     is_private: boolean;
-    tags: Tag[];
+    tags: Tag[] | InputTag[];
     ingredient_groups: IngredientGroupEditor[];
     step_groups: StepGroupEditor[];
     translations: RecipeTranslation[];
 }
 export interface RecipeTranslation{
+    id: string
     language_code: String;
     title: String;
     description: String;
@@ -48,11 +50,13 @@ export interface IngredientGroupEditor {
     translations: IngredientGroupTranslation[]
 }
 export interface IngredientGroupTranslation{
+    id: string
     language_code: String;
     title: String;
 }
 export interface IngredientRecipeView {
     id: string;
+    ingredient_id: string;
     name: string;
     quantity: number;
     unit: IngredientUnit;
@@ -65,6 +69,7 @@ export interface IngredientView {
 }
 export interface IngredientEditor {
     id: string;
+    ingredient_id: string;
     quantity: number;
     unit: IngredientUnit;
     note: string|null;
@@ -72,6 +77,7 @@ export interface IngredientEditor {
     translations: IngredientTranslation[];
 }
 export interface IngredientTranslation {
+    id: string
     language_code: String;
     name: String;
 }
@@ -99,10 +105,11 @@ export interface StepGroupView {
 export interface StepGroupEditor {
     id: string;
     position: number;
-    steps: StepView[];
+    steps: StepEditor[];
     translations: StepGroupTranslation[];
 }
 export interface StepGroupTranslation {
+    id: string
     language_code: String;
     title: String;
 }
@@ -118,12 +125,13 @@ export interface StepEditor {
     id: string;
     step_group_id: string;
     position: number;
-    image_url: string|null;
+    image_url: string | File | null;
     duration_minutes: number|null;
     translations: StepTranslation[];
 }
 
 export interface StepTranslation {
+    id: string
     language_code: String;
     instruction: String;
 }

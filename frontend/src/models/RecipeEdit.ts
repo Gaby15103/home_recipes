@@ -29,6 +29,7 @@ export interface IngredientGroupEdit {
 
 export interface IngredientEdit {
     id?: string
+    ingredient_id?: string;
     _uid: string
     name: string
     quantity: number

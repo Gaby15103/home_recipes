@@ -55,14 +55,19 @@ pub async fn find_or_create_tag(
         }
     };
 
-    // Link to the recipe in the junction table
-    // We use if_not_exists logic implicitly or handle conflict if necessary
-    let _ = recipe_tags::ActiveModel {
-        recipe_id: Set(recipe_id),
-        tag_id: Set(tag_model.id),
+    let exists = recipe_tags::Entity::find()
+        .filter(recipe_tags::Column::RecipeId.eq(recipe_id))
+        .filter(recipe_tags::Column::TagId.eq(tag_model.id))
+        .one(txn)
+        .await?;
+    if exists.is_none() {
+        let _ = recipe_tags::ActiveModel {
+            recipe_id: Set(recipe_id),
+            tag_id: Set(tag_model.id),
+        }
+        .insert(txn)
+        .await?;
     }
-    .insert(txn)
-    .await?;
 
     Ok(TagDto {
         id: tag_model.id,
@@ -87,17 +92,12 @@ pub async fn find_by_recipe(
     }
     Ok(tags_dto)
 }
-pub async fn get_all(
-    db: &DatabaseConnection,
-)->Result<Vec<TagDto>, Error> {
+pub async fn get_all(db: &DatabaseConnection) -> Result<Vec<TagDto>, Error> {
     let tags = tags::Entity::find().all(db).await?;
     let tags_dto: Vec<TagDto> = tags.into_iter().map(TagDto::from).collect();
     Ok(tags_dto)
 }
-pub async fn create(
-    db: &DatabaseConnection,
-    new_tag: InputTag,
-) -> Result<TagDto, Error> {
+pub async fn create(db: &DatabaseConnection, new_tag: InputTag) -> Result<TagDto, Error> {
     let tag_model = match new_tag {
         InputTag::New { name } => {
             tags::ActiveModel {
@@ -105,22 +105,25 @@ pub async fn create(
                 name: Set(name),
                 ..Default::default()
             }
-                .insert(db)
-                .await?
+            .insert(db)
+            .await?
         }
-        _ => return Err(Error::BadRequest(serde_json::json!({"error": "Expected a new tag name"}))),
+        _ => {
+            return Err(Error::BadRequest(
+                serde_json::json!({"error": "Expected a new tag name"}),
+            ));
+        }
     };
 
     Ok(TagDto::from(tag_model))
 }
-pub async fn update(
-    db: &DatabaseConnection,
-    updated_tag: TagDto,
-) -> Result<TagDto, Error> {
+pub async fn update(db: &DatabaseConnection, updated_tag: TagDto) -> Result<TagDto, Error> {
     let existing = tags::Entity::find_by_id(updated_tag.id)
         .one(db)
         .await?
-        .ok_or(Error::NotFound(serde_json::json!({"error": "Tag not found"})))?;
+        .ok_or(Error::NotFound(
+            serde_json::json!({"error": "Tag not found"}),
+        ))?;
 
     if existing.name == updated_tag.name {
         return Ok(TagDto::from(existing));

@@ -1,9 +1,14 @@
 import {api} from "./client";
 import {RecipeRoutes} from "./routes";
-import type {RecipeCommentCreate, RecipeCreate, StepImage} from "@/models/RecipeCreate";
-import type {PaginatedRecipes, RecipeView, RecipeComment, RecipeFilter, RecipeRating} from "@/models/Recipe.ts";
-import type {RecipeEdit} from "@/models/RecipeEdit.ts";
-import {editToUpdatePayload} from "@/mappers/recipe.mapper.ts";
+import type {RecipeCommentCreate, RecipeCreate} from "@/models/RecipeCreate";
+import type {
+    PaginatedRecipes,
+    RecipeView,
+    RecipeComment,
+    RecipeFilter,
+    RecipeRating,
+    RecipeEditor
+} from "@/models/Recipe.ts";
 import {uploadSingleFile} from "@/api/upload.ts";
 
 
@@ -43,8 +48,31 @@ export function getAllRecipesByPage(
     return api<PaginatedRecipes>(RecipeRoutes.byPage(), {method: "GET", params});
 }
 
-export function getRecipeById(id: string) {
-    return api<RecipeView>(RecipeRoutes.get(id), {method: "GET"});
+export function getRecipeById(id: string, include_translations: boolean = false)
+{
+    // 1. Construct the path
+    let path = RecipeRoutes.get(id);
+
+    // 2. Append the query parameter
+    // This turns true into "true" and handles the '?' prefix automatically
+    const queryString = new URLSearchParams({
+        include_translations: String(include_translations)
+    }).toString();
+
+    return api<RecipeView>(`${path}?${queryString}`, { method: "GET" });
+}
+export function getRecipeByIdEditor(id: string, include_translations: boolean = false)
+{
+    // 1. Construct the path
+    let path = RecipeRoutes.get(id);
+
+    // 2. Append the query parameter
+    // This turns true into "true" and handles the '?' prefix automatically
+    const queryString = new URLSearchParams({
+        include_translations: String(include_translations)
+    }).toString();
+
+    return api<RecipeEditor>(`${path}?${queryString}`, { method: "GET" });
 }
 
 export async function createRecipe(recipe: RecipeCreate): Promise<RecipeView> {
@@ -69,43 +97,25 @@ export async function createRecipe(recipe: RecipeCreate): Promise<RecipeView> {
 
 export async function updateRecipe(
     id: string,
-    recipe: RecipeEdit,
-    stepImages: StepImage[],
-    mainImageFile?: File | null
+    recipe: RecipeEditor
 ) {
-    const form = new FormData()
-    const payload = editToUpdatePayload(recipe)
-
-    form.append("recipe", new Blob([JSON.stringify({ recipe: payload })], { type: "application/json" }))
-
-    if (mainImageFile) {
-        form.append("main_image", mainImageFile)
+    if (recipe.image_url instanceof File){
+        let res = await uploadSingleFile(recipe.image_url)
+        recipe.image_url = res.temp_id
+    }
+    for(let step_group of recipe.step_groups){
+        for(let step of step_group.steps){
+            if (step.image_url instanceof File){
+                let res = await uploadSingleFile(step.image_url)
+                step.image_url = res.temp_id
+            }
+        }
     }
 
-    if (stepImages.length > 0) {
-        stepImages.forEach((img) => form.append("step_images[]", img.image_file))
-    }
-
-    form.append(
-        "step_images_meta",
-        new Blob([JSON.stringify(
-            stepImages.length > 0
-                ? stepImages.map((img, i) => ({
-                    group_position: img.group_position,
-                    step_position: img.step_position,
-                    index: i,
-                }))
-                : []
-        )], { type: "application/json" })
-    )
-
-    return api(RecipeRoutes.update(id), {
+    return api<RecipeView>(RecipeRoutes.update(id), {
         method: "PUT",
-        data: form,
-        headers: {
-            "Content-Type": "multipart/form-data",
-        },
-    })
+        data: recipe,
+    });
 }
 
 export function deleteRecipe(id: string) {

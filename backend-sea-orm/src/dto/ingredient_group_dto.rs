@@ -3,7 +3,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 use entity::{ingredient_group_translations, ingredient_groups, ingredients};
-use crate::dto::ingredient_dto::{IngredientEditorDto, IngredientInput, IngredientRecipeViewDto};
+use crate::dto::ingredient_dto::{EditIngredientInput, IngredientEditorDto, IngredientInput, IngredientRecipeViewDto};
 
 #[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct IngredientGroupInput {
@@ -12,9 +12,24 @@ pub struct IngredientGroupInput {
     #[validate(nested)]
     pub ingredients: Vec<IngredientInput>,
 }
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+pub struct EditIngredientGroupInput {
+    pub id: Option<Uuid>,
+    pub translations: Vec<EditIngredientGroupTranslationInput>,
+    pub position: i32,
+    #[validate(nested)]
+    pub ingredients: Vec<EditIngredientInput>,
+}
 
 #[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
 pub struct IngredientGroupTranslationInput {
+    pub language_code: String,
+    #[validate(length(min = 1, max = 100))]
+    pub title: String,
+}
+#[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
+pub struct EditIngredientGroupTranslationInput {
+    pub id: Option<Uuid>,
     pub language_code: String,
     #[validate(length(min = 1, max = 100))]
     pub title: String,
