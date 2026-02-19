@@ -14,35 +14,63 @@ export interface StepImage {
     image_preview: string
 }
 
+export interface IngredientGroupTranslationCreate {
+    language_code: string;
+    title: string;
+}
+
+export interface StepGroupTranslationCreate {
+    language_code: string;
+    title: string;
+}
+export interface  StepTranslationCreate {
+    language_code: string
+    instruction: string
+}
 export interface StepCreate {
     position: number
-    instruction: string
+    image_url: string | File | null
+    translations: StepTranslationCreate[]
     duration_minutes: number | null
 }
 
 export interface StepGroupCreate {
-    title: string
+    translations: StepGroupTranslationCreate
     position: number
     steps: StepCreate[]
 }
 
 export interface IngredientGroupCreate {
-    title: string;
+    translations: IngredientGroupTranslationCreate[]
     position: number;
     ingredients: IngredientCreate[];
 }
+export interface IngredientTranslationCreate {
+    language_code: string
+    name: string
+}
 export interface IngredientCreate {
-    name: string;
+    translations: IngredientTranslationCreate[];
     quantity: number;
     unit: IngredientUnit;
-    note: string|null;
+    note: IngredientNoteTranslation[] | null;
     position: number;
 }
+export interface IngredientNoteTranslation {
+    language_code: string
+    note: string
+}
 
+export interface RecipeTranslation{
+    language_code: string
+    title: string
+    description: string
+}
 
 export interface RecipeCreate {
-    title: string
-    description: string | null
+    primary_language: string
+    translations: RecipeTranslation[]
+    image_url: string | File | null
     servings: number
     prep_time_minutes: number
     cook_time_minutes: number

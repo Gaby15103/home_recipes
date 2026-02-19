@@ -1,28 +1,22 @@
 ﻿// composables/useTwoFactorAuth.ts
-import { ref, computed } from 'vue'
-import {
-    getQrCode,
-    getSecretKey,
-    getRecoveryCodes,
-    enableTwoFactor,
-    disableTwoFactor,
-} from '@/api'
+import {computed, ref} from 'vue'
+import {disableTwoFactor, enableTwoFactor, getQrCode, getRecoveryCodes, getSecretKey, type QrCodeResponse,} from '@/api'
 
 const errors = ref<string[]>([])
 const manualSetupKey = ref<string | null>(null)
 const qrCodeSvg = ref<string | null>(null)
 const recoveryCodesList = ref<string[]>([])
+const qrCode = ref<QrCodeResponse | null>(null);
 
 const hasSetupData = computed(() => qrCodeSvg.value !== null && manualSetupKey.value !== null)
 
 export const useTwoFactorAuth = () => {
     const fetchQrCode = async (): Promise<void> => {
         try {
-            const { svg } = await getQrCode()
-            qrCodeSvg.value = svg
+            qrCode.value = await getQrCode();
         } catch {
             errors.value.push('Failed to fetch QR code')
-            qrCodeSvg.value = null
+            qrCode.value = null
         }
     }
 
@@ -88,7 +82,7 @@ export const useTwoFactorAuth = () => {
     }
 
     return {
-        qrCodeSvg,
+        qrCode,
         manualSetupKey,
         recoveryCodesList,
         errors,

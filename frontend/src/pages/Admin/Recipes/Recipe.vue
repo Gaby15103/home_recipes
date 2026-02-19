@@ -7,14 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Recipe } from "@/models/Recipe";
+import type { RecipeView } from "@/models/Recipe";
 import { ROUTES } from "@/router/routes.ts";
 import {useI18n} from "vue-i18n";
 const { t } = useI18n()
 const route = useRoute();
 const router = useRouter();
 
-const recipe = ref<Recipe | null>(null);
+const recipe = ref<RecipeView | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const { locale } = useI18n();
@@ -80,8 +80,8 @@ async function removeRecipe() {
           />
 
           <div class="flex-1 space-y-4">
-            <h1 class="text-3xl font-bold">{{ recipe.translations[0].title }}</h1>
-            <p class="text-gray-600 dark:text-gray-300">{{ recipe.translations[0].description }}</p>
+            <h1 class="text-3xl font-bold">{{ recipe.title }}</h1>
+            <p class="text-gray-600 dark:text-gray-300">{{ recipe.description }}</p>
 
             <!-- Metadata -->
             <div class="grid grid-cols-2 gap-4 text-sm">
@@ -120,13 +120,13 @@ async function removeRecipe() {
         <CardContent class="space-y-6">
           <template v-for="group in recipe.ingredient_groups" :key="group.id">
             <h3 class="font-semibold">
-              {{ group.translations[0].title || t('Admin.recipe.view.ingredients') }} (ID: {{ group.id }})
+              {{ group.title || t('Admin.recipe.view.ingredients') }} (ID: {{ group.id }})
             </h3>
             <ul class="space-y-2">
               <li v-for="ing in group.ingredients" :key="ing.id" class="flex gap-2 items-start">
                 <Checkbox disabled />
                 <span>
-                  <strong>{{ ing.quantity }} {{ ing.unit }}</strong> {{ ing.translations[0].name }}
+                  <strong>{{ ing.quantity }} {{ ing.unit }}</strong> {{ ing.name }}
                   <span class="text-gray-400 ml-1">(ID: {{ ing.id }})</span>
                   <span v-if="ing.note" class="text-red-500 ml-1">*</span>
                 </span>
@@ -144,11 +144,11 @@ async function removeRecipe() {
         <CardContent class="space-y-6">
           <template v-for="group in recipe.step_groups" :key="group.id">
             <h3 class="font-semibold">
-              {{ group.translations[0].title || t('Admin.recipe.steps.title') }} (ID: {{ group.id }})
+              {{ group.title || t('Admin.recipe.steps.title') }} (ID: {{ group.id }})
             </h3>
             <ol class="space-y-4 list-decimal pl-5">
               <li v-for="step in group.steps" :key="step.id">
-                <p>{{ step.translations[0].instruction }}</p>
+                <p>{{ step.instruction }}</p>
                 <p v-if="step.duration_minutes" class="text-sm text-gray-500">{{ step.duration_minutes }} min</p>
                 <img
                     v-if="step.image_url"

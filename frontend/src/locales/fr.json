@@ -7,6 +7,7 @@
   "Logout": "Déconnexion",
   "Profile": "Profil",
   "Admin Dashboard": "Tableau d'administration",
+  "Loading": "chargement...",
   "theme": {
     "toggle": "Changer le thème",
     "light": "Clair",
@@ -139,6 +140,13 @@
       "Reply": "Répondre"
     }
   },
+  "Ingredients": {
+    "no_match": "aucun ingredients trouvée",
+    "search_placeholder": "Search ingredients...",
+    "suggestions": "Suggestions",
+    "selected_count": "{count} ingredients selectionné",
+    "selected_title": "Ingredients selectionné"
+  },
   "Admin": {
     "common": {
       "cancel": "Annuler",
@@ -180,7 +188,9 @@
         "prepTime": "Temps de préparation (min)",
         "cookTime": "Temps de cuisson (min)",
         "image": "Image de la recette",
-        "private": "Recette privée"
+        "private": "Recette privée",
+        "primaryLanguage": "Langage Principale",
+        "switchLanguage": "Changer de langue"
       },
 
       "placeholders": {
@@ -213,6 +223,7 @@
       "groupTitle": "Titre du groupe",
       "addIngredient": "Ajouter ingrédient",
       "name": "Nom",
+      "unit": "Unité",
       "quantity": "Quantité",
       "note": "Note (optionnel)",
       "remove": "Retirer",

@@ -10,6 +10,7 @@ import {useI18n} from "vue-i18n";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import TagsMultiSelect from "@/components/Recipe/TagsMultiSelect.vue";
+import IngredientMultiSelect from "@/components/Recipe/IngredientMultiSelect.vue";
 const { t } = useI18n()
 const props = defineProps<{
   modelValue: RecipeFilter
@@ -27,7 +28,7 @@ const filters = computed({
 function reset() {
   emit("update:modelValue", {
     search: "",
-    ingredient: "",
+    ingredient: [],
     tags: [],
     minPrep: null,
     maxPrep: null,
@@ -50,10 +51,7 @@ function reset() {
         :placeholder="t('Admin.filters.search')"
     />
 
-    <Input
-        v-model="filters.ingredient"
-        :placeholder="t('Admin.filters.ingredient')"
-    />
+    <IngredientMultiSelect :model-value="filters.ingredient"/>
     <Button variant="ghost" @click="reset">
       {{ t('Admin.filters.reset') }}
     </Button>

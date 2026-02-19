@@ -1,8 +1,9 @@
 ﻿use std::fmt;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize,ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum IngredientUnit {
     #[serde(alias = "g", alias = "gram", alias = "grams")]

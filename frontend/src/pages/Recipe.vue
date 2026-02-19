@@ -11,7 +11,7 @@ import {Button} from "@/components/ui/button";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Switch} from "@/components/ui/switch";
 import {Label} from '@/components/ui/label'
-import type {Recipe, RecipeComment, RecipeRating} from "@/models/Recipe.ts";
+import type {RecipeView, RecipeComment, RecipeRating} from "@/models/Recipe.ts";
 import type {RecipeCommentCreate} from "@/models/RecipeCreate.ts";
 import {useAuthStore} from "@/stores/auth.ts";
 import CommentThread from "@/components/TextArea/CommentEditor/CommentThread.vue";
@@ -23,7 +23,7 @@ const route = useRoute();
 const highlighted = ref<string | null>(null);
 const showStepImages = ref(true);
 
-const recipe = ref<Recipe | null>(null);
+const recipe = ref<RecipeView | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
@@ -86,10 +86,12 @@ async function loadComment(){
 
   }
 }
-onMounted(() => {
-  loadRecipe()
-  loadData()
-  loadComment()
+onMounted(async () => {
+  await loadRecipe()
+  await Promise.all([
+    loadData(),
+    loadComment()
+  ])
 });
 
 watch(
@@ -136,7 +138,7 @@ async function toggleFavorite() {
 async function postComment() {
   if (!recipe.value || !newComment.value.content.trim() || !authStore.user) return;
   newComment.value.user_id = authStore.user.id;
-  console.log("fuck you")
+  newComment.value.recipe_id = recipe.value.id;
   const added = await addComment(recipe.value.id, newComment.value);
   comments.value.push(added);
   newComment.value = {
@@ -167,13 +169,13 @@ async function postComment() {
           <div class="shrink-0 md:w-1/2 rounded-xl overflow-hidden border dark:border-gray-700">
             <img
                 :src="$apiUrl + recipe.image_url"
-                :alt="recipe.translations[0].title"
+                :alt="recipe.title"
                 class="w-full h-full object-cover"
             />
           </div>
           <div class="flex-1 flex flex-col justify-between space-y-4">
             <div class="space-y-2">
-              <h1 class="text-4xl font-serif font-bold leading-tight">{{ recipe.translations[0].title }}</h1>
+              <h1 class="text-4xl font-serif font-bold leading-tight">{{ recipe.title }}</h1>
 
               <!-- Rating -->
               <div v-if="rating" class="flex items-center gap-2">
@@ -208,7 +210,7 @@ async function postComment() {
               </ul>
 
               <!-- Description -->
-              <p class="text-gray-700 dark:text-gray-300">{{ recipe.translations[0].description }}</p>
+              <p class="text-gray-700 dark:text-gray-300">{{ recipe.description }}</p>
 
               <!-- Tags -->
               <div v-if="recipe.tags?.length" class="mt-2">
@@ -257,8 +259,8 @@ async function postComment() {
         </CardHeader>
         <CardContent class="space-y-10 mb-10">
           <template v-for="group in recipe.ingredient_groups" :key="group.position">
-            <div v-if="group.translations[0].title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
-              {{ group.translations[0].title }}
+            <div v-if="group.title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
+              {{ group.title }}
             </div>
             <ul class="space-y-2">
               <li
@@ -295,15 +297,15 @@ async function postComment() {
         </CardHeader>
         <CardContent class="space-y-10 mb-10">
           <template v-for="group in recipe.step_groups" :key="group.position">
-            <div v-if="group.translations[0].title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
-              {{ group.translations[0].title }}
+            <div v-if="group.title" class="font-semibold text-gray-800 dark:text-gray-200 mb-1">
+              {{ group.title }}
             </div>
             <ul class="pl-5 space-y-4">
               <li v-for="step in group.steps" :key="step.position" class="space-y-3">
                 <div class="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
                   <div>
                     <Checkbox class="scale-150 m-2"/>
-                    {{ step.translations[0].instruction }}
+                    {{ step.instruction }}
                   </div>
                   <span v-if="step.duration_minutes" class="text-sm text-gray-500 dark:text-gray-400 ml-1">
                       ({{ step.duration_minutes }} min)

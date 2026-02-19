@@ -50,7 +50,7 @@ const submit = handleSubmit(async (values) => {
     if (!res.user)
       return
 
-    authStore.setUser(res.user.user)
+    authStore.setUser(res.user)
     await router.push(ROUTES.HOME)
   } catch (e: any) {
     error.value = e.message || t("auth.login.error.failed")

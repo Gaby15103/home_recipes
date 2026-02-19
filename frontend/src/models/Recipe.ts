@@ -1,36 +1,75 @@
-import type {Tag} from "@/models/Tag.ts";
+import type {InputTag, Tag} from "@/models/Tag.ts";
 
-export interface Recipe {
+export interface RecipeView {
     id: string;
+    title: string;
+    description: string;
     image_url: string;
+    servings: number;
+    prep_time_minutes: number;
+    cook_time_minutes: number;
+    author_id: string|null;
+    author: string|null;
+    is_private: boolean;
+    tags: Tag[];
+    ingredient_groups: IngredientGroupView[];
+    step_groups: StepGroupView[];
+}
+export interface RecipeEditor {
+    id: string;
+    primary_language: string;
+    image_url: string | File | null;
     servings: number;
     prep_time_minutes: number;
     cook_time_minutes: number;
     author: string|null;
     author_id: string|null;
     is_private: boolean;
-    tags: Tag[];
-    ingredient_groups: IngredientGroup[];
-    step_groups: StepGroup[];
+    tags: Tag[] | InputTag[];
+    ingredient_groups: IngredientGroupEditor[];
+    step_groups: StepGroupEditor[];
     translations: RecipeTranslation[];
 }
 export interface RecipeTranslation{
+    id: string
     language_code: String;
     title: String;
     description: String;
 }
-export interface IngredientGroup {
+export interface IngredientGroupView {
+    id: string;
+    title: string
+    recipe_id: string;
+    position: number;
+    ingredients: IngredientRecipeView[];
+}
+export interface IngredientGroupEditor {
     id: string;
     position: number;
-    ingredients: Ingredient[];
+    ingredients: IngredientEditor[];
     translations: IngredientGroupTranslation[]
 }
 export interface IngredientGroupTranslation{
+    id: string
     language_code: String;
     title: String;
 }
-export interface Ingredient {
+export interface IngredientRecipeView {
     id: string;
+    ingredient_id: string;
+    name: string;
+    quantity: number;
+    unit: IngredientUnit;
+    note: string|null;
+    position: number;
+}
+export interface IngredientView {
+    id: string;
+    name: string;
+}
+export interface IngredientEditor {
+    id: string;
+    ingredient_id: string;
     quantity: number;
     unit: IngredientUnit;
     note: string|null;
@@ -38,6 +77,7 @@ export interface Ingredient {
     translations: IngredientTranslation[];
 }
 export interface IngredientTranslation {
+    id: string
     language_code: String;
     name: String;
 }
@@ -55,33 +95,50 @@ export enum IngredientUnit {
     Tablespoon = "tablespoon",
     Cup = "cup",
 }
-export interface StepGroup {
+export interface StepGroupView {
+    id: string;
+    title: string;
+    recipe_id: string;
+    position: number;
+    steps: StepView[];
+}
+export interface StepGroupEditor {
     id: string;
     position: number;
-    steps: Step[];
+    steps: StepEditor[];
     translations: StepGroupTranslation[];
 }
 export interface StepGroupTranslation {
+    id: string
     language_code: String;
     title: String;
 }
-export interface Step {
+export interface StepView {
     id: string;
+    instruction: string;
     step_group_id: string;
     position: number;
     image_url: string|null;
+    duration_minutes: number|null;
+}
+export interface StepEditor {
+    id: string;
+    step_group_id: string;
+    position: number;
+    image_url: string | File | null;
     duration_minutes: number|null;
     translations: StepTranslation[];
 }
 
 export interface StepTranslation {
+    id: string
     language_code: String;
     instruction: String;
 }
 
 export interface RecipeFilter {
     search: string | null,            // name / description
-    ingredient: string | null,
+    ingredient: IngredientRecipeView[],
     tags: Tag[],
     minPrep: number | null,
     maxPrep: number | null,
@@ -111,10 +168,10 @@ export interface GetRecipesParams {
     sort?: string;
 }
 export interface PaginatedRecipes {
-    data: Recipe[]
+    data: RecipeView[]
     total: number
     page: number
-    perPage: number
+    per_page: number
 }
 export interface RecipeComment {
     id: string;

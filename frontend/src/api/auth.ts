@@ -5,7 +5,7 @@ import type { User } from "@/models/User";
 
 // -------- AUTH --------
 export function login(email: string, password: string) {
-    const payload: LoginRequest = { user: { email, password } };
+    const payload: LoginRequest = { email, password };
     return api<LoginResponse>(AuthRoutes.login(), { method: "POST", data: payload });
 }
 
@@ -31,7 +31,7 @@ export function logout() {
 
 // -------- USER --------
 export function getCurrentUser() {
-    return api<{ user: User }>(UserRoutes.me(), { method: "GET" });
+    return api<User>(UserRoutes.me(), { method: "GET" });
 }
 
 export function updateCurrentUser(user: Partial<User>) {

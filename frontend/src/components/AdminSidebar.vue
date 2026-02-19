@@ -12,12 +12,17 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import {Book, Folder, LayoutGrid} from 'lucide-vue-next';
+import {Book, Folder, Home, LayoutGrid} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import NavLink from "@/components/NavLink.vue";
 import { ROUTES } from "@/router/routes";
 
 const mainNavItems: NavItem[] = [
+  {
+    title: 'Return to the client',
+    href: ROUTES.HOME,
+    icon: Home,
+  },
   {
     title: 'Dashboard',
     href: ROUTES.ADMIN.DASHBOARD,

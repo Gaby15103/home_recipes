@@ -33,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type {Recipe, Tag} from '@/models/Recipe'
+import type {RecipeView, Tag} from '@/models/Recipe'
 import {Badge} from "@/components/ui/badge";
 import {
   Tooltip,
@@ -45,7 +45,7 @@ import {ROUTES} from "@/router/routes.ts";
 import {useI18n} from "vue-i18n";
 const { t } = useI18n()
 const props = defineProps<{
-  recipes: Recipe[]
+  recipes: RecipeView[]
   page: number
   perPage: number
   total: number
@@ -60,7 +60,7 @@ const emit = defineEmits<{
 
 // ------------------------- Reusable dropdown template -------------------------
 const [DefineTemplate, ReuseTemplate] = createReusableTemplate<{
-  recipe: Recipe
+  recipe: RecipeView
   onExpand: () => void
 }>()
 
@@ -69,7 +69,8 @@ function copyId(id: string) {
 }
 
 // ------------------------- Table columns -------------------------
-const columns: ColumnDef<Recipe>[] = [
+// ------------------------- Table columns -------------------------
+const columns: ColumnDef<RecipeView>[] = [
   {
     id: 'select',
     header: ({table}) => h(Checkbox, {
@@ -87,11 +88,11 @@ const columns: ColumnDef<Recipe>[] = [
   },
 
   {
-    accessorFn: (row: Recipe) => row.translations[0]?.title ?? '—',
-    id: 'title',
+    // Updated: Uses direct key from your JSON
+    accessorKey: 'title',
     header: t('Admin.table.title'),
     cell: ({row}) => {
-      const title = row.getValue('title') as string
+      const title = row.getValue('title') as string || '—'
 
       return h(
           TooltipProvider,
@@ -136,7 +137,11 @@ const columns: ColumnDef<Recipe>[] = [
   {
     accessorKey: 'cook_time_minutes',
     header: t('Admin.table.cookTime'),
-    cell: ({row}) => `${row.getValue('cook_time_minutes')} ${t('recipe.meta.minutes')}`,
+    // Added safety check for 0 or null
+    cell: ({row}) => {
+      const time = row.getValue('cook_time_minutes')
+      return time !== undefined ? `${time} ${t('recipe.meta.minutes')}` : '—'
+    },
   },
 
   {
@@ -197,12 +202,18 @@ const columns: ColumnDef<Recipe>[] = [
 
 
 const table = useVueTable({
+  // Use a getter with a fallback array
   get data() {
-    return props.recipes
+    return props.recipes ?? []
   },
   columns,
   manualPagination: true,
-  pageCount: Math.ceil(props.total / props.perPage),
+
+  // CRITICAL: Ensure this never returns NaN
+  get pageCount() {
+    if (!props.total || !props.perPage) return 0
+    return Math.ceil(props.total / props.perPage)
+  },
 
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
@@ -212,8 +223,9 @@ const table = useVueTable({
   state: {
     get pagination() {
       return {
-        pageIndex: props.page - 1,
-        pageSize: props.perPage,
+        // Page is 1-indexed from props, but 0-indexed in TanStack
+        pageIndex: Math.max(0, props.page - 1),
+        pageSize: props.perPage || 10,
       }
     },
   },

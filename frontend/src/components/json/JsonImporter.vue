@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts" generic="T extends object">
-import {ref} from "vue"
+import {ref, watch} from "vue"
 import {Button} from "@/components/ui/button"
 import JsonTextarea from "@/components/json/JsonTextarea.vue"
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
@@ -10,6 +10,15 @@ import {Accordion, AccordionItem, AccordionContent, AccordionTrigger} from "@/co
 const props = defineProps<{
   modelValue: T
 }>()
+
+watch(() => props.modelValue, (newVal) => {
+  const updatedString = JSON.stringify(newVal, null, 2)
+
+  // Only update if the string actually changed to avoid cursor jumping
+  if (importJson.value !== updatedString) {
+    importJson.value = updatedString
+  }
+}, { deep: true })
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: T): void

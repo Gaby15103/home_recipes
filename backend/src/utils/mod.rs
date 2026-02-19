@@ -1,12 +1,9 @@
-﻿pub mod auth;
-pub mod custom_type;
-pub mod hasher;
-pub mod jwt;
-pub mod unit;
-pub mod image_upload;
-pub mod two_factor;
-pub mod email_service;
 pub mod header_extractor;
+pub mod hasher;
+pub mod email_service;
+pub mod password_verification;
+pub(crate) mod two_factor;
+pub mod unit;
+pub mod file_upload;
 
-// just to make it less of a pain to write
-pub use {self::custom_type::*, self::hasher::*};
+pub use {self::hasher::*};
