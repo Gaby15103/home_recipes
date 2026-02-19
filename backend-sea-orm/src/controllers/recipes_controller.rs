@@ -12,6 +12,7 @@ use tokio::count;
 use validator::Validate;
 use crate::dto::auth_dto::LoginRequestDto;
 use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
+use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
 
 use crate::services::{recipe_service, user_service};
@@ -189,10 +190,14 @@ pub async fn analytics(
 }
 pub async fn track_view(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
+    auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().json({}))
+    let recipe_id = path.into_inner();
+    let user_id = auth.map(|a| a.user.id);
+    recipe_service::add_view(&state.db, recipe_id, user_id).await?;
+    
+    Ok(HttpResponse::Ok().finish())
 }
 pub async fn favorite(
     state: web::Data<AppState>,

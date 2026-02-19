@@ -181,3 +181,11 @@ pub async fn analytics(
 )->Result<u64, Error> {
     recipe_repository::get_analytics(db, recipe_id).await
 }
+pub async fn add_view(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Option<Uuid>,
+)->Result<(), Error> {
+    recipe_repository::add_view(db, recipe_id, user_id).await?;
+    Ok(())
+}

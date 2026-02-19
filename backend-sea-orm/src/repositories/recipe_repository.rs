@@ -1,12 +1,21 @@
 use crate::dto::ingredient_group_dto::IngredientGroupViewDto;
-use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
+use crate::dto::recipe_dto::{
+    CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
+};
 use crate::dto::step_group_dto::StepGroupViewDto;
 use crate::dto::tag_dto::{InputTag, TagDto};
+use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
 use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
-use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_ingredients, recipe_tags, recipe_translations, recipes};
+use entity::{
+    favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics,
+    recipe_ingredients, recipe_tags, recipe_translations, recipes,
+};
 use migration::JoinType;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, Set, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, Set,
+    TransactionTrait,
+};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
@@ -35,11 +44,16 @@ pub async fn find_by_query(
         if !s.trim().is_empty() {
             let pattern = format!("%{}%", s);
             query = query
-                .join(JoinType::LeftJoin, recipes::Relation::RecipeTranslations.def())
+                .join(
+                    JoinType::LeftJoin,
+                    recipes::Relation::RecipeTranslations.def(),
+                )
                 .filter(
-                    recipe_translations::Column::LanguageCode.eq(lang_code)
-                        .and(recipe_translations::Column::Title.like(&pattern)
-                            .or(recipe_translations::Column::Description.like(&pattern)))
+                    recipe_translations::Column::LanguageCode.eq(lang_code).and(
+                        recipe_translations::Column::Title
+                            .like(&pattern)
+                            .or(recipe_translations::Column::Description.like(&pattern)),
+                    ),
                 );
         }
     }
@@ -50,10 +64,22 @@ pub async fn find_by_query(
         if !i.trim().is_empty() {
             let pattern = format!("%{}%", i);
             query = query
-                .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
-                .join(JoinType::InnerJoin, ingredient_groups::Relation::RecipeIngredients.def())
-                .join(JoinType::InnerJoin, recipe_ingredients::Relation::Ingredients.def())
-                .join(JoinType::InnerJoin, ingredients::Relation::IngredientTranslations.def())
+                .join(
+                    JoinType::InnerJoin,
+                    recipes::Relation::IngredientGroups.def(),
+                )
+                .join(
+                    JoinType::InnerJoin,
+                    ingredient_groups::Relation::RecipeIngredients.def(),
+                )
+                .join(
+                    JoinType::InnerJoin,
+                    recipe_ingredients::Relation::Ingredients.def(),
+                )
+                .join(
+                    JoinType::InnerJoin,
+                    ingredients::Relation::IngredientTranslations.def(),
+                )
                 .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
                 .filter(ingredient_translations::Column::Name.like(pattern));
         }
@@ -65,11 +91,10 @@ pub async fn find_by_query(
         .group_by(recipes::Column::Id)
         .order_by_desc(recipes::Column::CreatedAt);
 
-    let results = query.all(db).await
-        .map_err(|e| {
-            eprintln!("Database Error: {:?}", e);
-            Error::InternalServerError
-        })?;
+    let results = query.all(db).await.map_err(|e| {
+        eprintln!("Database Error: {:?}", e);
+        Error::InternalServerError
+    })?;
 
     if results.is_empty() {
         Ok(None)
@@ -179,11 +204,16 @@ pub async fn find_by_query_by_page(
             if !s.trim().is_empty() {
                 let pattern = format!("%{}%", s);
                 query = query
-                    .join(JoinType::LeftJoin, recipes::Relation::RecipeTranslations.def())
+                    .join(
+                        JoinType::LeftJoin,
+                        recipes::Relation::RecipeTranslations.def(),
+                    )
                     .filter(
-                        recipe_translations::Column::LanguageCode.eq(lang_code)
-                            .and(recipe_translations::Column::Title.like(&pattern)
-                                .or(recipe_translations::Column::Description.like(&pattern)))
+                        recipe_translations::Column::LanguageCode.eq(lang_code).and(
+                            recipe_translations::Column::Title
+                                .like(&pattern)
+                                .or(recipe_translations::Column::Description.like(&pattern)),
+                        ),
                     );
             }
         }
@@ -192,18 +222,27 @@ pub async fn find_by_query_by_page(
             if !i.trim().is_empty() {
                 let pattern = format!("%{}%", i);
                 query = query
-                    .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
-                    .join(JoinType::InnerJoin, ingredient_groups::Relation::RecipeIngredients.def())
-                    .join(JoinType::InnerJoin, recipe_ingredients::Relation::Ingredients.def())
-                    .join(JoinType::InnerJoin, ingredients::Relation::IngredientTranslations.def())
+                    .join(
+                        JoinType::InnerJoin,
+                        recipes::Relation::IngredientGroups.def(),
+                    )
+                    .join(
+                        JoinType::InnerJoin,
+                        ingredient_groups::Relation::RecipeIngredients.def(),
+                    )
+                    .join(
+                        JoinType::InnerJoin,
+                        recipe_ingredients::Relation::Ingredients.def(),
+                    )
+                    .join(
+                        JoinType::InnerJoin,
+                        ingredients::Relation::IngredientTranslations.def(),
+                    )
                     .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
                     .filter(ingredient_translations::Column::Name.like(pattern));
             }
         }
     }
-
-
-
 
     query = query
         .group_by(recipes::Column::Id)
@@ -222,17 +261,14 @@ pub async fn find_by_query_by_page(
     }
 }
 
-pub async fn delete(
-    db: &DatabaseConnection,
-    id: Uuid,
-)-> Result<DeleteResult, Error> {
+pub async fn delete(db: &DatabaseConnection, id: Uuid) -> Result<DeleteResult, Error> {
     let result = recipes::Entity::delete_by_id(id).exec(db).await?;
     Ok(result)
 }
 pub async fn get_favorites(
     db: &DatabaseConnection,
     user_id: Uuid,
-)->Result<Vec<recipes::Model>,Error>{
+) -> Result<Vec<recipes::Model>, Error> {
     let recipes = recipes::Entity::find()
         .join(JoinType::InnerJoin, recipes::Relation::Favorites.def())
         .filter(favorites::Column::UserId.eq(user_id))
@@ -289,7 +325,8 @@ pub async fn update(
                 original_recipe
             };
 
-            let incoming_ids: Vec<Uuid> = updated_recipe.translations
+            let incoming_ids: Vec<Uuid> = updated_recipe
+                .translations
                 .iter()
                 .filter_map(|t| t.id)
                 .collect();
@@ -312,7 +349,8 @@ pub async fn update(
                             || existing_trans.description != trans_input.description
                             || existing_trans.language_code != trans_input.language_code
                         {
-                            let mut trans_active: recipe_translations::ActiveModel = existing_trans.into();
+                            let mut trans_active: recipe_translations::ActiveModel =
+                                existing_trans.into();
                             trans_active.language_code = Set(trans_input.language_code);
                             trans_active.title = Set(trans_input.title);
                             trans_active.description = Set(trans_input.description);
@@ -328,51 +366,84 @@ pub async fn update(
                             description: Set(trans_input.description),
                             ..Default::default()
                         }
-                            .insert(txn)
-                            .await?;
+                        .insert(txn)
+                        .await?;
                     }
                 }
             }
 
             // 4. Sync Tags, Ingredients, and Steps
-            let incoming_existing_tag_ids: Vec<Uuid> = updated_recipe.tags.iter()
-                .filter_map(|t| if let InputTag::Existing { id } = t { Some(*id) } else { None })
+            let incoming_existing_tag_ids: Vec<Uuid> = updated_recipe
+                .tags
+                .iter()
+                .filter_map(|t| {
+                    if let InputTag::Existing { id } = t {
+                        Some(*id)
+                    } else {
+                        None
+                    }
+                })
                 .collect();
 
             recipe_tags::Entity::delete_many()
                 .filter(recipe_tags::Column::RecipeId.eq(recipe_id))
                 .filter(recipe_tags::Column::TagId.is_not_in(incoming_existing_tag_ids))
-                .exec(txn).await?;
+                .exec(txn)
+                .await?;
 
-            let inserted_tags = tag_repository::find_or_create_tags(txn, updated_recipe.tags, recipe_id).await?;
+            let inserted_tags =
+                tag_repository::find_or_create_tags(txn, updated_recipe.tags, recipe_id).await?;
 
-            let incoming_group_ids: Vec<Uuid> = updated_recipe.ingredient_groups.iter().filter_map(|g| g.id).collect();
+            let incoming_group_ids: Vec<Uuid> = updated_recipe
+                .ingredient_groups
+                .iter()
+                .filter_map(|g| g.id)
+                .collect();
 
             ingredient_groups::Entity::delete_many()
                 .filter(ingredient_groups::Column::RecipeId.eq(recipe_id))
                 .filter(ingredient_groups::Column::Id.is_not_in(incoming_group_ids))
-                .exec(txn).await?;
+                .exec(txn)
+                .await?;
 
-            ingredient_group_repository::update(
-                txn, recipe_id, updated_recipe.ingredient_groups
-            ).await?;
+            ingredient_group_repository::update(txn, recipe_id, updated_recipe.ingredient_groups)
+                .await?;
 
-            step_group_repository::update(
-                txn, recipe_id, updated_recipe.step_groups
-            ).await?;
+            step_group_repository::update(txn, recipe_id, updated_recipe.step_groups).await?;
 
             Ok(())
         })
     })
-        .await
-        .map_err(|e| e.into())
+    .await
+    .map_err(|e| e.into())
 }
-pub async fn get_analytics(
-    db: &DatabaseConnection,
-    recipe_id: Uuid,
-)->Result<u64, Error> {
-    recipe_analytics::Entity::find()
+pub async fn get_analytics(db: &DatabaseConnection, recipe_id: Uuid) -> Result<u64, Error> {
+    let count = recipe_analytics::Entity::find()
         .filter(recipe_analytics::Column::RecipeId.eq(recipe_id))
         .count(db)
-        .await
+        .await?;
+    Ok(count)
+}
+pub async fn add_view(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Option<Uuid>,
+) -> Result<(), Error> {
+    if let Some(user_id) = user_id {
+        recipe_analytics::ActiveModel {
+            recipe_id: Set(recipe_id),
+            user_id: Set(Option::from(user_id)),
+            ..Default::default()
+        }
+        .insert(db)
+        .await?;
+    } else {
+        recipe_analytics::ActiveModel {
+            recipe_id: Set(recipe_id),
+            ..Default::default()
+        }
+        .insert(db)
+        .await?;
+    };
+    Ok(())
 }
