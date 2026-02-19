@@ -494,3 +494,15 @@ pub async fn rate(
     }
     Ok(())
 }
+pub async fn unrate(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Uuid,
+)-> Result<(), Error> {
+    let res = recipe_ratings::Entity::delete_many()
+        .filter(recipe_ratings::Column::RecipeId.eq(recipe_id))
+        .filter(recipe_ratings::Column::UserId.eq(user_id))
+        .exec(db)
+        .await?;
+    Ok(())
+}

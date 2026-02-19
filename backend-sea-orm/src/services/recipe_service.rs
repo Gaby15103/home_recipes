@@ -205,3 +205,10 @@ pub async fn rate(
 )->Result<(), Error> {
     recipe_repository::rate(db,recipe_id, user_id, rating).await
 }
+pub async fn unrate(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    user_id: Uuid,
+)->Result<(), Error> {
+    recipe_repository::unrate(db, recipe_id, user_id).await
+}

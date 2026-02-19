@@ -223,9 +223,12 @@ pub async fn rate(
 }
 pub async fn unrate(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
+    auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    let user_id = auth.user.id.clone();
+    recipe_service::unrate(&state.db,recipe_id, user_id).await?;
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn get_rating(
