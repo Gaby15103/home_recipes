@@ -174,3 +174,10 @@ pub async fn update(
         }
     }
 }
+
+pub async fn analytics(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+)->Result<u64, Error> {
+    recipe_repository::get_analytics(db, recipe_id).await
+}

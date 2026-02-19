@@ -8,6 +8,7 @@ use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
 use actix_web::web::Json;
 use sea_orm::sqlx::query;
+use tokio::count;
 use validator::Validate;
 use crate::dto::auth_dto::LoginRequestDto;
 use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
@@ -180,10 +181,11 @@ pub async fn delete(
 }
 pub async fn analytics(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
-    Ok(HttpResponse::Ok().json({}))
+    let recipe_id = path.into_inner();
+    let count = recipe_service::analytics(&state.db, recipe_id).await?;
+    Ok(HttpResponse::Ok().json(count))
 }
 pub async fn track_view(
     state: web::Data<AppState>,

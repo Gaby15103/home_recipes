@@ -4,9 +4,9 @@ use crate::dto::step_group_dto::StepGroupViewDto;
 use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::errors::Error;
 use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
-use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_ingredients, recipe_tags, recipe_translations, recipes};
+use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_ingredients, recipe_tags, recipe_translations, recipes};
 use migration::JoinType;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, DeleteResult, PaginatorTrait, Set, TransactionTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, Set, TransactionTrait};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
@@ -366,4 +366,13 @@ pub async fn update(
     })
         .await
         .map_err(|e| e.into())
+}
+pub async fn get_analytics(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+)->Result<u64, Error> {
+    recipe_analytics::Entity::find()
+        .filter(recipe_analytics::Column::RecipeId.eq(recipe_id))
+        .count(db)
+        .await
 }
