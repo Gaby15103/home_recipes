@@ -243,3 +243,13 @@ pub async fn delete_comment(
     auth.require_owner_or_roles(comment.user_id,&[Role::Admin,Role::Moderator,Role::Superuser])?;
     recipe_repository::delete_comment(db, comment_id).await
 }
+pub async fn edit_comment(
+    db: &DatabaseConnection,
+    comment_id: Uuid,
+    auth: AuthenticatedUser,
+    edit_comment: CommentDto,
+)->Result<CommentDto, Error> {
+    let comment = recipe_repository::get_comment(db, comment_id).await?;
+    auth.require_owner_or_roles(comment.user_id,&[Role::Admin,Role::Moderator,Role::Superuser])?;
+    recipe_repository::edit_comment(db, comment_id,edit_comment).await
+}

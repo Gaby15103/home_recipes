@@ -11,7 +11,7 @@ use sea_orm::sqlx::query;
 use tokio::count;
 use validator::Validate;
 use crate::dto::auth_dto::LoginRequestDto;
-use crate::dto::comment_dto::CreateCommentDto;
+use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
@@ -27,6 +27,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route("/by_page", web::get().to(get_by_page))
             .route("", web::post().to(create))
             .route("/favorites", web::get().to(get_favorites))
+            .route("/comment/{id}", web::delete().to(delete_comment))
+            .route("/comment/{id}", web::put().to(edit_comment))
             .route("/{id}", web::get().to(get))
             .route("/{id}", web::put().to(update))
             .route("/{id}", web::delete().to(delete))
@@ -197,7 +199,7 @@ pub async fn track_view(
     let recipe_id = path.into_inner();
     let user_id = auth.map(|a| a.user.id);
     recipe_service::add_view(&state.db, recipe_id, user_id).await?;
-    
+
     Ok(HttpResponse::Ok().finish())
 }
 pub async fn favorite(
@@ -271,9 +273,13 @@ pub async fn delete_comment(
 }
 pub async fn edit_comment(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<Uuid>,
+    body: web::Json<CommentDto>,
+    auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
+    let comment_id = path.into_inner();
+    let edit_comment = body.into_inner();
+    recipe_service::edit_comment(&state.db, comment_id, auth,edit_comment).await?;
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn restore_version(

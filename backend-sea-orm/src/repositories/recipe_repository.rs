@@ -579,3 +579,22 @@ pub async fn delete_comment(
         })))
     }
 }
+pub async fn edit_comment(
+    db: &DatabaseConnection,
+    comment_id: Uuid,
+    edit_comment: CommentDto,
+)->Result<CommentDto, Error> {
+    let res = recipe_comments::Entity::find_by_id(comment_id).one(db).await?;
+    if let Some(model) = res {
+        let mut active: recipe_comments::ActiveModel = model.into();
+        active.content = Set(edit_comment.content);
+        active.edited_at = Set(Some(chrono::Utc::now().into()));
+        let updated_model = active.update(db).await?;
+        Ok(CommentDto::from(updated_model))
+    }else {
+        Err(Error::NotFound(serde_json::json!({
+            "error": "Comment not found",
+            "id": comment_id
+        })))
+    }
+}
