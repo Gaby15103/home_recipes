@@ -40,7 +40,9 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route("/{id}/rating", web::get().to(get_rating))
             .route("/{id}/comments", web::get().to(get_comments))
             .route("/{id}/comments", web::post().to(add_comment))
-            .route("/{recipe_id}/versions/{version_id}/restore", web::post().to(restore_version), )
+            .route("/{recipe_id}/versions/", web::get().to(get_versions))
+            .route("/{recipe_id}/versions/{version_id}", web::get().to(get_version))
+            .route("/{recipe_id}/versions/{version_id}/restore", web::post().to(restore_version))
     );
 }
 
@@ -282,10 +284,32 @@ pub async fn edit_comment(
     recipe_service::edit_comment(&state.db, comment_id, auth,edit_comment).await?;
     Ok(HttpResponse::Ok().json({}))
 }
+pub async fn get_versions(
+    state: web::Data<AppState>,
+    path: web::Path<Uuid>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
+    recipe_service::get_versions(&state.db, recipe_id).await?;
+    Ok(HttpResponse::Ok().json({}))
+}
+pub async fn get_version(
+    state: web::Data<AppState>,
+    path: web::Path<(Uuid, Uuid)>,
+    auth: AuthenticatedUser,
+) -> Result<HttpResponse, Error> {
+    let (recipe_id, version_id) = path.into_inner();
+    auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
+    recipe_service::get_version(&state.db, recipe_id,version_id).await?;
+    Ok(HttpResponse::Ok().json({}))
+}
 pub async fn restore_version(
     state: web::Data<AppState>,
-    query: Query<GetAllRecipesByPageQuery>,
-    req: HttpRequest
+    path: web::Path<(Uuid, Uuid)>,
+    auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
+    let (recipe_id, version_id) = path.into_inner();
+    auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
     Ok(HttpResponse::Ok().json({}))
 }

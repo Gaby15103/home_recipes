@@ -16,4 +16,5 @@ pub mod ingredient_group_dto;
 pub mod step_group_dto;
 pub mod language_dto;
 pub mod comment_dto;
+pub mod recipe_version_dto;
 

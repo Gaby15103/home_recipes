@@ -1,17 +1,12 @@
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::ingredient_group_dto::IngredientGroupViewDto;
-use crate::dto::recipe_dto::{
-    CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
-};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, RecipeEditorDto, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
 use crate::dto::step_group_dto::StepGroupViewDto;
 use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
-use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
-use entity::{
-    favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics,
-    recipe_comments, recipe_ingredients, recipe_ratings, recipe_tags, recipe_translations, recipes,
-};
+use crate::repositories::{ingredient_group_repository, role_repository, step_group_repository, tag_repository};
+use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_comments, recipe_ingredients, recipe_ratings, recipe_tags, recipe_translations, recipe_versions, recipes, users};
 use migration::JoinType;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, PaginatorTrait, SelectExt, Set,
@@ -21,8 +16,9 @@ use sea_orm::{DatabaseConnection, EntityTrait};
 use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
 use std::ops::Deref;
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
+use crate::dto::recipe_version_dto::RecipeVersionDto;
 
 pub async fn find_all(db: &DatabaseConnection) -> Result<Vec<recipes::Model>, Error> {
     recipes::Entity::find().all(db).await.map_err(Error::from)

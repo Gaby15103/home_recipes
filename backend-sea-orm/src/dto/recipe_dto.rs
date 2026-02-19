@@ -39,6 +39,7 @@ pub struct RecipeViewDto {
     pub step_groups: Vec<StepGroupViewDto>,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Default)]
 pub struct RecipeEditorDto {
     pub id: Uuid,
     pub primary_language: String,

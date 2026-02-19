@@ -11,6 +11,7 @@ use actix::fut::ok;
 use uuid::Uuid;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
+use crate::dto::recipe_version_dto::RecipeVersionDto;
 use crate::dto::user_dto::UserResponseDto;
 
 pub async fn get_all(
@@ -252,4 +253,17 @@ pub async fn edit_comment(
     let comment = recipe_repository::get_comment(db, comment_id).await?;
     auth.require_owner_or_roles(comment.user_id,&[Role::Admin,Role::Moderator,Role::Superuser])?;
     recipe_repository::edit_comment(db, comment_id,edit_comment).await
+}
+pub async fn get_versions(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+)->Result<Vec<RecipeVersionDto>, Error> {
+    recipe_version_repository::get_versions(db, recipe_id).await
+}
+pub async fn get_version(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+    version_id: Uuid
+)->Result<RecipeVersionDto, Error> {
+    recipe_version_repository::get_version(db, recipe_id,version_id).await
 }
