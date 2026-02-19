@@ -212,3 +212,9 @@ pub async fn unrate(
 )->Result<(), Error> {
     recipe_repository::unrate(db, recipe_id, user_id).await
 }
+pub async fn get_rating(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+)->Result<f32, Error> {
+    recipe_repository::get_rating(db, recipe_id).await
+}

@@ -506,3 +506,17 @@ pub async fn unrate(
         .await?;
     Ok(())
 }
+pub async fn get_rating(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+)->Result<f32, Error> {
+    let res: Option<f64> = recipe_ratings::Entity::find()
+        .select_only()
+        .column_as(recipe_ratings::Column::Rating.avg(), "avg_rating")
+        .filter(recipe_ratings::Column::RecipeId.eq(recipe_id))
+        .into_tuple()
+        .one(db)
+        .await?;
+
+    Ok(res.unwrap_or(0.0) as f32)
+}
