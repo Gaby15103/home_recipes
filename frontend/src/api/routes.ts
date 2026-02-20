@@ -66,3 +66,9 @@ export const LanguageRoutes = {
 export const UploadRoutes = {
     single: () => `${API_ROOT}/upload`
 }
+export const UnitRoutes = {
+    get: (id: string) => `${API_ROOT}/units/${id}`,
+    list: () => `${API_ROOT}/units`,
+    create: () => `${API_ROOT}/units`,
+    update: (id: string) => `${API_ROOT}/units/${id}`
+}

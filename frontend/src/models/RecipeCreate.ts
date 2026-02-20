@@ -1,5 +1,4 @@
 ﻿// models/RecipeCreate.ts
-import {IngredientUnit} from "./Recipe"
 import type {InputTag} from "@/models/Tag.ts";
 
 export type StepCreateUI = StepCreate & {
@@ -52,7 +51,7 @@ export interface IngredientTranslationCreate {
 export interface IngredientCreate {
     translations: IngredientTranslationCreate[];
     quantity: number;
-    unit: IngredientUnit;
+    unit_id: string;
     note: IngredientNoteTranslation[] | null;
     position: number;
 }
@@ -91,4 +90,14 @@ export interface RecipeCommentCreate {
     user_id: string | null;
     parent_id?: string | null;
     content: string;
+}
+export interface UnitInput {
+    code: string;
+    symbol: string;
+    name_fr: string;
+    name_en: string;
+    system: string;
+    conversion_factor: number;
+    is_fraction_allowed: boolean;
+    is_active: boolean;
 }

@@ -5,6 +5,7 @@ pub use super::favorites::Entity as Favorites;
 pub use super::ingredient_group_translations::Entity as IngredientGroupTranslations;
 pub use super::ingredient_groups::Entity as IngredientGroups;
 pub use super::ingredient_translations::Entity as IngredientTranslations;
+pub use super::ingredient_units::Entity as IngredientUnits;
 pub use super::ingredients::Entity as Ingredients;
 pub use super::languages::Entity as Languages;
 pub use super::password_reset_tokens::Entity as PasswordResetTokens;

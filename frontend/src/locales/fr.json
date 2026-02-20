@@ -157,7 +157,9 @@
       "actions": "Actions",
       "loading": "Chargement..."
     },
-
+    "unit": {
+      "placeholder": "unité"
+    },
     "dashboard": {
       "stats": {
         "totalRecipes": "Recettes totales",

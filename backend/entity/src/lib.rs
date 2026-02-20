@@ -7,6 +7,7 @@ pub mod favorites;
 pub mod ingredient_group_translations;
 pub mod ingredient_groups;
 pub mod ingredient_translations;
+pub mod ingredient_units;
 pub mod ingredients;
 pub mod languages;
 pub mod password_reset_tokens;

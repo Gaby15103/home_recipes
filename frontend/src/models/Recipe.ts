@@ -71,7 +71,7 @@ export interface IngredientEditor {
     id: string;
     ingredient_id: string;
     quantity: number;
-    unit: IngredientUnit;
+    unit: Unit;
     note: string|null;
     position: number;
     translations: IngredientTranslation[];
@@ -81,6 +81,20 @@ export interface IngredientTranslation {
     language_code: String;
     name: String;
 }
+
+export interface Unit {
+    id: string;
+    code: string;
+    symbol: string;
+    name_fr: string;
+    name_en: string;
+    system: string;
+    base_unit_id: string | null;
+    conversion_factor: number;
+    is_fraction_allowed: boolean;
+    is_active: boolean;
+}
+
 
 
 //TODO add pinch, a can, unique like 1 oignon or an other where you put with our without mesure

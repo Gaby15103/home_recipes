@@ -11,9 +11,8 @@ pub struct Model {
     pub ingredient_id: Uuid,
     #[sea_orm(column_type = "Decimal(Some((10, 2)))")]
     pub quantity: Decimal,
-    #[sea_orm(column_type = "Text")]
-    pub unit: String,
     pub position: i32,
+    pub unit_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -26,6 +25,14 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     IngredientGroups,
+    #[sea_orm(
+        belongs_to = "super::ingredient_units::Entity",
+        from = "Column::UnitId",
+        to = "super::ingredient_units::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Restrict"
+    )]
+    IngredientUnits,
     #[sea_orm(
         belongs_to = "super::ingredients::Entity",
         from = "Column::IngredientId",
@@ -41,6 +48,12 @@ pub enum Relation {
 impl Related<super::ingredient_groups::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::IngredientGroups.def()
+    }
+}
+
+impl Related<super::ingredient_units::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::IngredientUnits.def()
     }
 }
 

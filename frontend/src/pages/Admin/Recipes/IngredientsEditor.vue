@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import type { IngredientGroupCreate, IngredientCreate } from "@/models/RecipeCreate.ts";
-import { IngredientUnit } from "@/models/Recipe.ts";
 import IngredientUnitSelect from "@/components/Recipe/IngredientUnitSelect.vue";
 import { useI18n } from "vue-i18n";
 import type { Language } from "@/models/Language.ts";
@@ -49,7 +48,7 @@ function addIngredient(group: IngredientGroupCreate) {
     // Initialize with an empty array so we can store multiple languages
     translations: [],
     quantity: 0,
-    unit: IngredientUnit.Gram,
+    unit_id: "",
     note: [],
     position: group.ingredients.length
   });
@@ -126,7 +125,7 @@ function syncLang(obj: any) {
 
         <div class="col-span-3">
           <Label class="text-xs">{{ t('Admin.ingredients.unit') }}</Label>
-          <IngredientUnitSelect v-model="ing.unit" />
+          <IngredientUnitSelect v-model="ing.unit_id" />
         </div>
         <div class="col-span-1"/>
         <div class="col-span-1 ms-auto flex items-end">

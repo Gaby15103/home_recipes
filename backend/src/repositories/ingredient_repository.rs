@@ -6,9 +6,10 @@ use std::str::FromStr;
 use actix_web::web::BufMut;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QuerySelect, RelationTrait, Set};
 use uuid::Uuid;
-use entity::{ingredient_groups, ingredient_translations, ingredients, recipe_ingredient_translations, recipe_ingredients, recipes};
+use entity::{ingredient_groups, ingredient_translations, ingredient_units, ingredients, recipe_ingredient_translations, recipe_ingredients, recipes};
 use migration::JoinType;
 use crate::dto::ingredient_dto::{IngredientInput, IngredientRecipeViewDto, IngredientViewDto};
+use crate::dto::unit_dto::UnitDto;
 use crate::errors::Error;
 use crate::utils::unit::IngredientUnit;
 
@@ -51,7 +52,7 @@ pub async fn create_and_link(
         ingredient_group_id: Set(group_id),
         ingredient_id: Set(master_ingredient.id),
         quantity: Set(input.quantity), // This is where rust_decimal::Decimal is used
-        unit: Set(input.unit.clone()),
+        unit_id: Set(input.unit_id.clone()),
         position: Set(input.position),
         ..Default::default()
     }
@@ -77,13 +78,16 @@ pub async fn create_and_link(
         }
     }
 
-    // 5. Return the View DTO
+    let results = ingredient_units::Entity::find_by_id(link.unit_id).one(txn).await?;
+    let unit_dto = results
+        .map(UnitDto::from).expect("Relational integrity violation: unit_id exists but unit doesn't");
+
     Ok(IngredientRecipeViewDto {
         id: link.id,
         ingredient_id:  master_ingredient.id,
         name: display_name,
         quantity: link.quantity,
-        unit: IngredientUnit::from_str(link.unit.deref()).unwrap(),
+        unit: unit_dto,
         note: display_note.expect("REASON"),
         position: link.position,
     })
