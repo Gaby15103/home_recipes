@@ -56,7 +56,8 @@ vite.svg
 ###########################
 
 /target/
-/Cargo.lock  # uncomment if building a library, keep if this is an app
+backend/assets/
+backend/Cargo.lock  # uncomment if building a library, keep if this is an app
 
 # Rust toolchain artifacts
 rustfmt.bk
@@ -107,3 +108,4 @@ __pycache__/
 
 # If using TypeScript incremental builds
 *.tsbuildinfo
+/backend/Cargo.lock
