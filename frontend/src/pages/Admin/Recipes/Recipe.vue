@@ -1,27 +1,27 @@
 ﻿<script setup lang="ts">
-import {ref, onMounted, watch} from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getRecipeById, deleteRecipe } from "@/api/recipe";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "vue-i18n";
+
+// UI Components
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import type { RecipeView } from "@/models/Recipe";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// API & Logic
+import { getRecipeById, deleteRecipe } from "@/api/recipe";
 import { ROUTES } from "@/router/routes.ts";
-import {useI18n} from "vue-i18n";
-const { t } = useI18n()
+import type { RecipeView } from "@/models/Recipe";
+import RecipeDisplay from "@/components/Recipe/RecipeDisplay.vue";
+import {Badge} from "@/components/ui/badge";
+
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
 const recipe = ref<RecipeView | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
-const { locale } = useI18n();
 
-watch(locale, () => {
-  fetchRecipe();
-});
 async function fetchRecipe() {
   loading.value = true;
   try {
@@ -33,6 +33,7 @@ async function fetchRecipe() {
   }
 }
 
+watch(locale, () => fetchRecipe());
 onMounted(fetchRecipe);
 
 function goToEdit() {
@@ -57,118 +58,55 @@ async function removeRecipe() {
 <template>
   <div class="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
-    <!-- Loading skeleton -->
     <div v-if="loading" class="space-y-6">
-      <Skeleton class="h-80 w-full rounded-xl" />
-      <Skeleton class="h-10 w-1/2" />
+      <Skeleton class="h-[400px] w-full rounded-xl" />
+      <div class="space-y-2">
+        <Skeleton class="h-10 w-1/2" />
+        <Skeleton class="h-4 w-full" />
+      </div>
     </div>
 
-    <!-- Error -->
-    <p v-else-if="error" class="text-red-500 text-center">{{ error }}</p>
+    <div v-else-if="error" class="text-center py-12">
+      <p class="text-red-500 mb-4">{{ error }}</p>
+      <Button @click="fetchRecipe">{{ t('common.retry') }}</Button>
+    </div>
 
-    <!-- Recipe content -->
     <div v-else-if="recipe" class="space-y-8">
 
-      <!-- Header / Main Info -->
-      <Card>
-        <CardContent class="flex flex-col md:flex-row gap-6">
-          <img
-              v-if="recipe.image_url"
-              :src="$apiUrl + recipe.image_url"
-              alt="Recipe Image"
-              class="w-full md:w-1/2 rounded-xl object-cover border"
-          />
-
-          <div class="flex-1 space-y-4">
-            <h1 class="text-3xl font-bold">{{ recipe.title }}</h1>
-            <p class="text-gray-600 dark:text-gray-300">{{ recipe.description }}</p>
-
-            <!-- Metadata -->
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div><strong>{{ t('Admin.recipe.view.author') }}:</strong> {{ recipe.author }} (ID: {{ recipe.author_id }})</div>
-              <div><strong>{{ t('Admin.recipe.fields.servings') }}:</strong> {{ recipe.servings }}</div>
-              <div><strong>{{ t('Admin.recipe.fields.prepTime') }}:</strong> {{ recipe.prep_time_minutes }} min</div>
-              <div><strong>{{ t('Admin.recipe.fields.cookTime') }}:</strong> {{ recipe.cook_time_minutes }} min</div>
-              <div>
-                <strong>{{ t('Admin.recipe.view.visibility') }}:</strong>
-                <Badge :variant="recipe.is_private ? 'destructive' : 'outline'">
-                  {{ recipe.is_private ? t('Admin.recipe.view.private') : t('Admin.recipe.view.public') }}
-                </Badge>
-              </div>
-              <div>
-                <strong>{{ t('Admin.recipe.tags') }}:</strong>
-                <div class="flex gap-1 flex-wrap">
-                  <Badge v-for="tag in recipe.tags" :key="tag.id" variant="secondary">{{ tag.name ?? tag.id }}</Badge>
-                </div>
-              </div>
+      <RecipeDisplay
+          :recipe="recipe"
+          :is-admin="true"
+          :multiplier="1"
+      >
+        <template #rating>
+          <div class="flex flex-col gap-1 text-xs text-muted-foreground">
+            <div>
+              <strong>ID:</strong> {{ recipe.id }}
             </div>
-
-            <!-- Admin actions -->
-            <div class="flex gap-3 pt-4">
-              <Button @click="goToEdit">✏️ {{ t('Admin.recipe.editTitle') }}</Button>
-              <Button variant="destructive" @click="removeRecipe">🗑 {{ t('Admin.common.delete') }}</Button>
+            <div>
+              <strong>{{ t('Admin.recipe.view.author') }}:</strong>
+              {{ recipe.author }} <span class="opacity-70">({{ recipe.author_id }})</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </template>
 
-      <!-- Ingredients -->
-      <Card>
-        <CardHeader>
-          <CardTitle>{{ t('Admin.recipe.view.ingredients') }}</CardTitle>
-        </CardHeader>
-        <CardContent class="space-y-6">
-          <template v-for="group in recipe.ingredient_groups" :key="group.id">
-            <h3 class="font-semibold">
-              {{ group.title || t('Admin.recipe.view.ingredients') }} (ID: {{ group.id }})
-            </h3>
-            <ul class="space-y-2">
-              <li v-for="ing in group.ingredients" :key="ing.id" class="flex gap-2 items-start">
-                <Checkbox disabled />
-                <span>
-                  <strong>{{ ing.quantity }} {{ ing.unit }}</strong> {{ ing.name }}
-                  <span class="text-gray-400 ml-1">(ID: {{ ing.id }})</span>
-                  <span v-if="ing.note" class="text-red-500 ml-1">*</span>
-                </span>
-              </li>
-            </ul>
-          </template>
-        </CardContent>
-      </Card>
+        <template #header-actions>
+          <Button @click="goToEdit" class="bg-blue-600 hover:bg-blue-700">
+            ✏️ {{ t('Admin.recipe.editTitle') }}
+          </Button>
+          <Button variant="destructive" @click="removeRecipe">
+            🗑 {{ t('Admin.common.delete') }}
+          </Button>
+        </template>
 
-      <!-- Steps -->
-      <Card>
-        <CardHeader>
-          <CardTitle>{{ t('Admin.recipe.view.steps') }}</CardTitle>
-        </CardHeader>
-        <CardContent class="space-y-6">
-          <template v-for="group in recipe.step_groups" :key="group.id">
-            <h3 class="font-semibold">
-              {{ group.title || t('Admin.recipe.steps.title') }} (ID: {{ group.id }})
-            </h3>
-            <ol class="space-y-4 list-decimal pl-5">
-              <li v-for="step in group.steps" :key="step.id">
-                <p>{{ step.instruction }}</p>
-                <p v-if="step.duration_minutes" class="text-sm text-gray-500">{{ step.duration_minutes }} min</p>
-                <img
-                    v-if="step.image_url"
-                    :src="$apiUrl + step.image_url"
-                    alt="Step image"
-                    class="rounded-lg border mt-2 max-h-64 object-cover"
-                />
-                <p class="text-gray-400 text-xs mt-1">ID: {{ step.id }}</p>
-              </li>
-            </ol>
-          </template>
-        </CardContent>
-      </Card>
+        <template #ingredient-toolbar>
+          <Badge variant="outline" class="ml-auto font-mono text-[10px]">
+            UID: {{ recipe.id.split('-')[0] }}...
+          </Badge>
+        </template>
+
+      </RecipeDisplay>
 
     </div>
   </div>
 </template>
-
-<style scoped>
-.accent-primary {
-  accent-color: hsl(var(--primary));
-}
-</style>

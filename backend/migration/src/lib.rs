@@ -29,6 +29,7 @@ mod m20260212_014801_create_password_reset_tokens;
 mod m20260217_014849_add_default_language_to_ingredients;
 mod m20260218_030837_change_recipes_author_field_to_nullable;
 mod m20260219_023250_add_automatic_update_at_to_all_Table_with_update_at;
+mod m20260220_002434_create_ingredient_units_table;
 
 pub struct Migrator;
 
@@ -65,6 +66,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260217_014849_add_default_language_to_ingredients::Migration),
             Box::new(m20260218_030837_change_recipes_author_field_to_nullable::Migration),
             Box::new(m20260219_023250_add_automatic_update_at_to_all_Table_with_update_at::Migration),
+            Box::new(m20260220_002434_create_ingredient_units_table::Migration),
         ]
     }
 }

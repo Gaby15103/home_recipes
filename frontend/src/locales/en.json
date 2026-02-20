@@ -157,6 +157,9 @@
       "actions": "Actions",
       "loading": "Loading..."
     },
+    "unit": {
+      "placeholder": "Unit"
+    },
 
     "dashboard": {
       "stats": {

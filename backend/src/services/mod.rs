@@ -5,3 +5,4 @@ pub(crate) mod upload_service;
 pub(crate) mod ingredient_service;
 pub(crate) mod tag_service;
 pub(crate) mod language_service;
+pub(crate) mod unit_service;

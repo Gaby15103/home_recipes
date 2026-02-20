@@ -3,6 +3,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 use migration::prelude::Decimal;
+use crate::dto::unit_dto::UnitDto;
 use crate::utils::unit::IngredientUnit;
 
 #[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
@@ -36,7 +37,7 @@ pub struct IngredientInput {
     #[validate(nested)]
     pub translations: Vec<IngredientTranslationInput>,
     pub quantity: Decimal,
-    pub unit: String,
+    pub unit_id: Uuid,
     pub note: Option<Vec<IngredientNoteTranslationInput>>,
     pub position: i32,
 }
@@ -47,7 +48,7 @@ pub struct EditIngredientInput {
     #[validate(nested)]
     pub translations: Vec<EditIngredientTranslationInput>,
     pub quantity: Decimal,
-    pub unit: String,
+    pub unit_id: Uuid,
     pub note: Option<Vec<EditIngredientNoteTranslationInput>>,
     pub position: i32,
 }
@@ -56,7 +57,7 @@ pub struct IngredientRecipeViewDto {
     pub id: Uuid,
     pub ingredient_id: Uuid,
     pub name: String,
-    pub unit: IngredientUnit,
+    pub unit: UnitDto,
     pub quantity: Decimal,
     pub note: Option<String>,
     pub position: i32,
@@ -72,7 +73,8 @@ pub struct IngredientEditorDto {
     pub id: Uuid,
     pub ingredient_id: Uuid,
     pub quantity: Decimal,
-    pub unit: IngredientUnit,
+    pub unit_id: Uuid,
+    pub unit: UnitDto,
     pub position: i32,
     pub translations: Vec<IngredientTranslationsDto>,
     pub note_translation: Vec<IngredientNoteTranslationsDto>,

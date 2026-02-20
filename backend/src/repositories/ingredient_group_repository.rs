@@ -10,7 +10,7 @@ use crate::dto::ingredient_dto::{IngredientEditorDto, IngredientNoteTranslations
 use crate::dto::ingredient_group_dto::{EditIngredientGroupInput, IngredientGroupEditorDto, IngredientGroupInput, IngredientGroupTranslationDto, IngredientGroupViewDto};
 use crate::dto::recipe_dto::{EditRecipeInput, RecipeViewDto};
 use crate::errors::Error;
-use crate::repositories::ingredient_repository;
+use crate::repositories::{ingredient_repository, unit_repository};
 use crate::utils::unit::IngredientUnit;
 
 pub async fn create_multiple(
@@ -138,7 +138,7 @@ pub async fn find_by_recipe(
             .or_else(|| notes.iter().find(|t| t.language_code == default_lang_code))
             .and_then(|t| t.note.clone());
 
-        let unit = IngredientUnit::from_str(&rel.unit).unwrap_or(IngredientUnit::Gram);
+        let unit = unit_repository::find_by_id::<DatabaseConnection>(db,rel.unit_id).await?;
 
         ingredients_map.entry(rel.ingredient_group_id).or_default().push(IngredientRecipeViewDto {
             id: rel.id,
@@ -217,18 +217,21 @@ pub async fn find_all_by_recipe(
             })
             .collect();
 
+        let unit = unit_repository::find_by_id::<DatabaseConnection>(db,rel.unit_id).await?;
+
         ingredients_map.entry(rel.ingredient_group_id).or_default().push(IngredientEditorDto {
             id: rel.id,
             ingredient_id: current_ingredient_id,
             quantity: rel.quantity,
             translations: ingredient_names,
-            unit: IngredientUnit::from_str(rel.unit.deref()).unwrap_or(IngredientUnit::Piece),
+            unit,
             position: rel.position,
             note_translation: notes.into_iter().map(|n| IngredientNoteTranslationsDto {
                 id: n.id,
                 language_code: n.language_code,
                 note: n.note.unwrap_or_default(),
-            }).collect()
+            }).collect(),
+            unit_id: rel.unit_id,
         });
     }
 
@@ -345,12 +348,12 @@ pub async fn update(
                         .ok_or(Error::NotFound(json!({"error": "Ingredient link not found"})))?;
 
                     if rel.quantity != ing_in.quantity
-                        || rel.unit != ing_in.unit.to_string()
+                        || rel.unit_id != ing_in.unit_id
                         || rel.position != ing_in.position
                     {
                         let mut am: recipe_ingredients::ActiveModel = rel.into();
                         am.quantity = Set(ing_in.quantity);
-                        am.unit = Set(ing_in.unit.to_string());
+                        am.unit_id = Set(ing_in.unit_id);
                         am.position = Set(ing_in.position);
                         am.update(txn).await?.id
                     } else {
@@ -365,7 +368,7 @@ pub async fn update(
                         ingredient_id: Set(Uuid::new_v4()), // Or find existing master ID
                         ingredient_group_id: Set(current_group_id),
                         quantity: Set(ing_in.quantity),
-                        unit: Set(ing_in.unit.to_string()),
+                        unit_id: Set(ing_in.unit_id),
                         position: Set(ing_in.position),
                         ..Default::default()
                     }
