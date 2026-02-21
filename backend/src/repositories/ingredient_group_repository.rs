@@ -257,7 +257,6 @@ pub async fn update(
     recipe_id: Uuid,
     ingredient_group: Vec<EditIngredientGroupInput>,
 ) -> Result<(), Error> {
-    // 1. Delete Groups not in incoming list
     let incoming_group_ids: Vec<Uuid> = ingredient_group.iter().filter_map(|g| g.id).collect();
 
     ingredient_groups::Entity::delete_many()

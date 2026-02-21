@@ -106,7 +106,8 @@
     "comments": {
       "title": "Comments",
       "placeholder": "Comment on this recipe...",
-      "post": "Post Comment"
+      "post": "Post Comment",
+      "loginToPost": "You need to be connected to post."
     }
   },
   "comments": {

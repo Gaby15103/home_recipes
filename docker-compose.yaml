@@ -20,5 +20,13 @@
       - "1025:1025"
       - "8025:8025"
 
+  tesseract:
+    # This image stays UP and waits for your Rust app to send images
+    image: tesserack/tesseract-api
+    container_name: tesseract_ocr
+    ports:
+      - "8000:8000"
+    restart: always
+
 volumes:
   postgresDb:

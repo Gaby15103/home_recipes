@@ -40,6 +40,9 @@ pub enum Error {
 
     #[error("Failed to send confirmation email")]
     EmailSend(JsonValue),
+
+    #[error("OCR Service Unavailable")]
+    OcrServiceError,
 }
 
 /* -------------------------------------------------------------------------- */
@@ -57,6 +60,7 @@ impl ResponseError for Error {
             Error::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Error::EmailAlreadyExists => StatusCode::CONFLICT,
             Error::EmailSend(_) =>  StatusCode::INTERNAL_SERVER_ERROR,
+            Error::OcrServiceError => StatusCode::SERVICE_UNAVAILABLE,
         }
     }
 
@@ -76,6 +80,10 @@ impl ResponseError for Error {
             | Error::EmailSend(v) => {
                 HttpResponse::InternalServerError().json(v)
             }
+            Error::OcrServiceError => HttpResponse::ServiceUnavailable().json(json!({
+                "error": "OCR service is currently unreachable",
+                "details": "Check if the tesseract container is running"
+            }))
         }
     }
 }
@@ -215,6 +223,24 @@ impl From<serde_json::Error> for Error {
             Error::BadRequest(json!({
                 "error": "Malformed JSON data",
                 "detail": err.to_string()
+            }))
+        } else {
+            Error::InternalServerError
+        }
+    }
+}
+
+/* ----- reqwest ----- */
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Self {
+        println!("Reqwest Error: {:?}", err);
+
+        if err.is_timeout() || err.is_connect() {
+            Error::OcrServiceError
+        } else if err.is_decode() {
+            Error::BadRequest(json!({
+                "error": "OCR service returned unreadable data",
+                "details": err.to_string()
             }))
         } else {
             Error::InternalServerError
