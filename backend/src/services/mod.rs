@@ -6,3 +6,4 @@ pub(crate) mod ingredient_service;
 pub(crate) mod tag_service;
 pub(crate) mod language_service;
 pub(crate) mod unit_service;
+pub(crate) mod ocr_service;

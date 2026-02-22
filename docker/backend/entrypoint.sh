@@ -1,18 +1,17 @@
 #!/bin/sh
 set -e
 
-echo "? Waiting for Postgres..."
-
-until diesel database setup >/dev/null 2>&1; do
-  echo "Postgres not ready yet, retrying..."
+echo "🔍 Checking Database connection..."
+# A simple way to wait for Postgres without Diesel CLI:
+until nc -z postgres 5432; do
+  echo "Postgres is unavailable - sleeping"
   sleep 2
 done
 
-echo "? Postgres is ready"
-if [ "$(diesel migration list | grep 2026_01_21_add_seeds | wc -l)" -eq 0 ]; then
-  echo "📦 Running Diesel migrations..."
-  diesel migration run
-fi
+echo "✅ Postgres is up!"
+
+# If you have a migration sub-command in your main app:
+# ./backend migrate up
 
 echo "🚀 Starting backend..."
 exec "$@"

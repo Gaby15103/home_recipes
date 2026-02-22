@@ -9,9 +9,8 @@ pub struct Model {
     pub id: Uuid,
     #[sea_orm(unique_key = "unique_recipe_ingredient_language")]
     pub recipe_ingredient_id: Uuid,
-    #[sea_orm(column_type = "Text", unique_key = "unique_recipe_ingredient_language")]
+    #[sea_orm(unique_key = "unique_recipe_ingredient_language")]
     pub language_code: String,
-    #[sea_orm(column_type = "Text", nullable)]
     pub note: Option<String>,
     pub created_at: DateTime,
     pub updated_at: DateTime,

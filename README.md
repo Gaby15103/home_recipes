@@ -43,3 +43,7 @@ gdbserver :2345 target/debug/backend
 sea-orm-cli generate entity -o backend/entity/src --lib
 ```
 
+### tesseract depend on :
+```bash 
+sudo pacman -S --needed cmake base-devel
+```

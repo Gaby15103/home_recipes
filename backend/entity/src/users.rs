@@ -9,13 +9,10 @@ pub struct Model {
     pub id: Uuid,
     #[sea_orm(unique)]
     pub email: String,
-    #[sea_orm(unique)]
     pub username: String,
     pub first_name: String,
     pub last_name: String,
-    #[sea_orm(column_type = "Text")]
     pub password_hash: String,
-    #[sea_orm(column_type = "Text", nullable)]
     pub avatar_url: String,
     #[sea_orm(column_type = "JsonBinary")]
     pub preferences: Json,
@@ -24,7 +21,6 @@ pub struct Model {
     pub last_login_at: Option<DateTime>,
     pub created_at: DateTime,
     pub updated_at: DateTime,
-    #[sea_orm(column_type = "Text", nullable)]
     pub two_factor_secret: Option<String>,
     #[sea_orm(column_type = "JsonBinary", nullable)]
     pub two_factor_recovery_codes: Option<Json>,

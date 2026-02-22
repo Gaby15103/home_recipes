@@ -20,13 +20,14 @@
       - "1025:1025"
       - "8025:8025"
 
-  tesseract:
-    # This image stays UP and waits for your Rust app to send images
-    image: tesserack/tesseract-api
-    container_name: tesseract_ocr
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
     ports:
-      - "8000:8000"
-    restart: always
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
 
 volumes:
   postgresDb:
+  ollama_data:

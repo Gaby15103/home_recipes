@@ -7,9 +7,7 @@ use sea_orm::entity::prelude::*;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub code: String,
-    #[sea_orm(column_type = "Text")]
     pub name: String,
-    #[sea_orm(column_type = "Text")]
     pub native_name: String,
     pub is_active: bool,
     pub is_default: bool,

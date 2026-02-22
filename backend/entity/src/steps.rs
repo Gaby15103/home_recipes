@@ -11,7 +11,6 @@ pub struct Model {
     pub step_group_id: Uuid,
     #[sea_orm(unique_key = "unique")]
     pub position: i32,
-    #[sea_orm(column_type = "Text", nullable)]
     pub image_url: Option<String>,
     pub duration_minutes: Option<i32>,
 }

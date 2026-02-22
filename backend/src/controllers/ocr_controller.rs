@@ -1,27 +1,23 @@
-use actix_web::{web, HttpRequest, HttpResponse};
+use actix_multipart::form::MultipartForm;
+use actix_web::{web, HttpResponse};
 use crate::errors::Error;
-use reqwest::Client;
+use crate::domain::user::{AuthenticatedUser, Role};
+use crate::dto::upload_dto::SingleImageForm;
+use crate::services::ocr_service;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/ocr")
+            .app_data(web::PayloadConfig::new(10 * 1024 * 1024))
             .route("/recipe", web::post().to(create_recipe))
     );
 }
 pub async fn create_recipe(
-    image_data: web::Bytes
+    auth: AuthenticatedUser,
+    MultipartForm(form): MultipartForm<SingleImageForm>,
 ) ->Result<HttpResponse, Error>{
-    let client = Client::new();
-    let tesseract_url = "http://tesseract:8080/tesseract";
-
-    let response = client
-        .post(tesseract_url)
-        .body(image_data)
-        .send()
-        .await
-        .map_err(Error::from)?;
-
-    let raw_text = response.text().await.map_err(Error::from)?;
-
-    Ok(HttpResponse::Ok().json(serde_json::json!({ "text": raw_text })))
+    auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
+    let recipe = ocr_service::recipe_from_file(form.image).await?;
+    
+    Ok(HttpResponse::Ok().json(recipe))
 }

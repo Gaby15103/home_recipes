@@ -10,7 +10,6 @@ pub struct Model {
     pub recipe_id: Uuid,
     pub user_id: Option<Uuid>,
     pub parent_id: Option<Uuid>,
-    #[sea_orm(column_type = "Text")]
     pub content: String,
     pub created_at: DateTimeWithTimeZone,
     pub edited_at: Option<DateTimeWithTimeZone>,
