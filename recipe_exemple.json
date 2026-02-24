@@ -116,3 +116,291 @@
     }
   ]
 }
+
+{
+  "cook_time_minutes": null,
+  "image_url": "",
+  "ingredient_groups": [
+    {
+      "ingredients": [
+        {
+          "position": 0,
+          "quantity": 250.0,
+          "translations": [
+            {
+              "data": "Poulet",
+              "language_code": "fr",
+              "note": "sans peau et désossée détaillée en fine julienne"
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 1,
+          "quantity": 250.0,
+          "translations": [
+            {
+              "data": "Crevettes moyennes (taille 26-30)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 2,
+          "quantity": 30.0,
+          "translations": [
+            {
+              "data": "Fécule de tapioca ou de maïs",
+              "language_code": "fr",
+              "note": "250 ml (1 1) de"
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 3,
+          "quantity": 60.0,
+          "translations": [
+            {
+              "data": "Huile végétale (pour cuisson)",
+              "language_code": "fr",
+              "note": "60 ml (1/4 1) de"
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 4,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Ail haché ou - b 5 ml (1 c. à thé) de purée d'ail",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 5,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Oignons taillés en fine julienne (250 ml (1 1) de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 6,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Poivrons verts taillés en fine julienne (125 ml (1/2 t) de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 7,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Poivrons rouges taillés en fine julienne (125 ml (1/2 t) de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 8,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Céleri taillé en fine julienne (125 ml (1/2 t) de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 9,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Piments rouges forts taillés en fine julienne (2 W piments rouges forts)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 10,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Pâte de curry rouge (12 A TAIZ 30-mH7-e-àtab-) _ de",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 11,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Concentré pour bouillon de poulet en poudre (30 ml (2 c. à tab.) _ de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 12,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Sucre (15 ml (1 c. à tab.) de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 13,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Sel (5 mi(1éaàthé) desel 75)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 14,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Lait de coco (30 ml @c àtab.) _ de",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 15,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Cresson bien lavé (1 x botte de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 16,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Citron ou lime tranché et taillé en quartiers (1)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 17,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Arachides non salées, hachées finement (125 ml (1/2 t) de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 18,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Feuilles de menthe hachées (125 ml (1/2 t) xde)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        },
+        {
+          "position": 19,
+          "quantity": null,
+          "translations": [
+            {
+              "data": "Oignons verts hachés (125 ml (1/2 t) de)",
+              "language_code": "fr",
+              "note": ""
+            }
+          ],
+          "unit_id": "00000000-0000-0000-0000-000000000000"
+        }
+      ],
+      "position": 0,
+      "translations": [
+        {
+          "language_code": "fr",
+          "title": "Ingrédients"
+        }
+      ]
+    }
+  ],
+  "is_private": false,
+  "prep_time_minutes": null,
+  "primary_language": "fr",
+  "servings": 6,
+  "step_groups": [
+    {
+      "position": 0,
+      "steps": [],
+      "translations": [
+        {
+          "language_code": "fr",
+          "title": "Instructions"
+        }
+      ]
+    }
+  ],
+  "tags": [],
+  "translations": [
+    {
+      "description": "",
+      "language_code": "fr",
+      "title": "Poulet et crevettes au style thailandais"
+    },
+    {
+      "description": "",
+      "language_code": "en",
+      "title": "Thai-Style Chicken and Shrimp"
+    }
+  ]
+}
+

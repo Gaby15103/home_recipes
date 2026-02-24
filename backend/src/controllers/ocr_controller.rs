@@ -1,5 +1,6 @@
 use actix_multipart::form::MultipartForm;
 use actix_web::{web, HttpResponse};
+use crate::app::state::AppState;
 use crate::errors::Error;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::upload_dto::SingleImageForm;
@@ -13,11 +14,12 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 pub async fn create_recipe(
+    state: web::Data<AppState>,
     auth: AuthenticatedUser,
     MultipartForm(form): MultipartForm<SingleImageForm>,
 ) ->Result<HttpResponse, Error>{
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
-    let recipe = ocr_service::recipe_from_file(form.image).await?;
+    let recipe = ocr_service::recipe_from_file(form.image,&state.db).await?;
     
     Ok(HttpResponse::Ok().json(recipe))
 }

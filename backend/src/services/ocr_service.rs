@@ -1,14 +1,18 @@
 use std::ops::Deref;
 use actix_multipart::form::tempfile::TempFile;
 use actix_web::web;
+use sea_orm::DatabaseConnection;
 use tesseract_rs::TesseractAPI;
 use crate::dto::recipe_dto::CreateRecipeInput;
 use crate::errors::Error;
+use crate::repositories::unit_repository;
 use crate::utils::ollama;
 
 pub async fn recipe_from_file(
-    image: TempFile
+    image: TempFile,
+    db: &DatabaseConnection
 )->Result<CreateRecipeInput, Error>{
+    let units = unit_repository::get_all_admin(db).await?;
     // 1. Offload heavy CPU work to web::block
     let text = web::block(move || {
         // Initialize API
@@ -55,6 +59,6 @@ pub async fn recipe_from_file(
         .await
         .map_err(|_| Error::InternalServerError)? // Threadpool error
         .map_err(|e| Error::BadRequest(serde_json::json!({ "error": e })))?;
-    let recipe = ollama::process_ocr_to_dto(&text.deref()).await?;
+    let recipe = ollama::process_ocr_to_dto(&text.deref(),units).await?;
     Ok(recipe)
 }
