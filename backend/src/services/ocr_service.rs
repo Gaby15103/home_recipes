@@ -14,14 +14,12 @@ pub async fn recipe_from_file(
         // Initialize API
         let api = TesseractAPI::new();
 
-        // Explicitly point to the tessdata folder itself
-        let home = std::env::var("HOME").unwrap_or_default();
-        let tessdata_path = format!("{}/.tesseract-rs/tessdata", home);
+        // Use the folder itself since the wrapper isn't appending it
+        let tessdata_path = "/usr/share/tessdata";
 
-        println!("Initializing Tesseract with exact path: {}", tessdata_path);
+        println!("Initializing Tesseract with system path: {}", tessdata_path);
 
-        // Initialize
-        api.init(&tessdata_path, "fra+eng").map_err(|e| {
+        api.init(tessdata_path, "fra+eng").map_err(|e| {
             eprintln!("Tesseract Init Error: {:?}", e);
             "Failed to init Tesseract"
         })?;

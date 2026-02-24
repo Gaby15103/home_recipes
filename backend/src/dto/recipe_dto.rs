@@ -131,7 +131,7 @@ pub struct RecipeFilter {
     pub scope: bool,
 
     pub search: Option<String>,
-    pub ingredient: Option<String>,
+    pub ingredient: Option<Vec<String>>,
     pub tags: Option<String>,
 
     pub min_prep: Option<i32>,

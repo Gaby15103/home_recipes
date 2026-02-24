@@ -1,7 +1,11 @@
+use serde_derive::Deserialize;
 use serde_json::json;
 use crate::dto::recipe_dto::CreateRecipeInput;
 use crate::errors::Error;
-
+#[derive(Deserialize)]
+struct OllamaResponse {
+    response: String,
+}
 pub async fn process_ocr_to_dto(ocr_text: &str) -> Result<CreateRecipeInput, Error> {
     let client = reqwest::Client::new();
 
@@ -15,7 +19,7 @@ pub async fn process_ocr_to_dto(ocr_text: &str) -> Result<CreateRecipeInput, Err
           "servings": 0,
           "prep_time_minutes": 0,
           "cook_time_minutes": 0,
-          "ingredient_groups": [{"name": "Ingredients", "ingredients": [{"name": "...", "amount": 0.0, "unit": "..."}]}],
+          "ingredient_groups": [{"name": "Ingredients", "ingredients": [{"name": "...", "quantity": 0.0, "unit": "..."}]}],
           "step_groups": [{"name": "Instructions", "steps": [{"instruction": "..."}]}]
         }
         Notes: Translate the 'en' translation title from the French text. If units are 'ml' or 'g', keep them.
@@ -41,7 +45,16 @@ pub async fn process_ocr_to_dto(ocr_text: &str) -> Result<CreateRecipeInput, Err
     println!("{}", structured_str);
     // 3. Convert to your Rust Struct
     let dto: CreateRecipeInput = serde_json::from_str(structured_str)
-        .map_err(|_| Error::BadRequest(serde_json::json!({"error": "AI parsing failed"})))?;
+        .map_err(|e| {
+            // This is your best friend right now:
+            eprintln!("SERDE ERROR: {}", e);
+            eprintln!("ON COLUMN: {}", e.column());
+
+            Error::BadRequest(serde_json::json!({
+            "error": "AI parsing failed",
+            "details": e.to_string()
+        }))
+        })?;
 
     Ok(dto)
 }

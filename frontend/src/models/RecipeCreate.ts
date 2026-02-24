@@ -46,13 +46,13 @@ export interface IngredientGroupCreate {
 }
 export interface IngredientTranslationCreate {
     language_code: string
-    name: string
+    data: string
+    note: string|null
 }
 export interface IngredientCreate {
     translations: IngredientTranslationCreate[];
     quantity: number;
     unit_id: string;
-    note: IngredientNoteTranslation[] | null;
     position: number;
 }
 export interface IngredientNoteTranslation {

@@ -45,6 +45,7 @@ export interface IngredientGroupView {
 }
 export interface IngredientGroupEditor {
     id: string;
+    recipe_id: string;
     position: number;
     ingredients: IngredientEditor[];
     translations: IngredientGroupTranslation[]
@@ -58,8 +59,8 @@ export interface IngredientRecipeView {
     id: string;
     ingredient_id: string;
     name: string;
+    unit: Unit;
     quantity: number;
-    unit: IngredientUnit;
     note: string|null;
     position: number;
 }
@@ -71,15 +72,16 @@ export interface IngredientEditor {
     id: string;
     ingredient_id: string;
     quantity: number;
+    unit_id: string;
     unit: Unit;
-    note: string|null;
     position: number;
     translations: IngredientTranslation[];
 }
 export interface IngredientTranslation {
     id: string
     language_code: String;
-    name: String;
+    data: String;
+    note: string|null;
 }
 
 export interface Unit {
@@ -151,8 +153,8 @@ export interface StepTranslation {
 }
 
 export interface RecipeFilter {
-    search: string | null,            // name / description
-    ingredient: IngredientRecipeView[],
+    search: string | null,
+    ingredient: string[],
     tags: Tag[],
     minPrep: number | null,
     maxPrep: number | null,

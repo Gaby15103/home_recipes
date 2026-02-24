@@ -19,8 +19,6 @@ pub enum Relation {
     IngredientGroupTranslations,
     #[sea_orm(has_many = "super::ingredient_translations::Entity")]
     IngredientTranslations,
-    #[sea_orm(has_many = "super::recipe_ingredient_translations::Entity")]
-    RecipeIngredientTranslations,
     #[sea_orm(has_many = "super::recipe_translations::Entity")]
     RecipeTranslations,
     #[sea_orm(has_many = "super::recipes::Entity")]
@@ -40,12 +38,6 @@ impl Related<super::ingredient_group_translations::Entity> for Entity {
 impl Related<super::ingredient_translations::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::IngredientTranslations.def()
-    }
-}
-
-impl Related<super::recipe_ingredient_translations::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::RecipeIngredientTranslations.def()
     }
 }
 

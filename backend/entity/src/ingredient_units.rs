@@ -30,13 +30,13 @@ pub enum Relation {
         on_delete = "SetNull"
     )]
     SelfRef,
-    #[sea_orm(has_many = "super::recipe_ingredients::Entity")]
-    RecipeIngredients,
+    #[sea_orm(has_many = "super::ingredients::Entity")]
+    Ingredients,
 }
 
-impl Related<super::recipe_ingredients::Entity> for Entity {
+impl Related<super::ingredients::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::RecipeIngredients.def()
+        Relation::Ingredients.def()
     }
 }
 

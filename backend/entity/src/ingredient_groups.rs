@@ -15,8 +15,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::ingredient_group_translations::Entity")]
     IngredientGroupTranslations,
-    #[sea_orm(has_many = "super::recipe_ingredients::Entity")]
-    RecipeIngredients,
+    #[sea_orm(has_many = "super::ingredients::Entity")]
+    Ingredients,
     #[sea_orm(
         belongs_to = "super::recipes::Entity",
         from = "Column::RecipeId",
@@ -33,9 +33,9 @@ impl Related<super::ingredient_group_translations::Entity> for Entity {
     }
 }
 
-impl Related<super::recipe_ingredients::Entity> for Entity {
+impl Related<super::ingredients::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::RecipeIngredients.def()
+        Relation::Ingredients.def()
     }
 }
 

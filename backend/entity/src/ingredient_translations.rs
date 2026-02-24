@@ -11,9 +11,8 @@ pub struct Model {
     pub ingredient_id: Uuid,
     #[sea_orm(unique_key = "unique_ingredient_language")]
     pub language_code: String,
-    pub name: String,
-    pub created_at: DateTime,
-    pub updated_at: DateTime,
+    pub data: String,
+    pub note: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

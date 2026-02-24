@@ -8,14 +8,38 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub default_language: Option<String>,
+    pub ingredient_group_id: Uuid,
+    pub quantity: Decimal,
+    pub position: i32,
+    pub unit_id: Uuid,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::ingredient_groups::Entity",
+        from = "Column::IngredientGroupId",
+        to = "super::ingredient_groups::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    IngredientGroups,
     #[sea_orm(has_many = "super::ingredient_translations::Entity")]
     IngredientTranslations,
-    #[sea_orm(has_many = "super::recipe_ingredients::Entity")]
-    RecipeIngredients,
+    #[sea_orm(
+        belongs_to = "super::ingredient_units::Entity",
+        from = "Column::UnitId",
+        to = "super::ingredient_units::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Restrict"
+    )]
+    IngredientUnits,
+}
+
+impl Related<super::ingredient_groups::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::IngredientGroups.def()
+    }
 }
 
 impl Related<super::ingredient_translations::Entity> for Entity {
@@ -24,9 +48,9 @@ impl Related<super::ingredient_translations::Entity> for Entity {
     }
 }
 
-impl Related<super::recipe_ingredients::Entity> for Entity {
+impl Related<super::ingredient_units::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::RecipeIngredients.def()
+        Relation::IngredientUnits.def()
     }
 }
 

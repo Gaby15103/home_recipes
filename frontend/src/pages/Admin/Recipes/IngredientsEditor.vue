@@ -21,7 +21,7 @@ const emit = defineEmits(["update:modelValue"])
 function getIngTrans(ingredient: IngredientCreate, langCode: string) {
   let trans = ingredient.translations.find(t => t.language_code === langCode);
   if (!trans) {
-    trans = { language_code: langCode, name: "" };
+    trans = { language_code: langCode, data: "" };
     ingredient.translations.push(trans);
   }
   return trans;
@@ -109,14 +109,6 @@ function syncLang(obj: any) {
       </div>
 
       <div v-for="(ing, iIdx) in group.ingredients" :key="iIdx" class="grid grid-cols-12 gap-2 p-2 border rounded bg-muted/20">
-        <div class="col-span-5">
-          <Label class="text-xs">{{ t('Admin.ingredients.name') }}</Label>
-          <Input
-              v-model="getIngTrans(ing, currentLang).name"
-              @input="syncLang(ing)"
-              :placeholder="`Name in ${currentLang}`"
-          />
-        </div>
 
         <div class="col-span-2">
           <Label class="text-xs">{{ t('Admin.ingredients.quantity') }}</Label>
@@ -126,6 +118,15 @@ function syncLang(obj: any) {
         <div class="col-span-3">
           <Label class="text-xs">{{ t('Admin.ingredients.unit') }}</Label>
           <IngredientUnitSelect v-model="ing.unit_id" />
+        </div>
+
+        <div class="col-span-5">
+          <Label class="text-xs">{{ t('Admin.ingredients.name') }}</Label>
+          <Input
+              v-model="getIngTrans(ing, currentLang).data"
+              @input="syncLang(ing)"
+              :placeholder="`Name in ${currentLang}`"
+          />
         </div>
         <div class="col-span-1"/>
         <div class="col-span-1 ms-auto flex items-end">

@@ -11,8 +11,6 @@ pub use super::languages::Entity as Languages;
 pub use super::password_reset_tokens::Entity as PasswordResetTokens;
 pub use super::recipe_analytics::Entity as RecipeAnalytics;
 pub use super::recipe_comments::Entity as RecipeComments;
-pub use super::recipe_ingredient_translations::Entity as RecipeIngredientTranslations;
-pub use super::recipe_ingredients::Entity as RecipeIngredients;
 pub use super::recipe_ratings::Entity as RecipeRatings;
 pub use super::recipe_tags::Entity as RecipeTags;
 pub use super::recipe_translations::Entity as RecipeTranslations;

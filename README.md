@@ -47,3 +47,6 @@ sea-orm-cli generate entity -o backend/entity/src --lib
 ```bash 
 sudo pacman -S --needed cmake base-devel
 ```
+```bash 
+sudo pacman -S tesseract tesseract-data-fra tesseract-data-eng
+```

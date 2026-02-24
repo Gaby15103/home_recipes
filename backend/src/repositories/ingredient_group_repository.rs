@@ -1,17 +1,13 @@
 use sea_orm::{DatabaseConnection, QueryFilter, QueryOrder};
 use std::collections::HashMap;
-use std::ops::Deref;
-use std::str::FromStr;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseTransaction, EntityTrait, Set};
 use serde_json::json;
 use uuid::Uuid;
-use entity::{ingredient_group_translations, ingredient_groups, ingredient_translations, ingredients, recipe_ingredient_translations, recipe_ingredients};
-use crate::dto::ingredient_dto::{IngredientEditorDto, IngredientNoteTranslationsDto, IngredientRecipeViewDto, IngredientTranslationsDto};
+use entity::{ingredient_group_translations, ingredient_groups, ingredient_translations, ingredients};
+use crate::dto::ingredient_dto::{IngredientEditorDto, IngredientRecipeViewDto, IngredientTranslationsDto};
 use crate::dto::ingredient_group_dto::{EditIngredientGroupInput, IngredientGroupEditorDto, IngredientGroupInput, IngredientGroupTranslationDto, IngredientGroupViewDto};
-use crate::dto::recipe_dto::{EditRecipeInput, RecipeViewDto};
 use crate::errors::Error;
 use crate::repositories::{ingredient_repository, unit_repository};
-use crate::utils::unit::IngredientUnit;
 
 pub async fn create_multiple(
     txn: &DatabaseTransaction,
@@ -84,9 +80,9 @@ pub async fn find_by_recipe(
     db: &DatabaseConnection,
     recipe_id: Uuid,
     lang: &str,
-    default_lang_code: &str,
+    default_lang: &str,
 ) -> Result<Vec<IngredientGroupViewDto>, Error> {
-    // 1. Fetch groups
+    // 1. Fetch groups + group translations
     let groups_with_trans = ingredient_groups::Entity::find()
         .filter(ingredient_groups::Column::RecipeId.eq(recipe_id))
         .order_by_asc(ingredient_groups::Column::Position)
@@ -94,78 +90,66 @@ pub async fn find_by_recipe(
         .all(db)
         .await?;
 
-    if groups_with_trans.is_empty() { return Ok(Vec::new()); }
+    if groups_with_trans.is_empty() { return Ok(vec![]); }
     let group_ids: Vec<Uuid> = groups_with_trans.iter().map(|(g, _)| g.id).collect();
 
-    // 2. Fetch notes - Include BOTH requested and default language
-    let recipe_ingredients_with_notes = recipe_ingredients::Entity::find()
-        .filter(recipe_ingredients::Column::IngredientGroupId.is_in(group_ids))
-        .order_by_asc(recipe_ingredients::Column::Position)
-        .find_with_related(recipe_ingredient_translations::Entity)
-        // Only fetch translations for the two languages we care about
-        .filter(
-            recipe_ingredient_translations::Column::LanguageCode.is_in(vec![lang, default_lang_code])
-        )
+    // 2. Fetch the actual Ingredients (the line items) for these groups
+    let ingredients_list = ingredients::Entity::find()
+        .filter(ingredients::Column::IngredientGroupId.is_in(group_ids))
+        .order_by_asc(ingredients::Column::Position)
         .all(db)
         .await?;
 
-    // 3. Fetch master names - Include BOTH requested and default language
-    let master_ids: Vec<Uuid> = recipe_ingredients_with_notes.iter().map(|(ri, _)| ri.ingredient_id).collect();
+    let ingredient_ids: Vec<Uuid> = ingredients_list.iter().map(|i| i.id).collect();
 
-    let name_translations = ingredient_translations::Entity::find()
-        .filter(ingredient_translations::Column::IngredientId.is_in(master_ids))
-        .filter(
-            ingredient_translations::Column::LanguageCode.is_in(vec![lang, default_lang_code])
-        )
+    // 3. Fetch Translations for those specific ingredients
+    let translations = ingredient_translations::Entity::find()
+        .filter(ingredient_translations::Column::IngredientId.is_in(ingredient_ids))
+        .filter(ingredient_translations::Column::LanguageCode.is_in(vec![lang, default_lang]))
         .all(db)
         .await?;
 
-    // 4. Map everything into IngredientViewDtos
+    // 4. Map everything together
     let mut ingredients_map: HashMap<Uuid, Vec<IngredientRecipeViewDto>> = HashMap::new();
 
-    for (rel, notes) in recipe_ingredients_with_notes {
-        // Find best name from name_translations vector
-        let name = name_translations.iter()
-            .filter(|t| t.ingredient_id == rel.ingredient_id)
-            .find(|t| t.language_code == lang) // Try preferred
-            .or_else(|| name_translations.iter().filter(|t| t.ingredient_id == rel.ingredient_id).find(|t| t.language_code == default_lang_code)) // Try default
-            .map(|t| t.name.clone())
-            .unwrap_or_else(|| "Unknown".to_string());
-
-        // Find best note from the notes vector attached to this specific relation
-        let note = notes.iter()
+    for ing in ingredients_list {
+        // Find the best translation for this specific ingredient
+        let translation = translations.iter()
+            .filter(|t| t.ingredient_id == ing.id)
             .find(|t| t.language_code == lang)
-            .or_else(|| notes.iter().find(|t| t.language_code == default_lang_code))
-            .and_then(|t| t.note.clone());
+            .or_else(|| translations.iter().filter(|t| t.ingredient_id == ing.id).find(|t| t.language_code == default_lang));
 
-        let unit = unit_repository::find_by_id::<DatabaseConnection>(db,rel.unit_id).await?;
+        let unit = unit_repository::find_by_id(db, ing.unit_id).await?;
 
-        ingredients_map.entry(rel.ingredient_group_id).or_default().push(IngredientRecipeViewDto {
-            id: rel.id,
-            ingredient_id: rel.ingredient_id,
+        // Fallback name if no translation exists at all
+        let name = translation.map(|t| t.data.clone()).unwrap_or_else(|| "Unknown Ingredient".to_string());
+        let note = translation.and_then(|t| t.note.clone());
+
+        ingredients_map.entry(ing.ingredient_group_id).or_default().push(IngredientRecipeViewDto {
+            id: ing.id, // This is the ingredient line-item ID
+            ingredient_id: ing.id,
             name,
-            quantity: rel.quantity,
+            quantity: ing.quantity,
             note,
             unit,
-            position: rel.position,
+            position: ing.position,
         });
     }
 
-    // 5. Final Assembly with Fallback for Group Titles
-    let results = groups_with_trans.into_iter().map(|(group, trans)| {
-        let title = trans.iter()
+    // 5. Final Assembly
+    let results = groups_with_trans.into_iter().map(|(group, trans_list)| {
+        let title = trans_list.iter()
             .find(|t| t.language_code == lang)
-            .or_else(|| trans.iter().find(|t| t.language_code == default_lang_code))
+            .or_else(|| trans_list.iter().find(|t| t.language_code == default_lang))
             .map(|t| t.title.clone())
             .unwrap_or_else(|| "Ingredients".to_string());
 
-        let gid = group.id;
         IngredientGroupViewDto {
-            id: gid,
+            id: group.id,
             title,
             recipe_id: group.recipe_id,
             position: group.position,
-            ingredients: ingredients_map.remove(&gid).unwrap_or_default(),
+            ingredients: ingredients_map.remove(&group.id).unwrap_or_default(),
         }
     }).collect();
 
@@ -175,7 +159,7 @@ pub async fn find_all_by_recipe(
     db: &DatabaseConnection,
     recipe_id: Uuid,
 ) -> Result<Vec<IngredientGroupEditorDto>, Error> {
-    // 1. Fetch Groups + All Translations
+    // 1. Fetch Groups + Group Title Translations
     let groups_with_trans = ingredient_groups::Entity::find()
         .filter(ingredient_groups::Column::RecipeId.eq(recipe_id))
         .order_by_asc(ingredient_groups::Column::Position)
@@ -186,63 +170,61 @@ pub async fn find_all_by_recipe(
     let group_ids: Vec<Uuid> = groups_with_trans.iter().map(|(g, _)| g.id).collect();
     if group_ids.is_empty() { return Ok(vec![]); }
 
-    // 2. Fetch Recipe-Ingredient Relations + All Note Translations
-    let rels_with_notes = recipe_ingredients::Entity::find()
-        .filter(recipe_ingredients::Column::IngredientGroupId.is_in(group_ids))
-        .order_by_asc(recipe_ingredients::Column::Position)
-        .find_with_related(recipe_ingredient_translations::Entity)
+    // 2. Fetch the Ingredients (the line items) for these groups
+    let ingredients_list = ingredients::Entity::find()
+        .filter(ingredients::Column::IngredientGroupId.is_in(group_ids))
+        .order_by_asc(ingredients::Column::Position)
         .all(db)
         .await?;
 
-    let ingredient_ids: Vec<Uuid> = rels_with_notes.iter().map(|(rel, _)| rel.ingredient_id).collect();
+    let ingredient_ids: Vec<Uuid> = ingredients_list.iter().map(|i| i.id).collect();
 
-    let master_translations = ingredient_translations::Entity::find()
+    // 3. Fetch ALL Translations (names and notes) for these ingredients
+    let all_translations = ingredient_translations::Entity::find()
         .filter(ingredient_translations::Column::IngredientId.is_in(ingredient_ids))
         .all(db)
         .await?;
 
-    // 3. Map Ingredients into Groups
+    // 4. Map everything together
     let mut ingredients_map: HashMap<Uuid, Vec<IngredientEditorDto>> = HashMap::new();
 
-    for (rel, notes) in rels_with_notes {
-        let current_ingredient_id = rel.ingredient_id;
+    for ing in ingredients_list {
+        let ing_id = ing.id;
 
-        // Filter master names for this specific ingredient
-        let ingredient_names: Vec<IngredientTranslationsDto> = master_translations.iter()
-            .filter(|t| t.ingredient_id == current_ingredient_id)
+        // Collect all translations associated with this specific ingredient line-item
+        let translations_for_this_ing = all_translations.iter()
+            .filter(|t| t.ingredient_id == ing_id);
+
+        let translations_dto: Vec<IngredientTranslationsDto> = translations_for_this_ing.clone()
             .map(|t| IngredientTranslationsDto {
-                id: t.id.clone(),
+                id: t.id,
                 language_code: t.language_code.clone(),
-                name: t.name.clone(),
+                data: t.data.clone(),
+                note: t.note.clone(),
             })
             .collect();
 
-        let unit = unit_repository::find_by_id::<DatabaseConnection>(db,rel.unit_id).await?;
+        let unit = unit_repository::find_by_id(db, ing.unit_id).await?;
 
-        ingredients_map.entry(rel.ingredient_group_id).or_default().push(IngredientEditorDto {
-            id: rel.id,
-            ingredient_id: current_ingredient_id,
-            quantity: rel.quantity,
-            translations: ingredient_names,
+        ingredients_map.entry(ing.ingredient_group_id).or_default().push(IngredientEditorDto {
+            id: ing_id,
+            ingredient_id: ing_id, // In this schema, the line item is the ingredient
+            quantity: ing.quantity,
+            position: ing.position,
+            unit_id: ing.unit_id,
             unit,
-            position: rel.position,
-            note_translation: notes.into_iter().map(|n| IngredientNoteTranslationsDto {
-                id: n.id,
-                language_code: n.language_code,
-                note: n.note.unwrap_or_default(),
-            }).collect(),
-            unit_id: rel.unit_id,
+            translations: translations_dto,
         });
     }
 
-    // 4. Assemble Final Editor DTOs
-    let results = groups_with_trans.into_iter().map(|(group, trans)| {
+    // 5. Final Assembly
+    let results = groups_with_trans.into_iter().map(|(group, trans_list)| {
         let gid = group.id;
         IngredientGroupEditorDto {
             id: gid,
             recipe_id: group.recipe_id,
             position: group.position,
-            translations: trans.into_iter().map(|t| IngredientGroupTranslationDto {
+            translations: trans_list.into_iter().map(|t| IngredientGroupTranslationDto {
                 language_code: t.language_code,
                 title: t.title,
             }).collect(),
@@ -259,6 +241,7 @@ pub async fn update(
 ) -> Result<(), Error> {
     let incoming_group_ids: Vec<Uuid> = ingredient_group.iter().filter_map(|g| g.id).collect();
 
+    // 1. Delete groups no longer in the input
     ingredient_groups::Entity::delete_many()
         .filter(ingredient_groups::Column::RecipeId.eq(recipe_id))
         .filter(ingredient_groups::Column::Id.is_not_in(incoming_group_ids))
@@ -274,13 +257,9 @@ pub async fn update(
                     .await?
                     .ok_or(Error::NotFound(json!({"error": "Group not found"})))?;
 
-                if existing.position != group_in.position {
-                    let mut am: ingredient_groups::ActiveModel = existing.into();
-                    am.position = Set(group_in.position);
-                    am.update(txn).await?.id
-                } else {
-                    existing.id
-                }
+                let mut am: ingredient_groups::ActiveModel = existing.into();
+                am.position = Set(group_in.position);
+                am.update(txn).await?.id
             }
             None => {
                 ingredient_groups::ActiveModel {
@@ -295,26 +274,21 @@ pub async fn update(
         };
 
         // --- STEP B: RECONCILE GROUP TRANSLATIONS ---
-        let incoming_trans_ids: Vec<Uuid> = group_in.translations.iter().filter_map(|t| t.id).collect();
+        let incoming_g_trans_ids: Vec<Uuid> = group_in.translations.iter().filter_map(|t| t.id).collect();
         ingredient_group_translations::Entity::delete_many()
             .filter(ingredient_group_translations::Column::IngredientGroupId.eq(current_group_id))
-            .filter(ingredient_group_translations::Column::Id.is_not_in(incoming_trans_ids))
+            .filter(ingredient_group_translations::Column::Id.is_not_in(incoming_g_trans_ids))
             .exec(txn)
             .await?;
 
         for t_in in group_in.translations {
             match t_in.id {
                 Some(id) => {
-                    let existing = ingredient_group_translations::Entity::find_by_id(id)
-                        .one(txn)
-                        .await?
-                        .ok_or(Error::NotFound(json!({"error": "Group translation not found"})))?;
-                    if existing.title != t_in.title || existing.language_code != t_in.language_code {
-                        let mut am: ingredient_group_translations::ActiveModel = existing.into();
-                        am.title = Set(t_in.title);
-                        am.language_code = Set(t_in.language_code);
-                        am.update(txn).await?;
-                    }
+                    let existing = ingredient_group_translations::Entity::find_by_id(id).one(txn).await?.unwrap();
+                    let mut am: ingredient_group_translations::ActiveModel = existing.into();
+                    am.title = Set(t_in.title);
+                    am.language_code = Set(t_in.language_code);
+                    am.update(txn).await?;
                 }
                 None => {
                     ingredient_group_translations::ActiveModel {
@@ -322,98 +296,63 @@ pub async fn update(
                         language_code: Set(t_in.language_code),
                         title: Set(t_in.title),
                         ..Default::default()
-                    }
-                        .insert(txn)
-                        .await?;
+                    }.insert(txn).await?;
                 }
             }
         }
 
-        // --- STEP C: RECONCILE INGREDIENT LINKS ---
-        let incoming_rel_ids: Vec<Uuid> = group_in.ingredients.iter().filter_map(|i| i.id).collect();
-        recipe_ingredients::Entity::delete_many()
-            .filter(recipe_ingredients::Column::IngredientGroupId.eq(current_group_id))
-            .filter(recipe_ingredients::Column::Id.is_not_in(incoming_rel_ids))
+        // --- STEP C: RECONCILE INGREDIENTS (The Line Items) ---
+        let incoming_ing_ids: Vec<Uuid> = group_in.ingredients.iter().filter_map(|i| i.id).collect();
+
+        // Delete ingredients belonging to this group that aren't in the incoming list
+        ingredients::Entity::delete_many()
+            .filter(ingredients::Column::IngredientGroupId.eq(current_group_id))
+            .filter(ingredients::Column::Id.is_not_in(incoming_ing_ids))
             .exec(txn)
             .await?;
 
         for ing_in in group_in.ingredients {
-            // We capture current_rel_id to use in Step D (notes)
-            let current_rel_id = match ing_in.id {
-                Some(existing_rel_id) => {
-                    let rel = recipe_ingredients::Entity::find_by_id(existing_rel_id)
-                        .one(txn)
-                        .await?
-                        .ok_or(Error::NotFound(json!({"error": "Ingredient link not found"})))?;
-
-                    if rel.quantity != ing_in.quantity
-                        || rel.unit_id != ing_in.unit_id
-                        || rel.position != ing_in.position
-                    {
-                        let mut am: recipe_ingredients::ActiveModel = rel.into();
-                        am.quantity = Set(ing_in.quantity);
-                        am.unit_id = Set(ing_in.unit_id);
-                        am.position = Set(ing_in.position);
-                        am.update(txn).await?.id
-                    } else {
-                        rel.id
-                    }
+            let current_ing_id = match ing_in.id {
+                Some(id) => {
+                    let existing = ingredients::Entity::find_by_id(id).one(txn).await?.unwrap();
+                    let mut am: ingredients::ActiveModel = existing.into();
+                    am.quantity = Set(ing_in.quantity);
+                    am.unit_id = Set(ing_in.unit_id);
+                    am.position = Set(ing_in.position);
+                    am.update(txn).await?.id
                 }
                 None => {
-                    // Logic for a new ingredient link:
-                    // Note: You must ensure you handle the creation of the master ingredient
-                    // name/entry elsewhere if it doesn't exist yet!
-                    recipe_ingredients::ActiveModel {
-                        ingredient_id: Set(Uuid::new_v4()), // Or find existing master ID
+                    ingredients::ActiveModel {
                         ingredient_group_id: Set(current_group_id),
                         quantity: Set(ing_in.quantity),
                         unit_id: Set(ing_in.unit_id),
                         position: Set(ing_in.position),
                         ..Default::default()
-                    }
-                        .insert(txn)
-                        .await?
-                        .id
+                    }.insert(txn).await?.id
                 }
             };
 
-            // --- STEP D: RECONCILE NOTE TRANSLATIONS ---
-            if let Some(notes) = ing_in.note {
-                let incoming_note_ids: Vec<Uuid> = notes.iter().filter_map(|n| n.id).collect();
+            // --- STEP D: RECONCILE INGREDIENT TRANSLATIONS (Names & Notes) ---
+            // Combine translations (names) and note_translations from the DTO
+            // into the single ingredient_translations table.
 
-                recipe_ingredient_translations::Entity::delete_many()
-                    .filter(recipe_ingredient_translations::Column::RecipeIngredientId.eq(current_rel_id))
-                    .filter(recipe_ingredient_translations::Column::Id.is_not_in(incoming_note_ids))
-                    .exec(txn)
-                    .await?;
+            // 1. Delete all existing translations for this ingredient and re-insert
+            // OR do a fine-grained reconcile. Re-inserting is often cleaner for translations.
+            ingredient_translations::Entity::delete_many()
+                .filter(ingredient_translations::Column::IngredientId.eq(current_ing_id))
+                .exec(txn)
+                .await?;
 
-                for n_in in notes {
-                    match n_in.id {
-                        Some(id) => {
-                            let existing_note = recipe_ingredient_translations::Entity::find_by_id(id)
-                                .one(txn)
-                                .await?
-                                .ok_or(Error::NotFound(json!({"error": "Note not found"})))?;
+            for t_in in ing_in.translations {
+                // Find matching note for this language if it exists in the input
 
-                            if existing_note.note != Some(n_in.note.clone()) || existing_note.language_code != n_in.language_code {
-                                let mut am: recipe_ingredient_translations::ActiveModel = existing_note.into();
-                                am.note = Set(Some(n_in.note));
-                                am.language_code = Set(n_in.language_code);
-                                am.update(txn).await?;
-                            }
-                        }
-                        None => {
-                            recipe_ingredient_translations::ActiveModel {
-                                recipe_ingredient_id: Set(current_rel_id), // Correctly use the ID from Step C
-                                language_code: Set(n_in.language_code),
-                                note: Set(Some(n_in.note)),
-                                ..Default::default()
-                            }
-                                .insert(txn)
-                                .await?;
-                        }
-                    }
-                }
+                ingredient_translations::ActiveModel {
+                    ingredient_id: Set(current_ing_id),
+                    language_code: Set(t_in.language_code),
+                    data: Set(t_in.data),
+                    note: Set(t_in.note),
+                    ..Default::default()
+                }.insert(txn).await?;
             }
         }
     }
