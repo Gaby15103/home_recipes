@@ -1,8 +1,7 @@
-use jsonwebtoken::signature::digest::Mac;
+use crate::errors::Error;
+use crate::utils::PWD_SCHEME_VERSION;
 use libreauth::pass::HashBuilder;
 use serde_json::json;
-use crate::errors::Error;
-use crate::utils::{HASHER, PWD_SCHEME_VERSION};
 
 pub fn verify_password(hash: &str, password: &str) -> Result<(), Error> {
 

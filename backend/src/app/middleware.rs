@@ -40,9 +40,6 @@ where
             });
         }
     }
-
-    // Just call next.call(req).await
-    // No need to map_into_boxed_body() anymore because we are generic
     next.call(req).await
 }
 impl FromRequest for AuthenticatedUser {
@@ -62,7 +59,6 @@ impl FromRequest for AuthenticatedUser {
 impl AuthenticatedUser {
     pub fn require_roles(&self, allowed: &[Role]) -> Result<(), crate::errors::Error> {
         let has_role = self.user.roles.iter().any(|user_role| {
-            // Convert each 'allowed' enum to a string to compare against user_role.name
             allowed.iter().any(|a| a.to_string() == user_role.name)
         });
 

@@ -1,15 +1,16 @@
+use crate::errors::Error;
 use chrono::Utc;
 use entity::{sessions, users};
 use sea_orm::prelude::DateTimeWithTimeZone;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, QueryFilter, QuerySelect, RelationTrait, Set};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DeleteResult, EntityTrait, QueryFilter, Set,
+};
 use uuid::Uuid;
-use crate::errors::Error;
 
 pub async fn find_valid_session_with_user(
     db: &DatabaseConnection,
     token: &str,
 ) -> Result<Option<(sessions::Model, users::Model)>, sea_orm::DbErr> {
-    // find_also_related returns Option<(sessions::Model, Option<users::Model>)>
     let result = sessions::Entity::find()
         .find_also_related(users::Entity)
         .filter(sessions::Column::Token.eq(token))
@@ -18,7 +19,6 @@ pub async fn find_valid_session_with_user(
         .one(db)
         .await?;
 
-    // Map the nested Option safely
     Ok(result.and_then(|(session, user_opt)| user_opt.map(|user| (session, user))))
 }
 pub async fn get_user_sessions(
@@ -28,7 +28,6 @@ pub async fn get_user_sessions(
     sessions::Entity::find()
         .filter(sessions::Column::UserId.eq(user_id))
         .filter(sessions::Column::IsRevoked.eq(false))
-        // Only return sessions that haven't expired yet
         .filter(sessions::Column::ExpiresAt.gt(Utc::now()))
         .all(db)
         .await
@@ -36,13 +35,13 @@ pub async fn get_user_sessions(
 pub async fn find_by_id(
     db: &DatabaseConnection,
     session_id: Uuid,
-)-> Result<Option<sessions::Model>, sea_orm::DbErr> {
+) -> Result<Option<sessions::Model>, sea_orm::DbErr> {
     sessions::Entity::find_by_id(session_id).one(db).await
 }
 pub async fn delete_session_by_id(
     db: &DatabaseConnection,
     session_id: Uuid,
-)-> Result<DeleteResult, sea_orm::DbErr> {
+) -> Result<DeleteResult, sea_orm::DbErr> {
     sessions::Entity::delete_by_id(session_id).exec(db).await
 }
 
@@ -122,18 +121,17 @@ pub async fn refresh_session(
     new_token: String,
     new_expires_at: DateTimeWithTimeZone,
 ) -> Result<String, Error> {
-    // 1. Fetch the existing session
     let session = sessions::Entity::find_by_id(session_id)
         .one(db)
         .await?
-        .ok_or(Error::Unauthorized("Session invalid or expired".to_string().parse().unwrap()))?;
+        .ok_or(Error::Unauthorized(
+            "Session invalid or expired".to_string().parse().unwrap(),
+        ))?;
 
-    // 2. Map to ActiveModel and update fields
     let mut session: sessions::ActiveModel = session.into();
     session.token = Set(new_token.clone());
     session.expires_at = Set(new_expires_at);
 
-    // 3. Save back to DB
     session.update(db).await?;
 
     Ok(new_token)

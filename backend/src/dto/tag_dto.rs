@@ -1,7 +1,7 @@
-use serde::{Serialize, Deserialize};
+use entity::tags;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use entity::tags;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
 pub struct TagDto {

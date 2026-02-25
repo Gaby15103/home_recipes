@@ -1,9 +1,7 @@
-use sea_orm::DatabaseConnection;
-use std::ops::Deref;
-use uuid::Uuid;
-use crate::dto::ingredient_dto::{IngredientRecipeViewDto, IngredientViewDto};
+use crate::dto::ingredient_dto::IngredientViewDto;
 use crate::errors::Error;
 use crate::repositories::ingredient_repository;
+use sea_orm::DatabaseConnection;
 
 pub async fn get_all(
     db: &DatabaseConnection,

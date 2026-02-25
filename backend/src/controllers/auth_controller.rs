@@ -1,13 +1,13 @@
 use crate::app::state::AppState;
 use crate::domain::user::AuthenticatedUser;
 use crate::dto::auth_dto::{ConfirmEmailQuery, ForgotPasswordDto, LoginRequestDto, RegisterRequestDto, ResetPasswordDto, SecretKeyResponse, VerifyTwoFactorRequest, VerifyTwoFactorResponse};
-use crate::dto::user_dto::{LoginResponseDto, UserResponseDto};
+use crate::dto::user_dto::{LoginResponseDto};
 use crate::errors::Error;
 use crate::services::auth_service;
 use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Cookie, SameSite};
 use actix_web::web::Json;
-use actix_web::web::{Data, service};
+use actix_web::web::{Data};
 use actix_web::{HttpRequest, HttpResponse, web};
 use serde_json::json;
 use validator::Validate;
@@ -15,7 +15,6 @@ use validator::Validate;
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/auth")
-            // Auth Routes
             .route("/register", web::post().to(register))
             .route("/login", web::post().to(login))
             .route("/logout", web::post().to(logout))
@@ -23,10 +22,9 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route("/confirm_email", web::post().to(confirm_email))
             .route("/forgot_password", web::post().to(forgot_password))
             .route("/reset_password", web::post().to(reset_password))
-            // Nested 2FA Scope: This results in /auth/two-factor/...
             .service(
-                web::scope("/two-factor") // Changed to hyphen to match your example
-                    .route("/qr-code", web::get().to(qr_code)) // Fixed typo "qr-cod"
+                web::scope("/two-factor")
+                    .route("/qr-code", web::get().to(qr_code))
                     .route("/secret-key", web::get().to(secret_key))
                     .route("/recovery-codes", web::get().to(recovery_codes))
                     .route("/enable", web::post().to(enable))
@@ -40,7 +38,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 pub async fn register(
     form: Json<RegisterRequestDto>,
     state: Data<AppState>,
-    req: HttpRequest,
 ) -> Result<HttpResponse, Error> {
     let register_user = form.into_inner();
 
@@ -50,7 +47,7 @@ pub async fn register(
 
     Ok(HttpResponse::Created().finish())
 }
-//return access_token and refresh_token
+
 pub async fn login(
     state: Data<AppState>,
     req: HttpRequest,
@@ -93,8 +90,7 @@ pub async fn login(
     Ok(response.json(login_response))
 }
 pub async fn logout(
-    state: web::Data<AppState>,
-    req: HttpRequest,
+    state:Data<AppState>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     auth_service::logout(&state.db, &auth.active_session.token).await?;
@@ -105,8 +101,8 @@ pub async fn logout(
         .path("/")
         .http_only(true)
         .same_site(SameSite::Lax)
-        .secure(false) // Set to true in production with HTTPS
-        .max_age(Duration::ZERO) // This tells the browser to delete it immediately
+        .secure(false)
+        .max_age(Duration::ZERO)
         .finish();
 
     response.cookie(cookie);
@@ -114,43 +110,38 @@ pub async fn logout(
     Ok(response.json(serde_json::json!({ "message": "Successfully logged out" })))
 }
 pub async fn refresh(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
-    // 1. Call service to swap the old token for a new one
-    // We pass the current session ID to target the specific row
+
     let new_token = auth_service::refresh_session(&state.db, auth.active_session.id).await?;
 
-    // 2. Build the new cookie
     let cookie = Cookie::build("session_token", new_token)
         .path("/")
         .http_only(true)
         .same_site(SameSite::Lax)
-        .secure(false) // Set to true in prod
+        .secure(false)
         .max_age(Duration::days(30))
         .finish();
-
-    // 3. Return response with the updated cookie
+    
     Ok(HttpResponse::Ok()
         .cookie(cookie)
-        .json(serde_json::json!({ "status": "session rotated" })))
+        .json(json!({ "status": "session rotated" })))
 }
 pub async fn confirm_email(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     query: web::Query<ConfirmEmailQuery>,
 ) -> Result<HttpResponse, Error> {
-    // 1. Service handles the business logic and error mapping
-    // If this fails, the '?' will automatically return the error to Actix
+    
     auth_service::confirm_email(&state.db, query.token.clone()).await?;
-
-    // 2. If it succeeds, return the success JSON
-    Ok(HttpResponse::Ok().json(serde_json::json!({
+    
+    Ok(HttpResponse::Ok().json(json!({
         "success": true,
         "message": "Email confirmed successfully! Please log in."
     })))
 }
 pub async fn forgot_password(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     form: Json<ForgotPasswordDto>,
 ) -> Result<HttpResponse, Error> {
     form.validate()?;
@@ -160,8 +151,8 @@ pub async fn forgot_password(
         .json(json!({ "message": "If that email exists, a reset link has been sent" })))
 }
 pub async fn reset_password(
-    state: web::Data<AppState>,
-    form: Json<ResetPasswordDto>, // Contains new_password and token from email
+    state: Data<AppState>,
+    form: Json<ResetPasswordDto>,
 ) -> Result<HttpResponse, Error> {
     form.validate()?;
     auth_service::reset_password(&state.db, form.into_inner()).await?;
@@ -202,7 +193,7 @@ pub async fn verify(
     let cookie = Cookie::build("session_token", res.session_token)
         .path("/")
         .http_only(true)
-        .max_age(actix_web::cookie::time::Duration::days(30))
+        .max_age(Duration::days(30))
         .finish();
 
     Ok(HttpResponse::Ok().cookie(cookie).json(VerifyTwoFactorResponse { user: res.user }))

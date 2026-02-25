@@ -1,27 +1,22 @@
-use crate::app::state::AppState;
 use crate::domain::user::NewUser;
 use crate::dto::auth_dto::{LoginRequestDto, QrCodeResponse, RegisterRequestDto, ResetPasswordDto, VerifyTwoFactorRequest};
-use crate::dto::preferences_dto::UserPreferences;
-use crate::dto::user_dto::{LoginResponseDto, TwoFactorStatusResponse, UpdatePasswordDto, UserResponseDto, VerifyTwoFactorResult};
+use crate::dto::user_dto::{LoginResponseDto, TwoFactorStatusResponse, UserResponseDto, VerifyTwoFactorResult};
 use crate::errors::Error;
 use crate::repositories::{role_repository, session_repository, user_repository};
 use crate::utils::email_service::{send_email_confirmation, send_password_reset};
 use crate::utils::password_verification::{check_password, verify_password};
-use crate::utils::{HASHER, PWD_SCHEME_VERSION};
-use actix_multipart::form::json::Json;
-use actix_web::web::Data;
-use actix_web::{HttpRequest, HttpResponse, web};
+use crate::utils::two_factor::{generate_new_secret, verify_totp};
+use crate::utils::HASHER;
+use actix_web::HttpResponse;
 use chrono::{Duration, Utc};
 use entity::{roles, sessions, users};
-use rand::Rng;
-use rand::distr::Alphanumeric;
-use sea_orm::prelude::DateTimeWithTimeZone;
-use sea_orm::{ActiveModelTrait, DatabaseConnection, Iden, Set};
-use std::ops::Deref;
 use qrcode::QrCode;
+use rand::distr::Alphanumeric;
+use rand::Rng;
+use sea_orm::prelude::DateTimeWithTimeZone;
+use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
 use serde_json::json;
 use uuid::Uuid;
-use crate::utils::two_factor::{generate_new_secret, verify_totp};
 
 pub async fn register(
     db: &DatabaseConnection,
@@ -57,7 +52,6 @@ pub async fn validate_session(
     Ok(None)
 }
 
-//return access_token and refresh_token
 pub async fn login(
     db: &DatabaseConnection,
     login_request: LoginRequestDto,
@@ -201,13 +195,11 @@ pub async fn verify_2fa_login(
     user_agent: Option<String>,
     ip_address: Option<String>,
 ) -> Result<VerifyTwoFactorResult, Error> {
-    // 1. Repository: Find the user
     let user = user_repository::find_user_by_2fa_token(db, payload.token).await?;
 
     let secret = user.two_factor_secret.as_ref()
-        .ok_or(Error::Unauthorized(serde_json::json!({"error": "2FA not enabled"})))?;
-
-    // 2. Utils/Repository: Verify logic
+        .ok_or(Error::Unauthorized(json!({"error": "2FA not enabled"})))?;
+    
     let is_valid = if let Some(code) = payload.code {
         verify_totp(secret, &code)?
     } else if let Some(recovery) = payload.recovery_code {
@@ -217,20 +209,18 @@ pub async fn verify_2fa_login(
     };
 
     if !is_valid {
-        return Err(Error::Unauthorized(serde_json::json!({"error": "Invalid code"})));
+        return Err(Error::Unauthorized(json!({"error": "Invalid code"})));
     }
-
-    // 3. Repository: Cleanup
+    
     user_repository::clear_2fa_token(db, user.id).await?;
-
-    // 4. Session/Role Repository: Complete the login
+    
     let token: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(64)
         .map(char::from)
         .collect();
 
-    let expires_at = (chrono::Utc::now() + chrono::Duration::days(30)).into();
+    let expires_at = (Utc::now() + Duration::days(30)).into();
 
     let session =
         session_repository::create(db, user.id, token, expires_at, user_agent, ip_address).await?;

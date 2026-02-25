@@ -1,7 +1,7 @@
-use sea_orm::DatabaseConnection;
 use crate::dto::language_dto::LanguageDto;
 use crate::errors::Error;
 use crate::repositories::language_repository;
+use sea_orm::DatabaseConnection;
 
 pub async fn get_all(
     db: &DatabaseConnection

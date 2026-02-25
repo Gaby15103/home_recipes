@@ -1,11 +1,11 @@
-use serde::{Serialize, Deserialize};
-use uuid::Uuid;
-use crate::dto::tag_dto::{InputTag, TagDto};
-use entity::{recipe_translations, recipes};
-use utoipa::ToSchema;
-use validator::Validate;
 use crate::dto::ingredient_group_dto::{EditIngredientGroupInput, IngredientGroupEditorDto, IngredientGroupInput, IngredientGroupViewDto};
 use crate::dto::step_group_dto::{EditStepGroupInput, StepGroupEditorDto, StepGroupInput, StepGroupViewDto};
+use crate::dto::tag_dto::{InputTag, TagDto};
+use entity::{recipe_translations, recipes};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use uuid::Uuid;
+use validator::Validate;
 
 #[derive(Serialize, ToSchema)]
 pub struct RecipeDto {
@@ -166,7 +166,7 @@ pub struct GetRecipeQuery {
     pub include_translations: Option<bool>,
 }
 #[derive(Serialize, ToSchema)]
-#[serde(untagged)] // This makes the JSON look like the DTO itself, not { "View": { ... } }
+#[serde(untagged)]
 pub enum RecipeResponse {
     View(RecipeViewDto),
     Editor(RecipeEditorDto),
@@ -184,9 +184,9 @@ impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {
             author_id: recipe.author_id,
             author: recipe.author,
             is_private: recipe.is_private,
-            tags: vec![], // load from repository if needed
-            ingredient_groups: vec![], // load from repository
-            step_groups: vec![], // load from repository
+            tags: vec![],
+            ingredient_groups: vec![],
+            step_groups: vec![],
         }
     }
 }

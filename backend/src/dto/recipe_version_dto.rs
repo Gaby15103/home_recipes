@@ -1,10 +1,10 @@
+use crate::dto::recipe_dto::RecipeEditorDto;
+use crate::dto::user_dto::UserResponseDto;
 use chrono::{DateTime, Utc};
+use entity::recipe_versions;
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use entity::recipe_versions;
-use crate::dto::recipe_dto::RecipeEditorDto;
-use crate::dto::user_dto::UserResponseDto;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RecipeVersionDto {

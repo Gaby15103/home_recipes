@@ -1,7 +1,7 @@
+use entity::ingredient_units;
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use entity::ingredient_units;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema,Clone)]
 pub struct UnitDto {

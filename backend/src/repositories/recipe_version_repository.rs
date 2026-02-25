@@ -1,15 +1,15 @@
-use sea_orm::{QueryFilter, QueryOrder};
-use sea_orm::ColumnTrait;
-use chrono::Utc;
 use crate::dto::recipe_dto::RecipeEditorDto;
-use crate::errors::Error;
-use entity::{recipe_versions, users};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
-use serde_json::json;
-use uuid::Uuid;
 use crate::dto::recipe_version_dto::RecipeVersionDto;
 use crate::dto::user_dto::UserResponseDto;
+use crate::errors::Error;
 use crate::repositories::role_repository;
+use chrono::Utc;
+use entity::{recipe_versions, users};
+use sea_orm::ColumnTrait;
+use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
+use sea_orm::{QueryFilter, QueryOrder};
+use serde_json::json;
+use uuid::Uuid;
 
 pub async fn create(
     db: &DatabaseConnection,
@@ -42,8 +42,7 @@ pub async fn get_versions(
     let mut dtos = Vec::new();
 
     for (version, user_opt) in res {
-        let recipe_data: RecipeEditorDto = serde_json::from_value(version.data)
-            .unwrap_or_default();
+        let recipe_data: RecipeEditorDto = serde_json::from_value(version.data).unwrap_or_default();
 
         if let Some(user_model) = user_opt {
             let roles = role_repository::get_roles_for_user(db, user_model.id).await?;
@@ -74,12 +73,11 @@ pub async fn get_version(
         .await?;
 
     if let Some((version, user_opt)) = res {
-        let recipe_data: RecipeEditorDto = serde_json::from_value(version.data)
-            .map_err(|e| Error::InternalServerError)?;
+        let recipe_data: RecipeEditorDto =
+            serde_json::from_value(version.data).map_err(|e| Error::InternalServerError)?;
 
-        let user_model = user_opt.ok_or_else(|| {
-            Error::NotFound(json!({"error": "Editor information missing"}))
-        })?;
+        let user_model = user_opt
+            .ok_or_else(|| Error::NotFound(json!({"error": "Editor information missing"})))?;
 
         let roles = role_repository::get_roles_for_user(db, user_model.id).await?;
         let user_dto = UserResponseDto::from((user_model, roles));

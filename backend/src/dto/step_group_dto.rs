@@ -1,8 +1,8 @@
+use crate::dto::step_dto::{EditStepInput, StepEditorDto, StepInput, StepViewDto};
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
-use crate::dto::step_dto::{EditStepInput, StepEditorDto, StepInput, StepViewDto};
 #[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct StepGroupInput {
     pub position: i32,

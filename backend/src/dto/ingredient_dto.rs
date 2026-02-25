@@ -1,10 +1,9 @@
-use serde::{Serialize, Deserialize};
+use crate::dto::unit_dto::UnitDto;
+use migration::prelude::Decimal;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
-use migration::prelude::Decimal;
-use crate::dto::unit_dto::UnitDto;
-use crate::utils::unit::IngredientUnit;
 
 #[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
 pub struct IngredientTranslationInput {
@@ -44,7 +43,6 @@ pub struct EditIngredientInput {
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct IngredientRecipeViewDto {
     pub id: Uuid,
-    pub ingredient_id: Uuid,
     pub name: String,
     pub unit: UnitDto,
     pub quantity: Decimal,

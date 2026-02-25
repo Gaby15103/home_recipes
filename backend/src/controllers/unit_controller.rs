@@ -1,11 +1,11 @@
-use actix_web::{web, HttpRequest, HttpResponse};
-use actix_web::web::Json;
-use uuid::Uuid;
 use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::unit_dto::{UnitDto, UnitInputDto};
 use crate::errors::Error;
 use crate::services::unit_service;
+use actix_web::web::{Data, Json, Path};
+use actix_web::{web, HttpResponse};
+use uuid::Uuid;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
 
@@ -19,13 +19,13 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 pub async fn list(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
 )-> Result<HttpResponse, Error>{
     let tags = unit_service::get_all(&state.db).await?;
     Ok(HttpResponse::Ok().json(tags))
 }
 pub async fn create(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     auth: AuthenticatedUser,
     input: Json<UnitInputDto>
 )-> Result<HttpResponse, Error>{
@@ -36,7 +36,7 @@ pub async fn create(
     Ok(HttpResponse::Ok().json(result))
 }
 pub async fn update(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     auth: AuthenticatedUser,
     input: Json<UnitDto>
 )-> Result<HttpResponse, Error>{
@@ -47,9 +47,9 @@ pub async fn update(
     Ok(HttpResponse::Ok().json(result))
 }
 pub async fn get(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     auth: AuthenticatedUser,
-    path: web::Path<Uuid>,
+    path: Path<Uuid>,
 )-> Result<HttpResponse, Error>{
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;;
     let unit_id = path.into_inner();

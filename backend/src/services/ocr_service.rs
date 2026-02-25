@@ -6,7 +6,7 @@ use actix_multipart::form::tempfile::TempFile;
 use actix_web::web;
 use sea_orm::DatabaseConnection;
 use std::ops::Deref;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::Instant;
 use tesseract_rs::TesseractAPI;
 
 pub async fn recipe_from_file(
@@ -14,13 +14,10 @@ pub async fn recipe_from_file(
     db: &DatabaseConnection,
 ) -> Result<CreateRecipeInput, Error> {
     let units = unit_repository::get_all_admin(db).await?;
-    // 1. Offload heavy CPU work to web::block
     let start = Instant::now();
     let text = web::block(move || {
-        // Initialize API
         let api = TesseractAPI::new();
 
-        // Use the folder itself since the wrapper isn't appending it
         let tessdata_path = "/usr/share/tessdata";
 
         println!("Initializing Tesseract with system path: {}", tessdata_path);
@@ -29,18 +26,15 @@ pub async fn recipe_from_file(
             eprintln!("Tesseract Init Error: {:?}", e);
             "Failed to init Tesseract"
         })?;
-        // Use .path() to get the actual location in /tmp
         let path = image.file.path();
-
-        // Read the actual bytes from the disk into memory
+        
         let file_bytes = std::fs::read(path).map_err(|_| "Could not read temp file from disk")?;
 
         println!(
             "Read {} bytes from disk. Attempting memory decode...",
             file_bytes.len()
         );
-
-        // Use load_from_memory - it's often better at sniffing headers than open()
+        
         let img = image::load_from_memory(&file_bytes)
             .map_err(|e| {
                 eprintln!("Detailed Image Error: {:?}", e);
