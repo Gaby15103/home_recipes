@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { RouterView, useRoute } from "vue-router"
-import MainLayout from "@/components/layout/MainLayout.vue"
-import AdminLayout from "@/components/layout/AdminLayout.vue"
+import PublicLayout from "@/layouts/PublicLayout.vue"
+import AdminLayout from "@/layouts/AdminLayout.vue"
 
 const route = useRoute()
 </script>
 
 <template>
   <!-- Use Vue's dynamic component -->
-  <component :is="route.meta.layout === 'AdminLayout' ? AdminLayout : MainLayout">
+  <component :is="route.meta.layout === 'AdminLayout' ? AdminLayout : PublicLayout">
     <RouterView />
   </component>
 </template>

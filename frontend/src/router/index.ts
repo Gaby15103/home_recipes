@@ -1,28 +1,28 @@
 ﻿import {createRouter, createWebHistory} from "vue-router";
-import {ROUTES} from "./routes";
+import {ROUTES} from "./routes.ts";
 import {useAuthStore} from "@/stores/auth.ts";
 
 // Pages
 import Home from "@/pages/Home.vue";
 import Login from "@/pages/auth/Login.vue";
 import Register from "@/pages/auth/Register.vue";
-import Recipes from "@/pages/Recipes.vue";
-import Recipe from "@/pages/Recipe.vue";
-import AdminRecipe from "@/pages/Admin/Recipes/Recipe.vue"
+import Index from "@/pages/recipes/Index.vue";
+import Show from "@/pages/recipes/Show.vue";
+import AdminRecipe from "@/pages/recipes/Recipe.vue"
 
 // Admin Pages
-import AdminDashBoard from "@/pages/Admin/AdminDashBoard.vue";
-import RecipeDashboard from "@/pages/Admin/Recipes/RecipeDashboard.vue";
-import List from "@/pages/Admin/Recipes/List.vue";
-import Create from "@/pages/Admin/Recipes/Create.vue";
-import Edit from "@/pages/Admin/Recipes/Edit.vue";
-import Categories from "@/pages/Admin/Recipes/Categories.vue";
+import AdminDashBoard from "@/pages/dashboard/AdminDashBoard.vue";
+import RecipeDashboard from "@/pages/dashboard/RecipeDashboard.vue";
+import Manage from "@/pages/recipes/Manage.vue";
+import Create from "@/pages/recipes/Create.vue";
+import Edit from "@/pages/recipes/Edit.vue";
+import Categories from "@/pages/recipes/Categories.vue";
 
-// User Settings Pages
-import Profile from "@/pages/Settings/Profile.vue";
-import Password from "@/pages/Settings/Password.vue";
-import TwoFactor from "@/pages/Settings/TwoFactor.vue";
-import Appearance from "@/pages/Settings/Appearance.vue";
+// User settings Pages
+import Profile from "@/pages/settings/Profile.vue";
+import Password from "@/pages/settings/Password.vue";
+import TwoFactor from "@/pages/settings/TwoFactor.vue";
+import Appearance from "@/pages/settings/Appearance.vue";
 import TwoFactorChallenge from "@/pages/auth/TwoFactorChallenge.vue";
 import ConfirmEmail from "@/pages/auth/ConfirmEmail.vue";
 
@@ -33,8 +33,8 @@ const routes = [
     {path: ROUTES.TWO_FACTOR, component: TwoFactorChallenge},
     {path: ROUTES.REGISTER, component: Register},
     {path: ROUTES.EMAIL_CONFIRMATION, component: ConfirmEmail },
-    {path: ROUTES.RECIPES, component: Recipes},
-    {path: "/recipe/:id", component: Recipe},
+    {path: ROUTES.RECIPES, component: Index},
+    {path: "/recipe/:id", component: Show},
 
     {
         path: ROUTES.ADMIN.BASE,
@@ -53,24 +53,24 @@ const routes = [
                 },
             },
 
-            // Recipe Management
+            // Show Management
             {
                 path: "recipe",
                 component: RecipeDashboard,
                 meta: {
                     breadcrumb: [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                        {title: "Recipe"},
+                        {title: "Show"},
                     ],
                 },
             },
             {
                 path: "recipe/list",
-                component: List,
+                component: Manage,
                 meta: {
                     breadcrumb: [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "Show", href: ROUTES.ADMIN.RECIPE.BASE},
                         {title: "List"},
                     ],
                 },
@@ -81,7 +81,7 @@ const routes = [
                 meta: {
                     breadcrumb: [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "Show", href: ROUTES.ADMIN.RECIPE.BASE},
                         {title: "Create"},
                     ],
                 },
@@ -92,7 +92,7 @@ const routes = [
                 meta: {
                     breadcrumb: [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "Show", href: ROUTES.ADMIN.RECIPE.BASE},
                         {title: "Edit"},
                     ],
                 },
@@ -103,7 +103,7 @@ const routes = [
                 meta: {
                     breadcrumb: [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "Show", href: ROUTES.ADMIN.RECIPE.BASE},
                         {title: ":id"},
                     ],
                 },
@@ -119,7 +119,7 @@ const routes = [
                 },
             },
 
-            // User Settings
+            // User settings
             {
                 path: "user",
                 meta: {requiresAuth: true, roles: ["ADMIN", "MODERATOR"]},
@@ -131,7 +131,7 @@ const routes = [
                         meta: {
                             breadcrumb: [
                                 {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "User settings", href: ROUTES.ADMIN.USER.PROFILE},
                                 {title: "Profile"},
                             ],
                         },
@@ -142,7 +142,7 @@ const routes = [
                         meta: {
                             breadcrumb: [
                                 {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "User settings", href: ROUTES.ADMIN.USER.PROFILE},
                                 {title: "Password"},
                             ],
                         },
@@ -153,7 +153,7 @@ const routes = [
                         meta: {
                             breadcrumb: [
                                 {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "User settings", href: ROUTES.ADMIN.USER.PROFILE},
                                 {title: "Two-Factor"},
                             ],
                         },
@@ -164,7 +164,7 @@ const routes = [
                         meta: {
                             breadcrumb: [
                                 {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
-                                {title: "User Settings", href: ROUTES.ADMIN.USER.PROFILE},
+                                {title: "User settings", href: ROUTES.ADMIN.USER.PROFILE},
                                 {title: "Appearance"},
                             ],
                         },

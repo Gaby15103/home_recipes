@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
-import InputError from '@/components/InputError.vue'
+import InputError from '@/components/common/InputError.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -11,7 +11,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp'
 
-import AuthLayout from '@/components/layout/AuthLayout.vue'
+import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { verifyTwoFactor } from '@/api'
 import { ROUTES } from '@/router/routes'
