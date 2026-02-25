@@ -72,3 +72,6 @@ export const UnitRoutes = {
     create: () => `${API_ROOT}/units`,
     update: (id: string) => `${API_ROOT}/units/${id}`
 }
+export const OcrRoutes = {
+    create: () => `${API_ROOT}/ocr/recipe`,
+}

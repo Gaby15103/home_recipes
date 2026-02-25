@@ -96,6 +96,7 @@ pub struct EditRecipeInput {
 pub struct RecipeTranslationInput {
     pub language_code: String,
     pub title: String,
+    #[serde(default)]
     pub description: String,
 }
 #[derive(Debug, Serialize, Deserialize, Validate, Clone, ToSchema)]

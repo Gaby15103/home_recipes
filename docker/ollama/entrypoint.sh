@@ -3,14 +3,14 @@
 # Start Ollama in the background
 ollama serve &
 
+# Wait for Ollama to wake up
+sleep 5
 
-
-# Check if llama3 is already pulled to avoid redundant downloads
-if ! ollama list | grep -q "llama3"; then
-  echo "Pulling llama3 model..."
-  ollama pull llama3
+# Pull Mistral-Nemo instead of Llama3
+if ! ollama list | grep -q "mistral-nemo"; then
+  echo "Pulling Mistral-Nemo 12B (Better for French)..."
+  ollama pull mistral-nemo
 fi
 
-echo "Llama3 is ready!"
-# Bring the background Ollama process to the foreground
+echo "Mistral-Nemo is ready!"
 wait

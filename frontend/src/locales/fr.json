@@ -183,6 +183,7 @@
       "details": "Détails",
       "recipeSection": "Recette",
       "tags": "Étiquettes",
+      "loading":"Transformer image a une recette.",
 
       "fields": {
         "title": "Titre",

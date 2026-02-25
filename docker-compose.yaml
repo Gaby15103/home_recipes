@@ -21,14 +21,17 @@
       - "8025:8025"
 
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:rocm # SPECIFIC FOR AMD
     container_name: ollama
     ports:
       - "11434:11434"
+    devices:
+      - "/dev/kfd:/dev/kfd"    # Direct GPU access
+      - "/dev/dri:/dev/dri"    # Direct Graphics access
     volumes:
-      - ollama_data:/root/.ollama-
-      - ./docker/ollama/entrypoint.sh:/entrypoint.sh  # Mount the script
-    entrypoint: ["/bin/bash", "/entrypoint.sh"] # Execute it on start
+      - ollama_data:/root/.ollama
+      - ./docker/ollama/entrypoint.sh:/entrypoint.sh
+    entrypoint: [ "/bin/bash", "/entrypoint.sh" ]
 
 volumes:
   postgresDb:
