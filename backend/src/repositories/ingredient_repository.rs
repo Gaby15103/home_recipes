@@ -1,17 +1,11 @@
-// crate::repository::ingredient_repository
-
-use sea_orm::{QueryFilter, QueryOrder};
-use std::ops::Deref;
-use std::str::FromStr;
-use actix_web::web::BufMut;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QuerySelect, RelationTrait, Set};
+use sea_orm::{QueryFilter};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DatabaseTransaction, EntityTrait, QuerySelect, Set};
+use serde_json::json;
 use uuid::Uuid;
-use entity::{ingredient_groups, ingredient_translations, ingredient_units, ingredients, recipe_ingredient_translations, recipe_ingredients, recipes};
-use migration::JoinType;
+use entity::{ ingredient_translations, ingredient_units, ingredients};
 use crate::dto::ingredient_dto::{IngredientInput, IngredientRecipeViewDto, IngredientViewDto};
 use crate::dto::unit_dto::UnitDto;
 use crate::errors::Error;
-use crate::utils::unit::IngredientUnit;
 
 pub async fn create_and_link(
     txn: &DatabaseTransaction,
@@ -19,77 +13,58 @@ pub async fn create_and_link(
     input: IngredientInput,
     lang: &str,
 ) -> Result<IngredientRecipeViewDto, crate::errors::Error> {
-    // 1. Create the Master Ingredient record
-    // Note: If you want to prevent duplicates, implement the "Find or Create" logic here
-    let master_ingredient = ingredients::ActiveModel {
-        id: Set(Uuid::new_v4()),
-        // Add any global fields here (e.g., category, icon)
-        ..Default::default()
-    }
-        .insert(txn)
-        .await?;
-
-    // 2. Insert Master Ingredient Translations
-    let mut display_name = String::new();
-    for trans in input.translations {
-        ingredient_translations::ActiveModel {
-            ingredient_id: Set(master_ingredient.id),
-            language_code: Set(trans.language_code.clone()),
-            name: Set(trans.name.clone()),
-            ..Default::default()
-        }
-            .insert(txn)
-            .await?;
-
-        if trans.language_code == lang {
-            display_name = trans.name;
-        }
-    }
-
-    // 3. Link to the Group (The Recipe-specific details)
-    let link = recipe_ingredients::ActiveModel {
+    // 1. Create the Ingredient (The line item)
+    let ingredient = ingredients::ActiveModel {
         id: Set(Uuid::new_v4()),
         ingredient_group_id: Set(group_id),
-        ingredient_id: Set(master_ingredient.id),
-        quantity: Set(input.quantity), // This is where rust_decimal::Decimal is used
-        unit_id: Set(input.unit_id.clone()),
+        quantity: Set(input.quantity),
+        unit_id: Set(input.unit_id),
         position: Set(input.position),
         ..Default::default()
     }
         .insert(txn)
         .await?;
 
-    // 4. Handle Note Translations (Specific to this recipe instance)
+    // 2. Insert Translations (Unified: includes Name and Note)
+    let mut display_name = String::new();
     let mut display_note = None;
-    if let Some(notes) = input.note {
-        for note_input in notes {
-            recipe_ingredient_translations::ActiveModel {
-                recipe_ingredient_id: Set(link.id),
-                language_code: Set(note_input.language_code.clone()),
-                note: Set(note_input.note.clone()),
-                ..Default::default()
-            }
-                .insert(txn)
-                .await?;
 
-            if note_input.language_code == lang {
-                display_note = Some(note_input.note);
-            }
+    // We assume the frontend sends matched translations (name + note for same lang)
+    // If translations and notes come in separate vectors in your Input DTO,
+    // you'll need to zip/match them by language_code here.
+    for trans in input.translations {
+
+        ingredient_translations::ActiveModel {
+            id: Set(Uuid::new_v4()),
+            ingredient_id: Set(ingredient.id),
+            language_code: Set(trans.language_code.clone()),
+            data: Set(trans.data.clone()),
+            note: Set(trans.note.clone()),
+            ..Default::default()
+        }
+            .insert(txn)
+            .await?;
+
+        if trans.language_code == lang {
+            display_name = trans.data;
+            display_note = trans.note;
         }
     }
 
-    let results = ingredient_units::Entity::find_by_id(link.unit_id).one(txn).await?;
-    let unit_dto = results
-        .map(UnitDto::from).expect("Relational integrity violation: unit_id exists but unit doesn't");
+    // 3. Get Unit for DTO
+    let unit = ingredient_units::Entity::find_by_id(ingredient.unit_id)
+        .one(txn)
+        .await?
+        .ok_or(Error::NotFound(json!({"error": "Unit not found"})))?;
 
     Ok(IngredientRecipeViewDto {
-        id: link.id,
-        ingredient_id:  master_ingredient.id,
+        id: ingredient.id,
+        ingredient_id: ingredient.id,
         name: display_name,
-        quantity: link.quantity,
-        unit: unit_dto,
-        note: display_note.expect("REASON"),
-        position: link.position,
+        quantity: ingredient.quantity,
+        unit: UnitDto::from(unit),
+        note: Option::from(display_note),
+        position: ingredient.position,
     })
 }
 pub async fn get_all(
@@ -105,7 +80,7 @@ pub async fn get_all(
     // 2. Filter by search text (if provided)
     if let Some(s) = search.as_ref().filter(|s| !s.trim().is_empty()) {
         let pattern = format!("%{}%", s);
-        trans_query = trans_query.filter(ingredient_translations::Column::Name.ilike(pattern));
+        trans_query = trans_query.filter(ingredient_translations::Column::Data.ilike(pattern));
     }
 
     // 3. Execute query to get unique Ingredients
@@ -148,7 +123,7 @@ pub async fn get_all(
                     translations.iter().find(|t| t.language_code == def)
                 })
                 .or_else(|| translations.first())
-                .map(|t| t.name.clone())
+                .map(|t| t.data.clone())
                 .unwrap_or_else(|| "Unknown".to_string());
 
             IngredientViewDto {

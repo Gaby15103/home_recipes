@@ -5,5 +5,6 @@ pub mod password_verification;
 pub(crate) mod two_factor;
 pub mod unit;
 pub mod file_upload;
+pub mod llm_prompt;
 
 pub use {self::hasher::*};

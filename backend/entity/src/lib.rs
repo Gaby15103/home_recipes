@@ -13,8 +13,6 @@ pub mod languages;
 pub mod password_reset_tokens;
 pub mod recipe_analytics;
 pub mod recipe_comments;
-pub mod recipe_ingredient_translations;
-pub mod recipe_ingredients;
 pub mod recipe_ratings;
 pub mod recipe_tags;
 pub mod recipe_translations;

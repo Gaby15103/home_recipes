@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted, ref} from "vue"
+import {onMounted, onUnmounted, ref} from "vue"
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
 import {Textarea} from "@/components/ui/textarea"
@@ -17,8 +17,10 @@ import TagsMultiSelect from "@/components/Recipe/TagsMultiSelect.vue";
 import {useI18n} from "vue-i18n";
 import type {Language} from "@/models/Language.ts";
 import {getAllLanguage} from "@/api/Language.ts";
-import {Select, SelectTrigger, SelectValue, SelectItem, SelectGroup, SelectContent} from "@/components/ui/select";
+import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {ROUTES} from "@/router/routes.ts";
+import {createRecipeFromImage} from "@/api/ocr.ts";
+
 const { t } = useI18n()
 
 const recipe = ref<RecipeCreate>({
@@ -40,6 +42,9 @@ const mainImageFile = ref<File | null>(null)
 const mainImagePreview = ref<string | null>(null)
 const currentLang = ref("")
 const available_language = ref<Language[]>()
+const loading = ref(false);
+const error = ref<string | null>(null);
+const currentAbortController = ref<AbortController | null>(null);
 
 function onMainImageChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0] ?? null
@@ -80,12 +85,53 @@ onMounted(async () => {
   recipe.value.primary_language = defaultLang;
   currentLang.value = defaultLang; // Set initial tab
 })
+async function onImportFile(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+
+  loading.value = true;
+  error.value = null;
+
+  try {
+    recipe.value = await createRecipeFromImage(file);
+  } catch (err: any) {
+    error.value = err.message ?? "Failed to fetch recipe";
+  } finally {
+    loading.value = false;
+  }
+}
+onUnmounted(() => {
+  if (currentAbortController.value) {
+    currentAbortController.value.abort();
+  }
+});
 </script>
 
 <template>
-  <div class="max-w-[1600px] mx-auto p-6 flex flex-col lg:flex-row gap-6 items-start justify-center">
+  <div class="max-w-[1600px] mx-auto p-6 flex flex-col lg:flex-row gap-6 items-start justify-center relative">
 
-    <div class="max-w-4xl min-w-6xl mx-auto p-6 space-y-6">
+    <div
+        v-if="loading"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-background/20 backdrop-blur-[2px]"
+    >
+      <div class="flex flex-col items-center gap-4 p-8 bg-card border shadow-2xl rounded-2xl">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <p class="font-medium animate-pulse text-lg">{{ t('Admin.recipe.loading') }}...</p>
+      </div>
+    </div>
+
+    <div v-if="error" class="text-center py-12">
+      <p class="text-red-500 mb-4">{{ error }}</p>
+      <Button @click="error = null">Retry</Button>
+    </div>
+
+    <div
+        v-show="recipe && !error"
+        :class="[
+        'max-w-4xl min-w-6xl mx-auto p-6 space-y-6 transition-all duration-300',
+        loading ? 'blur-md grayscale-50 pointer-events-none opacity-60' : ''
+      ]"
+    >
       <div class="flex justify-between items-center">
         <h1 class="text-3xl font-bold">{{ t('Admin.recipe.createTitle') }}</h1>
 
@@ -97,11 +143,7 @@ onMounted(async () => {
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem
-                    v-for="lang in available_language"
-                    :key="lang.code"
-                    :value="lang.code"
-                >
+                <SelectItem v-for="lang in available_language" :key="lang.code" :value="lang.code">
                   {{ lang.name }}
                 </SelectItem>
               </SelectGroup>
@@ -116,7 +158,6 @@ onMounted(async () => {
         <CardHeader>
           <CardTitle>{{ t('Admin.recipe.basicInfo') }}</CardTitle>
         </CardHeader>
-
         <CardContent class="space-y-6">
           <div v-if="available_language && available_language.length > 0">
             <div class="flex border-b mb-4">
@@ -144,7 +185,6 @@ onMounted(async () => {
                       :placeholder="t('Admin.recipe.placeholders.title')"
                   />
                 </div>
-
                 <div class="space-y-2">
                   <Label :for="'description-' + lang.code">
                     {{ t('Admin.recipe.fields.description') }} ({{ lang.code.toUpperCase() }})
@@ -164,7 +204,7 @@ onMounted(async () => {
           <div class="space-y-2">
             <Label>{{ t('Admin.recipe.fields.image') }}</Label>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input type="file" accept="image/*" @change="onMainImageChange" :v-model="recipe.image_url"/>
+              <Input type="file" accept="image/*" @change="onMainImageChange" />
               <div class="ml-auto flex items-center gap-2">
                 <Label>{{ t('Admin.recipe.fields.private') }}</Label>
                 <Switch v-model:checked="recipe.is_private"/>
@@ -175,41 +215,28 @@ onMounted(async () => {
         </CardContent>
       </Card>
 
-      <!-- Numbers -->
       <Card>
         <CardHeader>
-          <CardTitle>
-            {{ t('Admin.recipe.details') }}
-          </CardTitle>
+          <CardTitle>{{ t('Admin.recipe.details') }}</CardTitle>
         </CardHeader>
-
         <CardContent class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="space-y-2">
-            <Label>
-              {{ t('Admin.recipe.fields.servings') }}
-            </Label>
+            <Label>{{ t('Admin.recipe.fields.servings') }}</Label>
             <Input type="number" min="1" v-model.number="recipe.servings"/>
           </div>
-
           <div class="space-y-2">
-            <Label>
-              {{ t('Admin.recipe.fields.prepTime') }}
-            </Label>
+            <Label>{{ t('Admin.recipe.fields.prepTime') }}</Label>
             <Input type="number" min="0" v-model.number="recipe.prep_time_minutes"/>
           </div>
-
           <div class="space-y-2">
-            <Label>
-              {{ t('Admin.recipe.fields.cookTime') }}
-            </Label>
+            <Label>{{ t('Admin.recipe.fields.cookTime') }}</Label>
             <Input type="number" min="0" v-model.number="recipe.cook_time_minutes"/>
           </div>
         </CardContent>
       </Card>
+
       <Card>
-        <CardHeader>
-          {{ t('Admin.recipe.tags') }}
-        </CardHeader>
+        <CardHeader>{{ t('Admin.recipe.tags') }}</CardHeader>
         <CardContent class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <TagsMultiSelect v-model:model-value="recipe.tags"/>
         </CardContent>
@@ -217,12 +244,9 @@ onMounted(async () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {{ t('Admin.recipe.recipeSection') }}
-          </CardTitle>
+          <CardTitle>{{ t('Admin.recipe.recipeSection') }}</CardTitle>
         </CardHeader>
-
-        <CardContent class="grid grid-cols-1 ">
+        <CardContent class="grid grid-cols-1">
           <div class="space-y-2">
             <IngredientsEditor
                 v-model="recipe.ingredient_groups"
@@ -242,9 +266,8 @@ onMounted(async () => {
       </Card>
     </div>
 
-    <aside class="sticky top-6 hidden xl:flex flex-col gap-4 w-60">
+    <aside :class="['sticky top-6 hidden xl:flex flex-col gap-4 w-60 transition-all duration-300', loading ? 'opacity-50 pointer-events-none' : '']">
       <div class="bg-card border rounded-xl p-4 shadow-md space-y-4">
-
         <div class="space-y-2">
           <Label class="text-[10px] font-bold text-muted-foreground uppercase px-1">
             {{ t('Admin.recipe.fields.primaryLanguage') }}
@@ -262,9 +285,7 @@ onMounted(async () => {
             </SelectContent>
           </Select>
         </div>
-
         <Separator />
-
         <div class="space-y-2">
           <Label class="text-[10px] font-bold text-muted-foreground uppercase px-1">
             {{ t('Admin.recipe.fields.switchLanguage') }}
@@ -274,6 +295,7 @@ onMounted(async () => {
                 v-for="lang in available_language"
                 :key="lang.code"
                 @click="currentLang = lang.code"
+                :disabled="submitting || loading"
                 type="button"
                 class="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-all border"
                 :class="currentLang === lang.code
@@ -285,17 +307,15 @@ onMounted(async () => {
             </button>
           </div>
         </div>
-
         <Separator />
-
+        <Input type="file" accept="image/*" @change="onImportFile" :disabled="loading" />
+        <Separator />
         <div class="pt-2">
-          <Button :disabled="submitting" @click="submit" class="w-full shadow-lg h-11">
+          <Button :disabled="submitting || loading" @click="submit" class="w-full shadow-lg h-11">
             {{ t('Admin.common.create') }}
           </Button>
         </div>
       </div>
     </aside>
-
   </div>
-
 </template>

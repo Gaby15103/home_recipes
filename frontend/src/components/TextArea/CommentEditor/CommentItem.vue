@@ -4,7 +4,9 @@ import type { RecipeComment } from "@/models/Recipe"
 import CommentEditor from "./CommentEditor.vue"
 import MarkdownRenderer from "./MarkdownRenderer.vue"
 import { useI18n } from "vue-i18n"
+import {useAuthStore} from "@/stores/auth.ts";
 const { t } = useI18n()
+const authStore = useAuthStore();
 const {
   comment,
   recipeId
@@ -43,6 +45,7 @@ function onChildReplyPosted(parentId: string, reply: RecipeComment) {
       <MarkdownRenderer :content="comment.content" />
 
       <button
+          v-if="authStore.user"
           @click="replying = !replying"
           class="text-sm text-blue-500 hover:underline mt-2"
       >

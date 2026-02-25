@@ -9,9 +9,8 @@ pub struct Model {
     pub id: Uuid,
     #[sea_orm(unique_key = "unique_step_language")]
     pub step_id: Uuid,
-    #[sea_orm(column_type = "Text", unique_key = "unique_step_language")]
+    #[sea_orm(unique_key = "unique_step_language")]
     pub language_code: String,
-    #[sea_orm(column_type = "Text")]
     pub instruction: String,
     pub created_at: DateTime,
     pub updated_at: DateTime,

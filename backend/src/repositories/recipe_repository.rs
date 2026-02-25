@@ -7,7 +7,7 @@ use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
 use crate::repositories::{ingredient_group_repository, role_repository, step_group_repository, tag_repository};
-use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_comments, recipe_ingredients, recipe_ratings, recipe_tags, recipe_translations, recipe_versions, recipes, users};
+use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_comments, recipe_ratings, recipe_tags, recipe_translations, recipe_versions, recipes, users};
 use migration::JoinType;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, FromQueryResult, PaginatorTrait, SelectExt, Set, TransactionTrait};
 use sea_orm::{DatabaseConnection, EntityTrait};
@@ -56,30 +56,22 @@ pub async fn find_by_query(
         }
     }
 
-    // 3. Ingredient Search (Only join if search is NOT empty)
-    // Using InnerJoin here is fine ONLY if a search term exists.
-    if let Some(i) = &filter.ingredient {
-        if !i.trim().is_empty() {
-            let pattern = format!("%{}%", i);
+    if let Some(ingredients_list) = &filter.ingredient {
+        if !ingredients_list.is_empty() {
             query = query
-                .join(
-                    JoinType::InnerJoin,
-                    recipes::Relation::IngredientGroups.def(),
-                )
-                .join(
-                    JoinType::InnerJoin,
-                    ingredient_groups::Relation::RecipeIngredients.def(),
-                )
-                .join(
-                    JoinType::InnerJoin,
-                    recipe_ingredients::Relation::Ingredients.def(),
-                )
-                .join(
-                    JoinType::InnerJoin,
-                    ingredients::Relation::IngredientTranslations.def(),
-                )
-                .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
-                .filter(ingredient_translations::Column::Name.like(pattern));
+                .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
+                .join(JoinType::InnerJoin, ingredient_groups::Relation::Ingredients.def())
+                .join(JoinType::InnerJoin, ingredient_translations::Relation::Ingredients.def())
+                .filter(ingredient_translations::Column::LanguageCode.eq(lang_code));
+
+            // Chain OR conditions for each ingredient string in the array
+            let mut condition = sea_orm::Condition::any();
+            for ing in ingredients_list {
+                if !ing.trim().is_empty() {
+                    condition = condition.add(ingredient_translations::Column::Data.like(format!("%{}%", ing)));
+                }
+            }
+            query = query.filter(condition);
         }
     }
 
@@ -216,28 +208,22 @@ pub async fn find_by_query_by_page(
             }
         }
 
-        if let Some(i) = &filter.ingredient {
-            if !i.trim().is_empty() {
-                let pattern = format!("%{}%", i);
+        if let Some(ingredients_list) = &filter.ingredient {
+            if !ingredients_list.is_empty() {
                 query = query
-                    .join(
-                        JoinType::InnerJoin,
-                        recipes::Relation::IngredientGroups.def(),
-                    )
-                    .join(
-                        JoinType::InnerJoin,
-                        ingredient_groups::Relation::RecipeIngredients.def(),
-                    )
-                    .join(
-                        JoinType::InnerJoin,
-                        recipe_ingredients::Relation::Ingredients.def(),
-                    )
-                    .join(
-                        JoinType::InnerJoin,
-                        ingredients::Relation::IngredientTranslations.def(),
-                    )
-                    .filter(ingredient_translations::Column::LanguageCode.eq(lang_code))
-                    .filter(ingredient_translations::Column::Name.like(pattern));
+                    .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
+                    .join(JoinType::InnerJoin, ingredient_groups::Relation::Ingredients.def())
+                    .join(JoinType::InnerJoin, ingredient_translations::Relation::Ingredients.def())
+                    .filter(ingredient_translations::Column::LanguageCode.eq(lang_code));
+
+                // Chain OR conditions for each ingredient string in the array
+                let mut condition = sea_orm::Condition::any();
+                for ing in ingredients_list {
+                    if !ing.trim().is_empty() {
+                        condition = condition.add(ingredient_translations::Column::Data.like(format!("%{}%", ing)));
+                    }
+                }
+                query = query.filter(condition);
             }
         }
     }

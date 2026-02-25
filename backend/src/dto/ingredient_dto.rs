@@ -11,7 +11,8 @@ pub struct IngredientTranslationInput {
     #[validate(length(min = 2, max = 5))]
     pub language_code: String,
     #[validate(length(min = 1, max = 50))]
-    pub name: String,
+    pub data: String,
+    pub note: Option<String>,
 }
 #[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
 pub struct EditIngredientTranslationInput {
@@ -19,18 +20,8 @@ pub struct EditIngredientTranslationInput {
     #[validate(length(min = 2, max = 5))]
     pub language_code: String,
     #[validate(length(min = 1, max = 50))]
-    pub name: String,
-}
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct IngredientNoteTranslationInput {
-    pub language_code: String,
+    pub data: String,
     pub note: Option<String>,
-}
-#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
-pub struct EditIngredientNoteTranslationInput {
-    pub id: Option<Uuid>,
-    pub language_code: String,
-    pub note: String,
 }
 #[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct IngredientInput {
@@ -38,7 +29,6 @@ pub struct IngredientInput {
     pub translations: Vec<IngredientTranslationInput>,
     pub quantity: Decimal,
     pub unit_id: Uuid,
-    pub note: Option<Vec<IngredientNoteTranslationInput>>,
     pub position: i32,
 }
 #[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
@@ -49,7 +39,6 @@ pub struct EditIngredientInput {
     pub translations: Vec<EditIngredientTranslationInput>,
     pub quantity: Decimal,
     pub unit_id: Uuid,
-    pub note: Option<Vec<EditIngredientNoteTranslationInput>>,
     pub position: i32,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
@@ -77,19 +66,13 @@ pub struct IngredientEditorDto {
     pub unit: UnitDto,
     pub position: i32,
     pub translations: Vec<IngredientTranslationsDto>,
-    pub note_translation: Vec<IngredientNoteTranslationsDto>,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct IngredientTranslationsDto {
     pub id: Uuid,
     pub language_code: String,
-    pub name: String,
-}
-#[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
-pub struct IngredientNoteTranslationsDto {
-    pub id: Uuid,
-    pub language_code: String,
-    pub note: String,
+    pub data: String,
+    pub note: Option<String>,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct IngredientList{

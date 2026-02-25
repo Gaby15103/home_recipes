@@ -106,7 +106,8 @@
     "comments": {
       "title": "Commentaires",
       "placeholder": "Commenter cette recette...",
-      "post": "Publier le commentaire"
+      "post": "Publier le commentaire",
+      "loginToPost": "Veuillez vous connecter pour commenter."
     }
   },
   "comments": {
@@ -182,6 +183,7 @@
       "details": "Détails",
       "recipeSection": "Recette",
       "tags": "Étiquettes",
+      "loading":"Transformer image a une recette.",
 
       "fields": {
         "title": "Titre",

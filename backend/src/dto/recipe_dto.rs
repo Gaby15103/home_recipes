@@ -96,6 +96,7 @@ pub struct EditRecipeInput {
 pub struct RecipeTranslationInput {
     pub language_code: String,
     pub title: String,
+    #[serde(default)]
     pub description: String,
 }
 #[derive(Debug, Serialize, Deserialize, Validate, Clone, ToSchema)]
@@ -131,7 +132,7 @@ pub struct RecipeFilter {
     pub scope: bool,
 
     pub search: Option<String>,
-    pub ingredient: Option<String>,
+    pub ingredient: Option<Vec<String>>,
     pub tags: Option<String>,
 
     pub min_prep: Option<i32>,

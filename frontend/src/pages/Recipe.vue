@@ -84,9 +84,9 @@ async function loadMeta() {
       getFavorites(),
       getComments(recipe.value.id)
     ]);
+    comments.value = commentsRes;
     rating.value = ratingRes;
     favorited.value = favsRes.some(f => f.id === recipe.value!.id);
-    comments.value = commentsRes;
   } catch (err) {
     console.warn("Meta data partially failed to load", err);
   }
@@ -97,7 +97,7 @@ function handleUnitOverride(ingredientId: string, unitId: string) {
 }
 
 async function toggleFavorite() {
-  if (!recipe.value) return;
+  if (!recipe.value || !authStore.user) return;
   favoriteLoading.value = true;
   try {
     await favoriteRecipe(recipe.value.id);
