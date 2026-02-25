@@ -1,5 +1,5 @@
-use utoipa::OpenApi;
 use crate::dto::recipe_dto::RecipeViewDto;
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(

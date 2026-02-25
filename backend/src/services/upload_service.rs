@@ -1,14 +1,12 @@
+use crate::errors::Error;
+use actix_multipart::form::tempfile::TempFile;
 use std::fs;
 use std::path::{Path, PathBuf};
-use actix_multipart::form::tempfile::TempFile;
 use uuid::Uuid;
-use crate::errors::Error;
 
-pub async fn save_to_temp(
-    file: &TempFile
-) -> Result<String, Error>{
+pub async fn save_to_temp(file: &TempFile) -> Result<String, Error> {
     let image_dir = PathBuf::from("assets/temp");
-    
+
     fs::create_dir_all(&image_dir)?;
 
     let extension = file
@@ -24,10 +22,10 @@ pub async fn save_to_temp(
         chrono::Utc::now().timestamp(),
         extension
     );
-    
+
     let disk_path = image_dir.join(&file_name);
 
     fs::copy(file.file.path(), &disk_path)?;
-    
+
     Ok(format!("/assets/temp/{}", file_name))
 }

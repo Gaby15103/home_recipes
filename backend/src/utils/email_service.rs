@@ -1,12 +1,11 @@
-﻿use std::env;
+﻿use crate::errors::Error;
+use entity::users;
 use lettre::message::Mailbox;
 use lettre::{Message, SmtpTransport, Transport};
 use serde_json::json;
+use std::env;
 use uuid::Uuid;
-use entity::users;
-use crate::errors::Error;
 
-/// Sends an email confirmation to the user
 pub fn send_email_confirmation(user: users::Model, token: &Uuid) -> Result<(), Error> {
     let frontend_origin = env::var("FRONTEND_ORIGIN")
         .map_err(|_| Error::EmailSend(json!({"error": "Missing FRONTEND_ORIGIN"})))?;
@@ -17,7 +16,7 @@ pub fn send_email_confirmation(user: users::Model, token: &Uuid) -> Result<(), E
      \nIf you didn't create an account, ignore this email.\n\nThanks,\nThe HomeRecipes Team",
         user.username,
         frontend_origin,
-        token.to_string().replace("\n", "") // make sure no newlines break the token
+        token.to_string().replace("\n", "")
     );
 
 
@@ -44,8 +43,7 @@ pub fn send_email_confirmation(user: users::Model, token: &Uuid) -> Result<(), E
         .unwrap_or_else(|_| "1025".to_string())
         .parse()
         .map_err(|_| Error::EmailSend(json!({"error": "Invalid SMTP_PORT"})))?;
-
-    // MailHog doesn't require authentication
+    
     let mailer = SmtpTransport::builder_dangerous(&smtp_host)
         .port(smtp_port)
         .build();

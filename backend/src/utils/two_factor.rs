@@ -1,9 +1,9 @@
-use base32::{encode, Alphabet};
-use totp_lite::{totp_custom, Sha1};
+use crate::errors::Error;
+use base32::{Alphabet, encode};
 use chrono::Utc;
 use rand::random;
 use serde_json::json;
-use crate::errors::Error;
+use totp_lite::{Sha1, totp_custom};
 
 pub fn generate_new_secret() -> String {
     let secret_bytes: [u8; 20] = random();

@@ -1,17 +1,15 @@
-use std::ops::Deref;
 use crate::dto::recipe_dto::RecipeViewDto;
 use crate::dto::session_dto::SessionResponseDto;
 use crate::dto::user_dto::{UpdatePasswordDto, UpdateUserDto, UserResponseDto};
 use crate::errors::Error;
 use crate::repositories::{
-    recipe_repository, recipe_translation_repository, role_repository, session_repository,
-    user_repository,
+    recipe_repository, recipe_translation_repository, session_repository, user_repository,
 };
 use crate::utils::HASHER;
-use entity::prelude::Users;
-use entity::{recipes, roles, users};
-use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
+use entity::users;
+use sea_orm::{ActiveModelTrait, DatabaseConnection};
 use serde_json::json;
+use std::ops::Deref;
 use uuid::Uuid;
 
 pub async fn get_active_sessions(
@@ -21,7 +19,6 @@ pub async fn get_active_sessions(
 ) -> Result<Vec<SessionResponseDto>, Error> {
     let sessions = session_repository::get_user_sessions(db, user_id).await?;
 
-    // We pass the current_session_id if we want to flag "is_current" in the DTO
     Ok(sessions
         .into_iter()
         .map(|m| SessionResponseDto::from_model(m, current_session_id))
@@ -50,7 +47,6 @@ pub async fn update_user(
     user_id: Uuid,
     data: UpdateUserDto,
 ) -> Result<users::Model, Error> {
-    // Just delegate to repository
     user_repository::update_user_profile(db, user_id, data).await
 }
 
@@ -59,7 +55,6 @@ pub async fn change_password(
     user_id: Uuid,
     data: UpdatePasswordDto,
 ) -> Result<(), Error> {
-    // 1. Verify credentials (Business logic)
     let user = user_repository::find_by_id(db, user_id).await?;
     crate::utils::password_verification::verify_password(&user.password_hash, &data.old_password)?;
 

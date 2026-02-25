@@ -1,15 +1,15 @@
 use dotenvy::dotenv;
 
-mod config;
 mod app;
-mod errors;
+mod config;
 mod controllers;
-mod services;
-mod repositories;
-mod dto;
-mod utils;
-mod openapi;
 mod domain;
+mod dto;
+mod errors;
+mod openapi;
+mod repositories;
+mod services;
+mod utils;
 
 use config::Config;
 
@@ -17,12 +17,13 @@ use config::Config;
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     if std::env::var("RUST_LOG").is_err() {
-        unsafe { std::env::set_var("RUST_LOG", "app=debug,actix_web=info"); }
+        unsafe {
+            std::env::set_var("RUST_LOG", "app=debug,actix_web=info");
+        }
     }
     env_logger::init();
 
-    let config = Config::from_env()
-        .expect("Failed to load configuration");
+    let config = Config::from_env().expect("Failed to load configuration");
 
     app::start(config).await
 }

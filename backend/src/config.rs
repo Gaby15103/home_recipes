@@ -44,8 +44,7 @@ impl Config {
         let redis_url =
             env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
 
-        let smtp_host =
-            env::var("SMTP_HOST").unwrap_or_else(|_| "localhost".to_string());
+        let smtp_host = env::var("SMTP_HOST").unwrap_or_else(|_| "localhost".to_string());
 
         let smtp_port = env::var("SMTP_PORT")
             .ok()
@@ -58,8 +57,8 @@ impl Config {
         let mail_from_address = env::var("MAIL_FROM_ADDRESS")
             .unwrap_or_else(|_| "no-reply@homerecipes.com".to_string());
 
-        let mail_from_name = env::var("MAIL_FROM_NAME")
-            .unwrap_or_else(|_| "HomeRecipes".to_string());
+        let mail_from_name =
+            env::var("MAIL_FROM_NAME").unwrap_or_else(|_| "HomeRecipes".to_string());
 
         Ok(Self {
             database_url,

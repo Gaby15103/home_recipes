@@ -1,13 +1,13 @@
-use std::io;
 use actix::MailboxError;
 use actix_web::{
-    HttpResponse,
     error::{JsonPayloadError, PayloadError, QueryPayloadError, ResponseError},
     http::StatusCode,
+    HttpResponse,
 };
 use jsonwebtoken::errors::{Error as JwtError, ErrorKind as JwtErrorKind};
 use sea_orm::{DbErr, TransactionError};
-use serde_json::{Map as JsonMap, Value as JsonValue, json};
+use serde_json::{json, Map as JsonMap, Value as JsonValue};
+use std::io;
 use thiserror::Error;
 use validator::ValidationErrors;
 
@@ -59,7 +59,7 @@ impl ResponseError for Error {
             Error::UnprocessableEntity(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Error::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             Error::EmailAlreadyExists => StatusCode::CONFLICT,
-            Error::EmailSend(_) =>  StatusCode::INTERNAL_SERVER_ERROR,
+            Error::EmailSend(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::OcrServiceError => StatusCode::SERVICE_UNAVAILABLE,
         }
     }
@@ -69,21 +69,19 @@ impl ResponseError for Error {
             Error::InternalServerError => HttpResponse::InternalServerError().json(json!({
                 "error": "Internal server error"
             })),
-            | Error::BadRequest(v)
+            Error::BadRequest(v)
             | Error::Unauthorized(v)
             | Error::Forbidden(v)
             | Error::NotFound(v)
             | Error::UnprocessableEntity(v) => HttpResponse::build(self.status_code()).json(v),
-            | Error::EmailAlreadyExists => HttpResponse::Conflict().json(json!({
+            Error::EmailAlreadyExists => HttpResponse::Conflict().json(json!({
                 "error": "Email already exists"
             })),
-            | Error::EmailSend(v) => {
-                HttpResponse::InternalServerError().json(v)
-            }
+            Error::EmailSend(v) => HttpResponse::InternalServerError().json(v),
             Error::OcrServiceError => HttpResponse::ServiceUnavailable().json(json!({
                 "error": "OCR service is currently unreachable",
                 "details": "Check if the tesseract container is running"
-            }))
+            })),
         }
     }
 }
@@ -169,7 +167,7 @@ impl From<TransactionError<Error>> for Error {
     fn from(err: TransactionError<Error>) -> Self {
         match err {
             TransactionError::Connection(e) => Error::from(e), // Uses your existing From<DbErr>
-            TransactionError::Transaction(e) => e,            // Your app error
+            TransactionError::Transaction(e) => e,             // Your app error
         }
     }
 }
@@ -215,7 +213,6 @@ impl From<io::Error> for Error {
 }
 
 /* ----- serde ----- */
-
 
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
