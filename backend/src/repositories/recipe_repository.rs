@@ -1,24 +1,30 @@
-use std::collections::HashMap;
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::ingredient_group_dto::IngredientGroupViewDto;
-use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, RecipeEditorDto, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
+use crate::dto::recipe_dto::{
+    CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
+};
+use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::dto::step_group_dto::StepGroupViewDto;
 use crate::dto::tag_dto::{InputTag, TagDto};
-use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
-use crate::repositories::{ingredient_group_repository, role_repository, step_group_repository, tag_repository};
-use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_comments, recipe_ratings, recipe_tags, recipe_translations, recipe_versions, recipes, users};
+use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
+use chrono::Utc;
+use entity::{
+    favorites, ingredient_groups, ingredient_translations, recipe_analytics, recipe_comments,
+    recipe_ratings, recipe_tags, recipe_translations, recipes, users,
+};
+use futures_util::TryFutureExt;
 use migration::JoinType;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbConn, DbErr, DeleteResult, FromQueryResult, PaginatorTrait, SelectExt, Set, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DeleteResult, FromQueryResult, PaginatorTrait, SelectExt, Set,
+    TransactionTrait,
+};
 use sea_orm::{DatabaseConnection, EntityTrait};
 use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
+use std::collections::HashMap;
 use std::ops::Deref;
-use chrono::{DateTime, Utc};
-use futures_util::TryFutureExt;
 use uuid::Uuid;
-use crate::dto::recipe_rating_dto::RecipeRatingDto;
-use crate::dto::recipe_version_dto::RecipeVersionDto;
 
 pub async fn find_all(db: &DatabaseConnection) -> Result<Vec<recipes::Model>, Error> {
     recipes::Entity::find().all(db).await.map_err(Error::from)
@@ -30,14 +36,10 @@ pub async fn find_by_query(
 ) -> Result<Option<Vec<recipes::Model>>, Error> {
     let mut query = recipes::Entity::find();
 
-    // 1. Correct Scope Handling
-    // Scope = true (Admin/All), Scope = false (Public Only)
     if !filter.scope {
-        // If scope is false, we strictly only show public recipes
         query = query.filter(recipes::Column::IsPrivate.eq(false));
     }
 
-    // 2. Search Text (Only join and filter if search is NOT empty)
     if let Some(s) = &filter.search {
         if !s.trim().is_empty() {
             let pattern = format!("%{}%", s);
@@ -59,24 +61,31 @@ pub async fn find_by_query(
     if let Some(ingredients_list) = &filter.ingredient {
         if !ingredients_list.is_empty() {
             query = query
-                .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
-                .join(JoinType::InnerJoin, ingredient_groups::Relation::Ingredients.def())
-                .join(JoinType::InnerJoin, ingredient_translations::Relation::Ingredients.def())
+                .join(
+                    JoinType::InnerJoin,
+                    recipes::Relation::IngredientGroups.def(),
+                )
+                .join(
+                    JoinType::InnerJoin,
+                    ingredient_groups::Relation::Ingredients.def(),
+                )
+                .join(
+                    JoinType::InnerJoin,
+                    ingredient_translations::Relation::Ingredients.def(),
+                )
                 .filter(ingredient_translations::Column::LanguageCode.eq(lang_code));
 
-            // Chain OR conditions for each ingredient string in the array
             let mut condition = sea_orm::Condition::any();
             for ing in ingredients_list {
                 if !ing.trim().is_empty() {
-                    condition = condition.add(ingredient_translations::Column::Data.like(format!("%{}%", ing)));
+                    condition = condition
+                        .add(ingredient_translations::Column::Data.like(format!("%{}%", ing)));
                 }
             }
             query = query.filter(condition);
         }
     }
 
-    // 4. Grouping & Execution
-    // Grouping by ID is vital to avoid duplicates from the joins
     query = query
         .group_by(recipes::Column::Id)
         .order_by_desc(recipes::Column::CreatedAt);
@@ -107,7 +116,6 @@ pub async fn create(
     let pref_lang = preferred_language.to_string();
     db.transaction::<_, RecipeViewDto, Error>(|txn| {
         Box::pin(async move {
-            // 1. Insert the Base Recipe
             let recipe_model = recipes::ActiveModel {
                 image_url: Set(new_recipe.image_url),
                 author_id: Set(new_recipe.author_id),
@@ -122,7 +130,6 @@ pub async fn create(
             .insert(txn)
             .await?;
 
-            // 2. Insert Translations
             for trans in new_recipe.translations {
                 recipe_translations::ActiveModel {
                     recipe_id: Set(recipe_model.id),
@@ -211,16 +218,26 @@ pub async fn find_by_query_by_page(
         if let Some(ingredients_list) = &filter.ingredient {
             if !ingredients_list.is_empty() {
                 query = query
-                    .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
-                    .join(JoinType::InnerJoin, ingredient_groups::Relation::Ingredients.def())
-                    .join(JoinType::InnerJoin, ingredient_translations::Relation::Ingredients.def())
+                    .join(
+                        JoinType::InnerJoin,
+                        recipes::Relation::IngredientGroups.def(),
+                    )
+                    .join(
+                        JoinType::InnerJoin,
+                        ingredient_groups::Relation::Ingredients.def(),
+                    )
+                    .join(
+                        JoinType::InnerJoin,
+                        ingredient_translations::Relation::Ingredients.def(),
+                    )
                     .filter(ingredient_translations::Column::LanguageCode.eq(lang_code));
 
                 // Chain OR conditions for each ingredient string in the array
                 let mut condition = sea_orm::Condition::any();
                 for ing in ingredients_list {
                     if !ing.trim().is_empty() {
-                        condition = condition.add(ingredient_translations::Column::Data.like(format!("%{}%", ing)));
+                        condition = condition
+                            .add(ingredient_translations::Column::Data.like(format!("%{}%", ing)));
                     }
                 }
                 query = query.filter(condition);
@@ -511,7 +528,10 @@ pub async fn get_rating(
         .into_model::<Aggregates>()
         .one(db)
         .await?
-        .unwrap_or(Aggregates { avg_rating: None, count: 0 });
+        .unwrap_or(Aggregates {
+            avg_rating: None,
+            count: 0,
+        });
 
     let mut user_rating = None;
     if let Some(uid) = user_id {
@@ -530,10 +550,7 @@ pub async fn get_rating(
         user_rating,
     })
 }
-pub async fn get_comment(
-    db: &DatabaseConnection,
-    comment_id: Uuid,
-) -> Result<CommentDto, Error> {
+pub async fn get_comment(db: &DatabaseConnection, comment_id: Uuid) -> Result<CommentDto, Error> {
     let res = recipe_comments::Entity::find_by_id(comment_id)
         .find_also_related(users::Entity)
         .one(db)
@@ -561,7 +578,7 @@ pub async fn get_comment(
             deleted_at: comment.deleted_at.map(|dt| dt.with_timezone(&Utc)),
         })
     } else {
-        Err(Error::NotFound(serde_json::json!({
+        Err(Error::NotFound(json!({
             "error": "Comment not found",
             "id": comment_id
         })))
@@ -578,28 +595,31 @@ pub async fn get_comments(
         .all(db)
         .await?;
 
-    let all_comments: Vec<CommentDto> = results.into_iter().map(|(comment, user_opt)| {
-        let username = user_opt
-            .map(|u| u.username)
-            .unwrap_or_else(|| "Deleted User".to_string());
+    let all_comments: Vec<CommentDto> = results
+        .into_iter()
+        .map(|(comment, user_opt)| {
+            let username = user_opt
+                .map(|u| u.username)
+                .unwrap_or_else(|| "Deleted User".to_string());
 
-        CommentDto {
-            id: comment.id,
-            recipe_id: comment.recipe_id,
-            user_id: comment.user_id.unwrap_or_else(Uuid::nil),
-            username,
-            parent_id: comment.parent_id,
-            content: if comment.deleted_at.is_some() {
-                "This comment has been deleted.".to_string()
-            } else {
-                comment.content
-            },
-            created_at: comment.created_at.with_timezone(&Utc),
-            edited_at: Default::default(),
-            children: Vec::new(),
-            deleted_at: None,
-        }
-    }).collect();
+            CommentDto {
+                id: comment.id,
+                recipe_id: comment.recipe_id,
+                user_id: comment.user_id.unwrap_or_else(Uuid::nil),
+                username,
+                parent_id: comment.parent_id,
+                content: if comment.deleted_at.is_some() {
+                    "This comment has been deleted.".to_string()
+                } else {
+                    comment.content
+                },
+                created_at: comment.created_at.with_timezone(&Utc),
+                edited_at: Default::default(),
+                children: Vec::new(),
+                deleted_at: None,
+            }
+        })
+        .collect();
 
     let mut children_map: HashMap<Uuid, Vec<CommentDto>> = HashMap::new();
 
@@ -643,8 +663,8 @@ pub async fn add_comment(
         created_at: Set(chrono::Utc::now().into()),
         ..Default::default()
     }
-        .insert(db)
-        .await?;
+    .insert(db)
+    .await?;
 
     let user = users::Entity::find_by_id(user_id).one(db).await?;
 

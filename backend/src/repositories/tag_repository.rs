@@ -1,7 +1,6 @@
 use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::errors::Error;
-use entity::recipes::Model;
-use entity::{recipe_tags, recipes, tags};
+use entity::{recipe_tags, tags};
 use migration::JoinType;
 use sea_orm::QueryFilter;
 use sea_orm::{ActiveModelTrait, DatabaseTransaction, EntityTrait, Set};
@@ -27,13 +26,11 @@ pub async fn find_or_create_tag(
     recipe_id: Uuid,
 ) -> Result<TagDto, Error> {
     let tag_model = match tag_input {
-        // Case 1: Existing - We need to fetch it to get the name for the DTO
         InputTag::Existing { id } => tags::Entity::find_by_id(id)
             .one(txn)
             .await?
             .ok_or_else(|| Error::NotFound(serde_json::json!({"error": "Tag not found"})))?,
 
-        // Case 2: New - Find by name or create
         InputTag::New { name } => {
             let normalized_name = name.trim().to_lowercase();
 

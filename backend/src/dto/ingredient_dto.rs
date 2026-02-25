@@ -43,7 +43,6 @@ pub struct EditIngredientInput {
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct IngredientRecipeViewDto {
     pub id: Uuid,
-    pub ingredient_id: Uuid,
     pub name: String,
     pub unit: UnitDto,
     pub quantity: Decimal,
