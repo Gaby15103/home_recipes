@@ -1,5 +1,5 @@
-use actix_web::{web, HttpRequest, HttpResponse};
-use actix_web::web::Json;
+use actix_web::{web, HttpResponse};
+use actix_web::web::{Data, Json};
 use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::tag_dto::{InputTag, TagDto};
@@ -16,15 +16,13 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     );
 }
 pub async fn list(
-    state: web::Data<AppState>,
-    req: HttpRequest,
+    state: Data<AppState>,
 )-> Result<HttpResponse, Error>{
     let tags = tag_service::get_all(&state.db).await?;
     Ok(HttpResponse::Ok().json(tags))
 }
 pub async fn create(
-    state: web::Data<AppState>,
-    req: HttpRequest,
+    state: Data<AppState>,
     auth: AuthenticatedUser,
     input: Json<InputTag>
 )-> Result<HttpResponse, Error>{
@@ -35,8 +33,7 @@ pub async fn create(
     Ok(HttpResponse::Ok().json(result))
 }
 pub async fn update(
-    state: web::Data<AppState>,
-    req: HttpRequest,
+    state: Data<AppState>,
     auth: AuthenticatedUser,
     input: Json<TagDto>
 )-> Result<HttpResponse, Error>{

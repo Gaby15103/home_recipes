@@ -1,7 +1,7 @@
+use crate::dto::user_dto::UserResponseDto;
 use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-use crate::dto::user_dto::UserResponseDto;
 
 #[derive(Debug, Validate, Deserialize)]
 pub struct RegisterRequestDto {

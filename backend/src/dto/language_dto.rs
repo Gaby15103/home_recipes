@@ -1,6 +1,6 @@
+use entity::languages;
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
-use entity::languages;
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone)]
 pub struct LanguageDto {

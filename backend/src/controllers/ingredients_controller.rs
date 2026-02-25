@@ -1,13 +1,9 @@
 use std::ops::Deref;
-use actix_multipart::form::MultipartForm;
 use actix_web::{web, HttpRequest, HttpResponse};
-use serde_json::json;
 use crate::app::state::AppState;
-use crate::domain::user::AuthenticatedUser;
-use crate::dto::ingredient_dto::{IngredientList, IngredientRecipeViewDto, IngredientViewDto};
-use crate::dto::upload_dto::SingleImageForm;
+use crate::dto::ingredient_dto::{IngredientList, IngredientViewDto};
 use crate::errors::Error;
-use crate::services::{ingredient_service, upload_service};
+use crate::services::{ingredient_service};
 use crate::utils::header_extractor::extract_language;
 
 pub fn configure(cfg: &mut web::ServiceConfig) {

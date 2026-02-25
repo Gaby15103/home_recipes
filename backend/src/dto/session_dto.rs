@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
+use entity::sessions;
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use entity::sessions;
 
 #[derive(Serialize, ToSchema)]
 pub struct SessionDto {

@@ -1,21 +1,15 @@
-use std::ops::Deref;
-use actix_multipart::form::{MultipartForm};
-use actix_web::{web, HttpRequest, HttpResponse};
-use actix_web::http::header::q;
-use actix_web::web::Query;
-use uuid::Uuid;
 use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
-use actix_web::web::Json;
-use sea_orm::sqlx::query;
-use tokio::count;
-use validator::Validate;
-use crate::dto::auth_dto::LoginRequestDto;
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
-use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
 use crate::dto::recipe_rating_dto::RecipeRatingDto;
-use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
+use actix_web::web::{Json, Path};
+use actix_web::web::{Data, Query};
+use actix_web::{web, HttpRequest, HttpResponse};
+use std::ops::Deref;
+use uuid::Uuid;
+use validator::Validate;
 
 use crate::services::{recipe_service, user_service};
 use crate::utils::header_extractor::extract_language;
@@ -56,9 +50,9 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     )
 )]
 pub async fn list(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     req: HttpRequest,
-    query: web::Query<RecipeFilter>,
+    query: Query<RecipeFilter>,
     auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
     if query.scope && auth.is_some() {
@@ -83,8 +77,8 @@ pub async fn list(
     )
 )]
 pub async fn get(
-    state: web::Data<AppState>,
-    id: web::Path<Uuid>,
+    state:Data<AppState>,
+    id: Path<Uuid>,
     query: Query<GetRecipeQuery>,
     req: HttpRequest
 ) -> Result<HttpResponse, Error> {
@@ -105,9 +99,9 @@ pub async fn get(
 }
 
 pub async fn get_by_page(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     req: HttpRequest,
-    query: web::Query<RecipeFilterByPage>,
+    query: Query<RecipeFilterByPage>,
     auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
     if let Some(filters) = &query.filters{
@@ -130,7 +124,7 @@ pub async fn get_by_page(
     }))
 }
 pub async fn create(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     req: HttpRequest,
     auth: AuthenticatedUser,
     input: Json<CreateRecipeInput>,
@@ -143,7 +137,7 @@ pub async fn create(
     Ok(HttpResponse::Ok().json(res))
 }
 pub async fn get_favorites(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
     if let Some(auth) = auth {
@@ -154,11 +148,11 @@ pub async fn get_favorites(
     Ok(HttpResponse::NoContent().finish())
 }
 pub async fn update(
-    state: web::Data<AppState>,
+    state: Data<AppState>,
     req: HttpRequest,
     auth: AuthenticatedUser,
     input: Json<EditRecipeInput>,
-    path: web::Path<Uuid>,
+    path: Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
 
@@ -175,8 +169,8 @@ pub async fn update(
     Ok(HttpResponse::Ok().json(result))
 }
 pub async fn delete(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
@@ -187,16 +181,16 @@ pub async fn delete(
     Ok(HttpResponse::Ok().finish())
 }
 pub async fn analytics(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
     let count = recipe_service::analytics(&state.db, recipe_id).await?;
     Ok(HttpResponse::Ok().json(count))
 }
 pub async fn track_view(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
@@ -206,8 +200,8 @@ pub async fn track_view(
     Ok(HttpResponse::Ok().finish())
 }
 pub async fn favorite(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
@@ -216,8 +210,8 @@ pub async fn favorite(
     Ok(HttpResponse::Ok().json(favorited))
 }
 pub async fn rate(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: AuthenticatedUser,
     body: Json<i32>,
 ) -> Result<HttpResponse, Error> {
@@ -228,8 +222,8 @@ pub async fn rate(
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn unrate(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
@@ -238,8 +232,8 @@ pub async fn unrate(
     Ok(HttpResponse::Ok().json({}))
 }
 pub async fn get_rating(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: Option<AuthenticatedUser>,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
@@ -248,17 +242,17 @@ pub async fn get_rating(
     Ok(HttpResponse::Ok().json(rating))
 }
 pub async fn get_comments(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
     let comments = recipe_service::get_comments(&state.db, recipe_id).await?;
     Ok(HttpResponse::Ok().json(comments))
 }
 pub async fn add_comment(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
-    body: web::Json<CreateCommentDto>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
+    body: Json<CreateCommentDto>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let new_comment = body.into_inner();
@@ -268,8 +262,8 @@ pub async fn add_comment(
     Ok(HttpResponse::Ok().json(comment))
 }
 pub async fn delete_comment(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let comment_id = path.into_inner();
@@ -277,9 +271,9 @@ pub async fn delete_comment(
     Ok(HttpResponse::Ok().json(comment))
 }
 pub async fn edit_comment(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
-    body: web::Json<CommentDto>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
+    body: Json<CommentDto>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let comment_id = path.into_inner();
@@ -288,8 +282,8 @@ pub async fn edit_comment(
     Ok(HttpResponse::Ok().json(comment))
 }
 pub async fn get_versions(
-    state: web::Data<AppState>,
-    path: web::Path<Uuid>,
+    state: Data<AppState>,
+    path: Path<Uuid>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
@@ -298,8 +292,8 @@ pub async fn get_versions(
     Ok(HttpResponse::Ok().json(versions))
 }
 pub async fn get_version(
-    state: web::Data<AppState>,
-    path: web::Path<(Uuid, Uuid)>,
+    state: Data<AppState>,
+    path: Path<(Uuid, Uuid)>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let (recipe_id, version_id) = path.into_inner();
@@ -308,8 +302,7 @@ pub async fn get_version(
     Ok(HttpResponse::Ok().json(version))
 }
 pub async fn restore_version(
-    state: web::Data<AppState>,
-    path: web::Path<(Uuid, Uuid)>,
+    path: Path<(Uuid, Uuid)>,
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, Error> {
     let (recipe_id, version_id) = path.into_inner();

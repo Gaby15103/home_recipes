@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
+use entity::recipe_comments;
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use entity::recipe_comments;
 
 #[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct CommentDto {

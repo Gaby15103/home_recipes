@@ -1,9 +1,9 @@
+use crate::dto::ingredient_dto::{EditIngredientInput, IngredientEditorDto, IngredientInput, IngredientRecipeViewDto};
+use entity::ingredient_groups;
 use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
-use entity::{ingredient_group_translations, ingredient_groups, ingredients};
-use crate::dto::ingredient_dto::{EditIngredientInput, IngredientEditorDto, IngredientInput, IngredientRecipeViewDto};
 
 #[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
 pub struct IngredientGroupInput {
