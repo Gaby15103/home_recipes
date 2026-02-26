@@ -1,23 +1,20 @@
 # Rust
-backend/target
-**/target
+**/target/
 
 # Git
-.git
-.gitignore
+.git/
 
 # Node / frontend
-node_modules
-frontend/node_modules
-
-# Env files
-.env*
-!.env.example
+**/node_modules/
+**/dist/
 
 # OS / editor junk
 .DS_Store
-.idea
-.vscode
+.idea/
+.vscode/
 
-# Docker
-docker-compose*.yaml
+# DO NOT ignore the env/ folder if your compose needs it
+# But DO ignore local .env files to keep secrets safe
+.env
+.env.local
+.env.dev

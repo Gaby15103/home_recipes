@@ -1,0 +1,53 @@
+# --- Stage 1: Base Chef ---
+FROM lukemathwalker/cargo-chef:latest-rust-1.85-alpine AS chef
+WORKDIR /app
+RUN apk add --no-cache \
+    pkgconfig openssl-dev openssl-libs-static \
+    musl-dev gcc g++ cmake make tesseract-ocr-dev \
+    clang-dev perl curl libc++-dev libc++-static llvm-libunwind-dev
+
+# --- Stage 2: Planner ---
+FROM chef AS planner
+COPY backend/ . 
+RUN cargo chef prepare --recipe-path recipe.json
+
+# --- Stage 3: Builder ---
+FROM chef AS builder 
+RUN rustup default stable && rustup update
+ENV RUSTC_BOOTSTRAP=1
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY backend/ .
+# Build the main workspace and the migration package
+RUN cargo build --release && cargo build --release --package migration
+
+# --- THE SMART BINARY PICKER ---
+# 1. Copy the migration binary specifically
+RUN cp target/release/migration /app/migration-binary
+
+# 2. Find the main app binary. 
+# We look for an executable in target/release, ignoring 'migration' and any files with extensions (like .d or .fingerprint)
+RUN find target/release -maxdepth 1 -type f -executable ! -name "migration" ! -name "*.*" -exec cp {} /app/app-binary \;
+
+# --- Stage 4: Runtime ---
+FROM alpine:latest AS runtime
+WORKDIR /app
+
+RUN apk add --no-cache \
+    libssl3 ca-certificates libstdc++ libc++ libunwind zlib \
+    tesseract-ocr tesseract-ocr-data-fra tesseract-ocr-data-eng \
+    gcompat 
+
+COPY --from=builder /app/app-binary /usr/local/bin/app
+COPY --from=builder /app/migration-binary /usr/local/bin/migration-tool
+
+# Copy assets and entrypoint
+COPY backend/assets ./assets
+COPY docker/backend/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+EXPOSE 8088
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
