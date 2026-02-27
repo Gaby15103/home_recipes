@@ -27,7 +27,6 @@
         "missing2fa": "2FA requis mais aucun jeton retourné par le serveur."
       }
     },
-
     "register": {
       "title": "Créer un compte",
       "username": "Nom d'utilisateur",
@@ -42,7 +41,6 @@
         "failed": "Échec de l'inscription"
       }
     },
-
     "confirmEmail": {
       "title": "Confirmation du courriel",
       "loading": "Confirmation du courriel en cours...",
@@ -50,7 +48,6 @@
       "error": "Une erreur est survenue lors de la confirmation du courriel.",
       "goLogin": "Aller à la connexion"
     },
-
     "twoFactor": {
       "authCodeTitle": "Code d'authentification",
       "authCodeDescription": "Entrez le code fourni par votre application d'authentification.",
@@ -64,6 +61,11 @@
       "missingToken": "Jeton 2FA manquant",
       "or": "ou vous pouvez"
     }
+  },
+  "Common": {
+    "Search": "Rechercher",
+    "Loading": "Récupération des recettes...",
+    "Reset": "Réinitialiser les filtres"
   },
   "Home": {
     "Title": "Recettes maison",
@@ -90,7 +92,8 @@
     "Feature3Desc": "Organisez votre semaine avec notre planificateur de repas intuitif.",
     "Settings": "Paramètres",
     "Appearance": "Apparence",
-    "Language": "Langue"
+    "Language": "Langue",
+    "SearchPlaceholder": "Rechercher une recette, un ingrédient ou un tag..."
   },
   "RecipeList": {
     "Title": "Toutes Les Recettes"
@@ -99,16 +102,15 @@
     "errors": {
       "fetch": "Impossible de charger la recette"
     },
-
     "meta": {
-      "prep": "Préparation",
-      "cook": "Cuisson",
-      "servings": "Portions",
-      "minutes": "min"
+      "time": "Temps de préparation",
+      "complexity": "Complexité",
+      "dates": "Période de publication",
+      "tags_placeholder": "Sélectionner des étiquettes...",
+      "minutes": " min",
+      "servings": " pers."
     },
-
     "tags": "Étiquettes",
-
     "actions": {
       "favorite": "Ajouter aux favoris",
       "favorited": "Dans les favoris",
@@ -116,16 +118,13 @@
       "share": "Partager",
       "copied": "Lien de la recette copié !"
     },
-
     "ingredients": {
       "title": "Ingrédients"
     },
-
     "steps": {
       "title": "Préparations",
       "showImages": "Afficher les images des étapes"
     },
-
     "comments": {
       "title": "Commentaires",
       "placeholder": "Commenter cette recette...",
@@ -138,17 +137,13 @@
       "title": "Éditeur Markdown",
       "switchToRich": "Passer en texte enrichi",
       "switchToMarkdown": "Passer en Markdown",
-
       "placeholder": "Écrire un commentaire",
       "replyPlaceholder": "Répondre à {username}",
-
       "cancel": "Annuler",
       "submit": "Publier",
-
       "errors": {
         "postFailed": "Impossible de publier le commentaire"
       },
-
       "toolbar": {
         "bold": "Gras",
         "italic": "Italique",
@@ -165,9 +160,9 @@
     }
   },
   "Ingredients": {
-    "no_match": "aucun ingredients trouvée",
-    "search_placeholder": "Search ingredients...",
-    "suggestions": "Suggestions",
+    "no_match": "Aucun ingrédient trouvé",
+    "search_placeholder": "Ajouter des ingrédients (Entrée)...",
+    "suggestions": "Ingrédients courants",
     "selected_count": "{count} ingredients selectionné",
     "selected_title": "Ingredients selectionné"
   },
@@ -198,7 +193,6 @@
       "recentRecipes": "Recettes récentes",
       "viewAll": "Voir tout"
     },
-
     "recipe": {
       "createTitle": "Créer une recette",
       "editTitle": "Modifier la recette",
@@ -206,8 +200,7 @@
       "details": "Détails",
       "recipeSection": "Recette",
       "tags": "Étiquettes",
-      "loading":"Transformer image a une recette.",
-
+      "loading": "Transformer image a une recette.",
       "fields": {
         "title": "Titre",
         "description": "Description",
@@ -219,19 +212,16 @@
         "primaryLanguage": "Langage Principale",
         "switchLanguage": "Changer de langue"
       },
-
       "placeholders": {
         "title": "Gâteau au chocolat",
         "description": "Courte description (optionnel)"
       },
-
       "list": {
         "title": "Toutes les recettes",
         "servings": "Portions",
         "prep": "Préparation",
         "cook": "Cuisson"
       },
-
       "view": {
         "author": "Auteur",
         "visibility": "Visibilité",
@@ -240,10 +230,8 @@
         "ingredients": "Ingrédients",
         "steps": "Étapes de préparation"
       },
-
       "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette recette ?"
     },
-
     "ingredients": {
       "title": "Ingrédients",
       "addGroup": "Ajouter un groupe",
@@ -256,7 +244,6 @@
       "remove": "Retirer",
       "note_placeholder": "Ajoutez des informations supplémentaires pour cet ingrédient"
     },
-
     "steps": {
       "title": "Étapes",
       "addGroup": "Ajouter un groupe",
@@ -266,13 +253,12 @@
       "remove": "Retirer",
       "remove_image": "Retirer l'image",
       "duration": "Durée (minutes)",
-      "choose_image":"Choisir une image",
+      "choose_image": "Choisir une image",
       "no_image_selected": "Aucune image sélectionnée"
     },
     "units": {
       "placeholder": "Unité"
     },
-
     "table": {
       "title": "Titre",
       "author": "Auteur",
@@ -305,16 +291,12 @@
       "ingredient": "Ingrédient",
       "reset": "Réinitialiser les filtres",
       "advanced": "Filtres avancés",
-
       "prep_min": "Temps de préparation min",
       "prep_max": "Temps de préparation max",
-
       "cook_min": "Temps de cuisson min",
       "cook_max": "Temps de cuisson max",
-
       "steps_min": "Nombre d'étapes min",
       "steps_max": "Nombre d'étapes max",
-
       "date_from": "Date de début",
       "date_to": "Date de fin"
     }
