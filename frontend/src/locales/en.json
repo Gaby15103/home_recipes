@@ -66,8 +66,31 @@
     }
   },
   "Home": {
-    "Title": "\uD83C\uDF73 Home Recipes",
-    "Text": "Browse delicious homemade recipes and manage your own cookbook."
+    "Title": "Home Recipes",
+    "Text": "Browse delicious homemade recipes and manage your own cookbook.",
+    "WelcomeBack": "Welcome back",
+    "ReadyToCook": "Ready to whip up something delicious today?",
+    "CreateRecipe": "Create Recipe",
+    "CreateRecipeDesc": "Share a new culinary masterpiece with the world.",
+    "MyLibrary": "My Library",
+    "MyLibraryDesc": "Browse the recipes you've saved and created.",
+    "Explore": "Explore",
+    "ExploreDesc": "Discover trending recipes from other home chefs.",
+    "RecentHeading": "Recently Added",
+    "ViewAll": "View All",
+    "RecipePlaceholder": "Delicious Recipe #{n}",
+    "DifficultyEasy": "Easy",
+    "BadgeNew": "New: Version 2.0 is live!",
+    "FeaturesTitle": "Platform Features",
+    "Feature1Title": "Community Driven",
+    "Feature1Desc": "Join thousands of home cooks sharing their family secrets.",
+    "Feature2Title": "Scale & Save",
+    "Feature2Desc": "Automatically adjust portions and save recipes for offline use.",
+    "Feature3Title": "Meal Planning",
+    "Feature3Desc": "Organize your week with our drag-and-drop recipe planner.",
+    "Settings": "Settings",
+    "Appearance": "Appearance",
+    "Language": "Language"
   },
   "RecipeList": {
     "Title": "All Recipes"

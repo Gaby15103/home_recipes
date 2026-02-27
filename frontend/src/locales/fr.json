@@ -66,8 +66,31 @@
     }
   },
   "Home": {
-    "Title": "\uD83C\uDF73 Recettes maison",
-    "Text": "Parcourez de délicieuses recettes maison et gérez votre propre livre de recettes."
+    "Title": "Recettes maison",
+    "Text": "Parcourez de délicieuses recettes maison et gérez votre propre livre de recettes.",
+    "WelcomeBack": "Bon retour",
+    "ReadyToCook": "Prêt à cuisiner quelque chose de délicieux aujourd'hui ?",
+    "CreateRecipe": "Créer une recette",
+    "CreateRecipeDesc": "Partagez un nouveau chef-d'œuvre culinaire avec le monde.",
+    "MyLibrary": "Ma bibliothèque",
+    "MyLibraryDesc": "Parcourez les recettes que vous avez sauvegardées et créées.",
+    "Explore": "Explorer",
+    "ExploreDesc": "Découvrez les recettes tendances d'autres chefs maison.",
+    "RecentHeading": "Ajouté récemment",
+    "ViewAll": "Voir tout",
+    "RecipePlaceholder": "Délicieuse recette n°{n}",
+    "DifficultyEasy": "Facile",
+    "BadgeNew": "Nouveau : La version 2.0 est en ligne !",
+    "FeaturesTitle": "Fonctionnalités de la plateforme",
+    "Feature1Title": "Communautaire",
+    "Feature1Desc": "Rejoignez des milliers de cuisiniers partageant leurs secrets de famille.",
+    "Feature2Title": "Adapter & Sauvegarder",
+    "Feature2Desc": "Ajustez les portions automatiquement et sauvegardez pour un accès hors ligne.",
+    "Feature3Title": "Planification",
+    "Feature3Desc": "Organisez votre semaine avec notre planificateur de repas intuitif.",
+    "Settings": "Paramètres",
+    "Appearance": "Apparence",
+    "Language": "Langue"
   },
   "RecipeList": {
     "Title": "Toutes Les Recettes"

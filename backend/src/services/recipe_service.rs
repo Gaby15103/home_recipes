@@ -122,6 +122,32 @@ pub async fn create(
         recipe_repository::create(db, new_recipe, preferred_language).await?;
     Ok(inserted_recipe)
 }
+pub async fn get_last(
+    db: &DatabaseConnection,
+    lang_code: &str,
+    limit: i64,
+    _include_translations: bool, // Param kept for signature matching, though usually not needed for a "latest" list
+) -> Result<Vec<RecipeViewDto>, Error> {
+    // 1. Fetch latest public recipes from repository
+    let recipes = recipe_repository::find_latest_public(db, limit).await?;
+
+    let mut dtos = Vec::new();
+
+    for recipe in recipes {
+        let translation = recipe_translation_repository::find_translation(
+            db,
+            recipe.id,
+            lang_code,
+            recipe.original_language_code.deref(),
+        )
+            .await?;
+        
+        let dto = RecipeViewDto::from((recipe, translation));
+        dtos.push(dto);
+    }
+
+    Ok(dtos)
+}
 
 pub async fn get_all_by_page(
     db: &DatabaseConnection,
