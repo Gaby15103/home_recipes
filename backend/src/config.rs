@@ -59,6 +59,8 @@ impl Config {
 
         let mail_from_name =
             env::var("MAIL_FROM_NAME").unwrap_or_else(|_| "HomeRecipes".to_string());
+            
+
 
         Ok(Self {
             database_url,

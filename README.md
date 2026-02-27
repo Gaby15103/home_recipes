@@ -50,3 +50,9 @@ sudo pacman -S --needed cmake base-devel
 ```bash 
 sudo pacman -S tesseract tesseract-data-fra tesseract-data-eng
 ```
+
+### Restart frontend :
+```bash
+docker compose -f docker-compose.prod.yaml build --no-cache frontend
+docker compose -f docker-compose.prod.yaml up -d frontend
+```

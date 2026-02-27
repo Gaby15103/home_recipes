@@ -13,7 +13,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .configure(languages_controller::configure)
             .configure(unit_controller::configure)
             .configure(ocr_controller::configure)
-            .configure(upload_controller::configure),
-    )
-    .configure(files_controller::configure);
+            .configure(upload_controller::configure)
+            .configure(files_controller::configure)
+    );    
 }
