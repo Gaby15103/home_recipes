@@ -1,119 +1,709 @@
-﻿{
-  "title": "pasta",
-  "description": "a simple pasta recipe",
-  "serving": 4,
-  "prep_time_minutes": 5,
-  "cook_time_minutes": 10,
-  "author": null,
+{
+  "primary_language": "fr",
+  "translations": [
+    {
+      "language_code": "fr",
+      "title": "Poulet et crevettes au style thaïlandais",
+      "description": ""
+    },
+    {
+      "language_code": "en",
+      "title": "Thai Style Chicken and Shrimp",
+      "description": ""
+    }
+  ],
+  "image_url": "",
+  "servings": 6,
+  "prep_time_minutes": 15,
+  "cook_time_minutes": 20,
   "author_id": null,
+  "author": null,
   "is_private": false,
   "tags": [],
-  "ingredients_groups": [
+  "ingredient_groups": [
     {
-      "title": "pasta",
       "position": 0,
       "ingredients": [
         {
-          "name": "salt",
-          "quantity": 1,
-          "unite": "Piece",
-          "note": null,
-          "position": 0
+          "quantity": "1",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 0,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Poulet",
+              "note": "poitrine sans peau et désossée détaillée en fine julienne"
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
         },
         {
-          "name": "spagethi",
-          "quantity": 400,
-          "unite": "Gram",
-          "note": null,
-          "position": 1
+          "quantity": "1",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 1,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Fécule de tapioca ou de maïs",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "1",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 2,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Crevettes moyennes (taille 26-30)",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "1",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 3,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Huile végétale",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "4",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 4,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Ail",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "250",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 5,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Oignons",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "125",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 6,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Poivrons verts",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "125",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 7,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Poivrons rouges",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "125",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 8,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Céleri",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "2",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 9,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Piments rouges forts",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "125",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 10,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Pâte de curry rouge",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "30",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 11,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Concentré pour bouillon de poulet en poudre",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "15",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 12,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Sucre",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "75",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 13,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Sel",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "30",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 14,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Lait de coco",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "1",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 15,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Cresson",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "1",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 16,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Citron ou lime",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "125",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 17,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Arachides non salées, hachées finement",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "125",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 18,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Feuilles de menthe hachées",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "quantity": "125",
+          "unit_id": "460d412b-4f85-4d55-bc52-63b598807431",
+          "position": 19,
+          "translations": [
+            {
+              "language_code": "fr",
+              "data": "Oignons verts hachés",
+              "note": null
+            },
+            {
+              "language_code": "en",
+              "data": "",
+              "note": null
+            }
+          ],
+          "note": [
+            {
+              "language_code": "en",
+              "note": ""
+            },
+            {
+              "language_code": "fr",
+              "note": ""
+            }
+          ]
         }
-      ]
-    },
-    {
-      "title": "sauce",
-      "position": 1,
-      "ingredients": [
+      ],
+      "translations": [
         {
-          "name": "tomato",
-          "quantity": 1,
-          "unite": "Piece",
-          "note": null,
-          "position": 0
+          "language_code": "fr",
+          "title": "Ingrédients"
         },
         {
-          "name": "olive oil",
-          "quantity": 2,
-          "unite": "Tablespoon",
-          "note": null,
-          "position": 1
-        },
-        {
-          "name": "chopped garlic",
-          "quantity": 2,
-          "unite": "Piece",
-          "note": null,
-          "position": 2
-        },
-        {
-          "name": "chopped oignon",
-          "quantity": 1,
-          "unite": "Piece",
-          "note": null,
-          "position": 3
-        },
-        {
-          "name": "chicken stock",
-          "quantity": 1,
-          "unite": "Cup",
-          "note": null,
-          "position": 4
+          "language_code": "en",
+          "title": ""
         }
       ]
     }
   ],
-  "step_group": [
+  "step_groups": [
     {
-      "title": "pasta",
       "position": 0,
       "steps": [
         {
-          "position": 0,
-          "instructions": "Add water and salt to a pot and boil until ebulition.",
-          "duration_minutes": null,
-          "image_file": null
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Enrober le poulet de fécule et blanchir immédiatement 1 minute à l‘eau bouillante à grande ébullition. Rafraîchir et réserver."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 0
         },
         {
-          "position": 1,
-          "instructions": "When boiling add the pasta and wait 10 minutes then remove pasta from water",
-          "duration_minutes": null,
-          "image_file": null
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Blanchir les crevettes à eau à grande ébullition pendant 1 minute. Rafraîchir et réserver."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 1
+        },
+        {
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Chauffer le wok à haute température."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 2
+        },
+        {
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Verser l'huile végétale et ajouter l'ail, les oignons, les poivrons, le céleri, les piments forts, le poulet et les crevettes."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 3
+        },
+        {
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Ajouter la pâte de curry rouge, le concentré pour bouillon de poulet en poudre, le sucre, le sel et le lait de coco et faire sauter la cuisson 1 à 2 minutes."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 4
+        },
+        {
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Dresser la préparation sur une assiette ovale, garnir de cresson et décorer le bord de l‘assiette avec des quartiers de citron ou de lime."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 5
+        },
+        {
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Parsemer les arachides, les feuilles de menthe et les oignons verts sur le dessus de la préparation."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 6
+        },
+        {
+          "image_url": null,
+          "translations": [
+            {
+              "language_code": "fr",
+              "instruction": "Servir avec du Riz parfumé à la vapeur (voir page 105)."
+            },
+            {
+              "language_code": "en",
+              "instruction": ""
+            }
+          ],
+          "position": 7
         }
-      ]
-    },
-    {
-      "title": "sauce",
-      "position": 1,
-      "steps": [
+      ],
+      "translations": [
         {
-          "position": 0,
-          "instructions": "in a pan saute garlic and oignon in oliv oil until tender",
-          "duration_minutes": null,
-          "image_file": null
+          "language_code": "fr",
+          "title": "Instructions"
         },
         {
-          "position": 1,
-          "instructions": " when slightly translucent add tomato can, basilic and chicken stock.. let it simer for 15 minutes at medium low",
-          "duration_minutes": null,
-          "image_file": null
-        },
-        {
-          "position": 2,
-          "instructions": "when the sauce as reduce add it to the psata in a plate and ther you have boy",
-          "duration_minutes": null,
-          "image_file": null
+          "language_code": "en",
+          "title": ""
         }
       ]
     }
   ]
 }
-
