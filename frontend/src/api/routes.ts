@@ -23,6 +23,7 @@ export const RecipeRoutes = {
     all: () => `${API_ROOT}/recipes`,
     byPage: () => `${API_ROOT}/recipes/by_page`,
     get: (id: string) => `${API_ROOT}/recipes/${id}`,
+    get_last: () => `${API_ROOT}/recipes/last`,
     create: () => `${API_ROOT}/recipes`,
     update: (id: string) => `${API_ROOT}/recipes/${id}`,
     delete: (id: string) => `${API_ROOT}/recipes/${id}`,

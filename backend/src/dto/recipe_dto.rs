@@ -165,6 +165,11 @@ pub struct RecipePagination{
 pub struct GetRecipeQuery {
     pub include_translations: Option<bool>,
 }
+#[derive(Deserialize)]
+pub struct LastRecipesQuery {
+    pub nb: Option<i64>,
+    pub include_translations: Option<bool>,
+}
 #[derive(Serialize, ToSchema)]
 #[serde(untagged)]
 pub enum RecipeResponse {

@@ -1,7 +1,7 @@
 use crate::app::state::AppState;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
-use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetRecipeQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetRecipeQuery, LastRecipesQuery, RecipeFilter, RecipeFilterByPage, RecipePagination, RecipeResponse, RecipeViewDto};
 use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::errors::Error;
 use actix_web::web::{Json, Path};
@@ -19,6 +19,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/recipes")
             .route("", web::get().to(list))
+            .route("/last", web::get().to(get_last))
             .route("/by_page", web::get().to(get_by_page))
             .route("", web::post().to(create))
             .route("/favorites", web::get().to(get_favorites))
@@ -96,6 +97,40 @@ pub async fn get(
             Ok(HttpResponse::Ok().json(view_data))
         }
     }
+}
+
+/// Get the latest recipes
+#[utoipa::path(
+    get,
+    path = "/recipes/last",
+    params(
+        ("nb" = Option<i64>, Query, description = "Number of recipes to fetch"),
+        ("include_translations" = Option<bool>, Query, description = "Whether to include all translations")
+    ),
+    responses(
+        (status = 200, description = "List of latest recipes", body = [RecipeViewDto])
+    )
+)]
+pub async fn get_last(
+    state: Data<AppState>,
+    req: HttpRequest,
+    query: Query<LastRecipesQuery>,
+) -> Result<HttpResponse, Error> {
+    let lang_code = extract_language(&req);
+
+    // Default to 4 if nb is not provided, capped at 20 for safety
+    let limit = query.nb.unwrap_or(4).min(20);
+    let include_translations = query.include_translations.unwrap_or(false);
+
+    // Call the service layer (you will need to implement this in recipe_service)
+    let recipes = recipe_service::get_last(
+        &state.db,
+        lang_code.deref(),
+        limit,
+        include_translations
+    ).await?;
+
+    Ok(HttpResponse::Ok().json(recipes))
 }
 
 pub async fn get_by_page(

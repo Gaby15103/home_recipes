@@ -1,7 +1,7 @@
 {
   "Title": "Home Recipes",
-  "home":"Home",
-  "Recipes":"Recipes",
+  "home": "Home",
+  "Recipes": "Recipes",
   "Login": "Connection",
   "Register": "Register",
   "Logout": "Disconnect",
@@ -27,7 +27,6 @@
         "missing2fa": "2FA required but token not returned by the server."
       }
     },
-
     "register": {
       "title": "Create account",
       "username": "Username",
@@ -42,7 +41,6 @@
         "failed": "Registration failed"
       }
     },
-
     "confirmEmail": {
       "title": "Email Confirmation",
       "loading": "Confirming your email, please wait...",
@@ -50,7 +48,6 @@
       "error": "An error occurred while confirming your email.",
       "goLogin": "Go to Login"
     },
-
     "twoFactor": {
       "authCodeTitle": "Authentication Code",
       "authCodeDescription": "Enter the authentication code provided by your authenticator application.",
@@ -65,9 +62,38 @@
       "or": "or you can"
     }
   },
+  "Common": {
+    "Search": "Search",
+    "Loading": "Gathering recipes...",
+    "Reset": "Reset filters"
+  },
   "Home": {
-    "Title": "\uD83C\uDF73 Home Recipes",
-    "Text": "Browse delicious homemade recipes and manage your own cookbook."
+    "Title": "Home Recipes",
+    "Text": "Browse delicious homemade recipes and manage your own cookbook.",
+    "WelcomeBack": "Welcome back",
+    "ReadyToCook": "Ready to whip up something delicious today?",
+    "CreateRecipe": "Create Recipe",
+    "CreateRecipeDesc": "Share a new culinary masterpiece with the world.",
+    "MyLibrary": "My Library",
+    "MyLibraryDesc": "Browse the recipes you've saved and created.",
+    "Explore": "Explore",
+    "ExploreDesc": "Discover trending recipes from other home chefs.",
+    "RecentHeading": "Recently Added",
+    "ViewAll": "View All",
+    "RecipePlaceholder": "Delicious Recipe #{n}",
+    "DifficultyEasy": "Easy",
+    "BadgeNew": "New: Version 2.0 is live!",
+    "FeaturesTitle": "Platform Features",
+    "Feature1Title": "Community Driven",
+    "Feature1Desc": "Join thousands of home cooks sharing their family secrets.",
+    "Feature2Title": "Scale & Save",
+    "Feature2Desc": "Automatically adjust portions and save recipes for offline use.",
+    "Feature3Title": "Meal Planning",
+    "Feature3Desc": "Organize your week with our drag-and-drop recipe planner.",
+    "Settings": "Settings",
+    "Appearance": "Appearance",
+    "Language": "Language",
+    "SearchPlaceholder": "Search for a recipe, ingredient, or tag..."
   },
   "RecipeList": {
     "Title": "All Recipes"
@@ -76,16 +102,15 @@
     "errors": {
       "fetch": "Failed to fetch recipe"
     },
-
     "meta": {
-      "prep": "Prep",
-      "cook": "Cook",
-      "servings": "Servings",
-      "minutes": "min"
+      "time": "Prep & Cook Time",
+      "complexity": "Complexity",
+      "dates": "Time Period",
+      "tags_placeholder": "Select tags...",
+      "minutes": " min",
+      "servings": " servings"
     },
-
     "tags": "Tags",
-
     "actions": {
       "favorite": "Add to Favorites",
       "favorited": "Favorited",
@@ -93,16 +118,13 @@
       "share": "Share",
       "copied": "Recipe URL copied to clipboard!"
     },
-
     "ingredients": {
       "title": "Ingredients"
     },
-
     "steps": {
       "title": "Preparations",
       "showImages": "Show Step Images"
     },
-
     "comments": {
       "title": "Comments",
       "placeholder": "Comment on this recipe...",
@@ -115,17 +137,13 @@
       "title": "Markdown Editor",
       "switchToRich": "Switch to Rich Text",
       "switchToMarkdown": "Switch to Markdown",
-
       "placeholder": "Write your comment",
       "replyPlaceholder": "Reply to {username}",
-
       "cancel": "Cancel",
       "submit": "Comment",
-
       "errors": {
         "postFailed": "Failed to post comment"
       },
-
       "toolbar": {
         "bold": "Bold",
         "italic": "Italic",
@@ -142,11 +160,11 @@
     }
   },
   "Ingredients": {
-    "search_placeholder": "Search ingredients...",
-    "suggestions": "Suggestions",
+    "search_placeholder": "Add ingredients (press Enter)...",
+    "suggestions": "Common ingredients",
     "selected_count": "{count} ingredients selected",
     "selected_title": "Selected Ingredients",
-    "no_match": "No ingredients found."
+    "no_match": "No ingredients found"
   },
   "Admin": {
     "common": {
@@ -161,7 +179,6 @@
     "unit": {
       "placeholder": "Unit"
     },
-
     "dashboard": {
       "stats": {
         "totalRecipes": "Total Recipes",
@@ -176,7 +193,6 @@
       "recentRecipes": "Recent Recipes",
       "viewAll": "View All"
     },
-
     "recipe": {
       "createTitle": "Create Recipe",
       "editTitle": "Edit Recipe",
@@ -184,8 +200,7 @@
       "details": "Details",
       "recipeSection": "Recipe",
       "tags": "Tags",
-      "loading":"Converting image  to recipe.",
-
+      "loading": "Converting image  to recipe.",
       "fields": {
         "title": "Title",
         "description": "Description",
@@ -197,19 +212,16 @@
         "primaryLanguage": "Primary language",
         "switchLanguage": "Switch Language"
       },
-
       "placeholders": {
         "title": "Chocolate Cake",
         "description": "Short description (optional)"
       },
-
       "list": {
         "title": "All Recipes",
         "servings": "Servings",
         "prep": "Prep",
         "cook": "Cook"
       },
-
       "view": {
         "author": "Author",
         "visibility": "Visibility",
@@ -218,10 +230,8 @@
         "ingredients": "Ingredients",
         "steps": "Preparation Steps"
       },
-
       "confirmDelete": "Are you sure you want to delete this recipe?"
     },
-
     "ingredients": {
       "title": "Ingredients",
       "addGroup": "Add Group",
@@ -234,7 +244,6 @@
       "remove": "Remove",
       "note_placeholder": "Add additional information for this ingredient"
     },
-
     "steps": {
       "title": "Steps",
       "addGroup": "Add Group",
@@ -244,7 +253,7 @@
       "remove": "Remove",
       "remove_image": "Remove image",
       "duration": "Duration (minutes)",
-      "choose_image":"Choose an image",
+      "choose_image": "Choose an image",
       "no_image_selected": "No image selected"
     },
     "units": {
@@ -282,16 +291,12 @@
       "ingredient": "Ingredient",
       "reset": "Reset filters",
       "advanced": "Advanced filters",
-
       "prep_min": "Min prep time",
       "prep_max": "Max prep time",
-
       "cook_min": "Min cook time",
       "cook_max": "Max cook time",
-
       "steps_min": "Min steps",
       "steps_max": "Max steps",
-
       "date_from": "From date",
       "date_to": "To date"
     }

@@ -188,6 +188,18 @@ pub async fn create(
     .await
     .map_err(|e| e.into())
 }
+pub async fn find_latest_public(
+    db: &DatabaseConnection,
+    limit: i64,
+) -> Result<Vec<recipes::Model>, Error> {
+    recipes::Entity::find()
+        .filter(recipes::Column::IsPrivate.eq(false)) // Ensure only public recipes
+        .order_by_desc(recipes::Column::CreatedAt)    // Newest first
+        .limit(limit as u64)                          // Apply limit
+        .all(db)
+        .await
+        .map_err(Error::from)
+}
 pub async fn find_by_query_by_page(
     db: &DatabaseConnection,
     filter: RecipeFilterByPage,
