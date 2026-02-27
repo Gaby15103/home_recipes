@@ -55,11 +55,17 @@ vite.svg
 #        Backend          #
 ###########################
 
-/target/
+# Ignore target folders anywhere in the project
+**/target/
+
+# Ignore specific Cargo locks if you want them ignored
+backend/migration/Cargo.lock
+# backend/Cargo.lock  <-- Keep this tracked for reproducible builds!
+
+# Your assets logic (this is perfect)
 backend/assets/**/*
 !backend/assets/**/.gitkeep
 !backend/assets/users/**
-backend/Cargo.lock  # uncomment if building a library, keep if this is an app
 
 # Rust toolchain artifacts
 rustfmt.bk
