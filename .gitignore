@@ -56,7 +56,9 @@ vite.svg
 ###########################
 
 /target/
-backend/assets/
+backend/assets/**/*
+!backend/assets/**/.gitkeep
+!backend/assets/users/**
 backend/Cargo.lock  # uncomment if building a library, keep if this is an app
 
 # Rust toolchain artifacts
