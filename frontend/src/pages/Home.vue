@@ -158,7 +158,47 @@ onMounted(async () => {
       </div>
     </section>
 
-    <section v-else>
+    <section v-else class="flex flex-col items-center justify-center text-center py-20 px-4">
+      <div
+          class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors bg-primary text-primary-foreground mb-6">
+        {{ t('Home.BadgeNew') }} 🚀
+      </div>
+      <h1 class="text-4xl font-extrabold tracking-tight sm:text-6xl mb-6 bg-linear-to-r from-primary to-orange-600 bg-clip-text text-transparent">
+        {{ t('Home.Title') }}
+      </h1>
+      <p class="text-xl text-muted-foreground mb-10 max-w-2xl leading-relaxed">
+        {{ t('Home.Text') }}
+      </p>
+      
+      <div class="flex flex-col sm:flex-row gap-4 w-full justify-center">
+        <RouterLink :to="ROUTES.LOGIN">
+          <Button size="lg" class="w-full sm:w-auto px-10 h-12 text-lg">
+            {{ t('Login') }}
+          </Button>
+        </RouterLink>
+        <RouterLink :to="ROUTES.REGISTER">
+          <Button size="lg" variant="outline" class="w-full sm:w-auto px-10 h-12 text-lg">
+            {{ t('Register') }}
+          </Button>
+        </RouterLink>
+      </div>
+      <div class="mt-24 grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl text-left border-t pt-12">
+        <div class="space-y-2">
+          <Users class="h-8 w-8 text-primary"/>
+          <h3 class="font-bold">{{ t('Home.Feature1Title') }}</h3>
+          <p class="text-sm text-muted-foreground">{{ t('Home.Feature1Desc') }}</p>
+        </div>
+        <div class="space-y-2">
+          <Flame class="h-8 w-8 text-orange-500"/>
+          <h3 class="font-bold">{{ t('Home.Feature2Title') }}</h3>
+          <p class="text-sm text-muted-foreground">{{ t('Home.Feature2Desc') }}</p>
+        </div>
+        <div class="space-y-2">
+          <Clock class="h-8 w-8 text-blue-500"/>
+          <h3 class="font-bold">{{ t('Home.Feature3Title') }}</h3>
+          <p class="text-sm text-muted-foreground">{{ t('Home.Feature3Desc') }}</p>
+        </div>
+      </div>
     </section>
   </div>
 </template>
