@@ -61,7 +61,7 @@ pub async fn process_ocr_to_dto(
     }"#;
 
     let response = client
-        .post("http://localhost:11434/api/generate")
+        .post("http://ollama:11434/api/generate")
         .json(&json!({
             "model": "llama3.2:3b",
             "prompt": format!("{}\n\nOCR:\n{}", system_instructions, cleaned_text),
