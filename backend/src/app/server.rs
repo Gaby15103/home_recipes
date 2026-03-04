@@ -20,7 +20,11 @@ pub async fn start(config: Config) -> std::io::Result<()> {
     let db = Database::connect(&config.database_url)
         .await
         .expect("DB connection failed");
-    Migrator::up(&db, None).await.expect("TODO: panic message");
+    Migrator::up(&db, None).await.expect("Migration failed");
+
+    let dict_db = sqlx::SqlitePool::connect("sqlite://resources/dictionary.db")
+        .await
+        .expect("Failed to connect to SQLite dictionary. Is the file in /resources?");
 
     let redis = Arc::new(
         Client::open(config.redis_url.clone())
@@ -36,6 +40,7 @@ pub async fn start(config: Config) -> std::io::Result<()> {
 
         let state = Data::new(AppState {
             db: db.clone(),
+            dict_db: dict_db.clone(),
             redis: redis.clone(),
             config: config.clone(),
         });

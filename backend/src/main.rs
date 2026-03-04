@@ -10,6 +10,7 @@ mod openapi;
 mod repositories;
 mod services;
 mod utils;
+mod recipe_parser;
 
 use config::Config;
 

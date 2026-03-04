@@ -19,7 +19,7 @@ pub async fn create_recipe(
     MultipartForm(form): MultipartForm<SingleImageForm>,
 ) ->Result<HttpResponse, Error>{
     auth.require_roles(&[Role::Admin,Role::Moderator,Role::Superuser])?;
-    let recipe = ocr_service::recipe_from_file(form.image,&state.db).await?;
+    let recipe = ocr_service::recipe_from_file(form.image,&state.db,&state.dict_db).await?;
     
     Ok(HttpResponse::Ok().json(recipe))
 }
