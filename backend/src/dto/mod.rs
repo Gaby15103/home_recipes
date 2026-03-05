@@ -19,4 +19,4 @@ pub mod comment_dto;
 pub mod recipe_version_dto;
 pub mod recipe_rating_dto;
 pub mod unit_dto;
-mod recipe_from_image_dto;
+pub(crate) mod recipe_ocr;

@@ -1,25 +1,54 @@
-use crate::dto::recipe_dto::CreateRecipeInput;
+use crate::dto::recipe_ocr::{OcrConfirmInput, OcrCorrectionWrapper, OcrResultResponse}; // Returning the bridge DTO instead
 use crate::errors::Error;
 use crate::recipe_parser;
-use crate::recipe_parser::ParserContext;
+use crate::recipe_parser::{teach_lexicon, ParserContext};
 use crate::repositories::unit_repository;
 use actix_multipart::form::tempfile::TempFile;
 use sea_orm::DatabaseConnection;
 use sqlx::SqlitePool;
+use uuid::Uuid;
+use crate::dto::recipe_dto::{CreateRecipeInput, RecipeDto, RecipeViewDto};
+use crate::services::recipe_service;
 
-pub async fn recipe_from_file(
-    image: TempFile,
+pub async fn recipe_from_files(
+    images: Vec<TempFile>,
     db: &DatabaseConnection,
     sqlite_pool: &SqlitePool,
-) -> Result<CreateRecipeInput, Error> {
+) -> Result<OcrResultResponse, Error> {
+    // 1. Get units to help the parser resolve UUIDs early if possible
     let units = unit_repository::get_all_admin(db).await?;
 
     let context = ParserContext {
-        sqlite_pool: &sqlite_pool,
+        sqlite_pool,
         known_units: units,
     };
 
-    let recipe = recipe_parser::run_pipeline(image.file.path(), context).await?;
+    // 2. Extract paths for the multi-image scanner
+    let paths: Vec<&std::path::Path> = images
+        .iter()
+        .map(|f| f.file.path())
+        .collect();
 
-    Ok(recipe)
+    // 3. Run the pipeline (Scan -> Classify -> Match)
+    // This returns the structured suggestion with confidence levels
+    let ocr_suggestions = recipe_parser::run_pipeline(&paths, context).await?;
+
+    Ok(ocr_suggestions)
+}
+pub async fn process_ocr_confirmation(
+    payload: OcrCorrectionWrapper,
+    pg_db: &DatabaseConnection,
+    sqlite_pool: &SqlitePool,
+    preferred_language: &str
+) -> Result<RecipeViewDto, Error> {
+    // 1. TEACH: Compare original strings to the user's final selections
+    teach_lexicon(&payload, sqlite_pool).await?;
+
+    // 2. CONVERT: Use the internal method of the modified part of the payload
+    let create_input = payload.modified_recipe.to_create_input();
+
+    // 3. PERSIST: Save the clean recipe to Postgres
+    let result = recipe_service::create(pg_db, create_input, preferred_language).await?;
+
+    Ok(result)
 }

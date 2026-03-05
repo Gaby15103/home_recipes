@@ -1,58 +1,62 @@
 use sqlx::{Row, SqlitePool};
+use crate::dto::recipe_ocr::OcrMatchMetadata;
 use crate::errors::Error;
-use std::time::Instant;
 
-/// Represents the categorized meaning of a word found via OCR.
-#[derive(Debug, Clone)]
-pub enum WordType {
-    /// A recognized ingredient name (e.g., "flour", "sugar")
-    Ingredient(String),
-    /// A recognized measurement unit (e.g., "grams", "ml", "tbsp")
-    Unit(String),
-    /// A numerical value for quantity (e.g., 200, 1.5)
-    Quantity(f32),
-    /// Standard text that didn't match a specific category
-    Text(String),
-}
+pub async fn resolve_line(
+    line: &str,
+    pool: &SqlitePool
+) -> Result<(Option<f32>, Option<OcrMatchMetadata>, Option<OcrMatchMetadata>, Vec<OcrMatchMetadata>), Error> {
+    let tokens: Vec<String> = line.split_whitespace().map(|s| s.to_string()).collect();
 
-/// Tokenizes a raw OCR string into a sequence of categorized WordTypes.
-/// This is the main entry point for the dictionary cleanup phase.
-pub async fn tokenize_text(raw_text: &str, pool: &SqlitePool) -> Result<Vec<WordType>, Error> {
-    let start = Instant::now();
-    let mut tokens = Vec::new();
+    let mut quantity = None;
+    let mut unit = None;
+    let mut ingredient = None;
+    let mut actions = Vec::new();
 
-    // Split by whitespace to process word-by-word
-    for word in raw_text.split_whitespace() {
-        // Remove punctuation like commas or dots for the lookup (e.g., "flour," -> "flour")
-        let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '.' && c != ',');
+    let mut i = 0;
+    while i < tokens.len() {
+        let mut matched = false;
 
-        if !clean_word.is_empty() {
-            let token = lookup_word(clean_word, pool).await?;
-            tokens.push(token);
+        // 1. TRY THE SLIDING WINDOW (Longest match first: 3 words down to 1)
+        for size in (1..=3).rev() {
+            if i + size <= tokens.len() {
+                let chunk = tokens[i..i+size].join(" ");
+
+                if let Some(metadata) = lookup_lexicon(&chunk, pool).await? {
+                    match metadata.category.as_str() {
+                        "unit" => unit = Some(metadata),
+                        "ingredient" => ingredient = Some(metadata),
+                        "action" => actions.push(metadata),
+                        _ => {}
+                    }
+                    i += size;
+                    matched = true;
+                    break;
+                }
+            }
+        }
+
+        // 2. FALLBACK: If no dictionary match, check if it's a number
+        if !matched {
+            if quantity.is_none() {
+                if let Ok(val) = parse_numeric(&tokens[i]) {
+                    quantity = Some(val);
+                }
+            }
+            i += 1;
         }
     }
 
-    println!(
-        "⏱️ [Dictionary] Tokenized {} words into {} tokens in {:.2?}",
-        raw_text.split_whitespace().count(),
-        tokens.len(),
-        start.elapsed()
-    );
-
-    Ok(tokens)
+    Ok((quantity, unit, ingredient, actions))
 }
 
-/// Queries the SQLite database to find the canonical version of a word.
-async fn lookup_word(word: &str, pool: &SqlitePool) -> Result<WordType, Error> {
-    // 1. Check if the word is a number (Quantity)
-    if let Ok(num) = word.replace(',', ".").parse::<f32>() {
-        return Ok(WordType::Quantity(num));
-    }
+async fn lookup_lexicon(text: &str, pool: &SqlitePool) -> Result<Option<OcrMatchMetadata>, Error> {
+    let word = text.to_lowercase().trim().to_string();
 
-    // 2. Query the SQLite Lexicon and Aliases
-    let result = sqlx::query(
+    // Standard sqlx::query does NOT require a DB connection at compile time
+    let row = sqlx::query(
         r#"
-        SELECT l.term_en, l.category
+        SELECT l.id, l.term_en, l.term_fr, l.category, a.confidence
         FROM lexicon l
         LEFT JOIN aliases a ON a.lexicon_id = l.id
         WHERE a.raw_text = ? OR l.term_en = ? OR l.term_fr = ?
@@ -60,30 +64,50 @@ async fn lookup_word(word: &str, pool: &SqlitePool) -> Result<WordType, Error> {
         LIMIT 1
         "#
     )
-        .bind(word)
-        .bind(word)
-        .bind(word)
+        .bind(&word)
+        .bind(&word)
+        .bind(&word)
         .fetch_optional(pool)
         .await
         .map_err(|e| {
-            eprintln!("Database Error: {:?}", e);
+            eprintln!("Lexicon Database Error: {:?}", e);
             Error::InternalServerError
         })?;
 
-    // 3. Map the database row to the WordType enum
-    match result {
-        Some(row) => {
-            // Manually extract columns by name or index
-            let term_en: String = row.get("term_en");
-            let category: String = row.get("category");
-
-            match category.to_lowercase().as_str() {
-                "ingredient" => Ok(WordType::Ingredient(term_en)),
-                "unit"       => Ok(WordType::Unit(term_en)),
-                _            => Ok(WordType::Text(term_en)),
-            }
-        },
-        // If not in DB, keep it as raw text
-        None => Ok(WordType::Text(word.to_string())),
+    // Manually map the row to your DTO
+    if let Some(r) = row {
+        Ok(Some(OcrMatchMetadata {
+            raw_token: text.to_string(),
+            lexicon_id: r.get::<i32, _>("id"),
+            term_en: r.get::<String, _>("term_en"),
+            term_fr: Option::from(r.get::<String, _>("term_fr")),
+            category: r.get::<Option<String>, _>("category").unwrap_or_else(|| "ingredient".to_string()),
+            confidence: r.get::<Option<f64>, _>("confidence").unwrap_or(1.0) as f32,
+            match_strategy: "fuzzy_alias".to_string(),
+        }))
+    } else {
+        Ok(None)
     }
+}
+
+fn parse_numeric(token: &str) -> Result<f32, ()> {
+    // Handle Unicode fractions like ½ or ¾
+    match token {
+        "¼" => return Ok(0.25),
+        "½" => return Ok(0.5),
+        "¾" => return Ok(0.75),
+        _ => {}
+    }
+
+    // Handle standard fractions like 1/2
+    if token.contains('/') {
+        let parts: Vec<&str> = token.split('/').collect();
+        if parts.len() == 2 {
+            if let (Ok(n), Ok(d)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>()) {
+                return Ok(n / d);
+            }
+        }
+    }
+
+    token.parse::<f32>().map_err(|_| ())
 }

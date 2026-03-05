@@ -1,7 +1,7 @@
 import sqlite3
 import os
 
-DB_PATH = "dictionnary.db"
+DB_PATH = "dictionary.db"
 SCHEMA_PATH = "up.sql"
 
 def reset_db():

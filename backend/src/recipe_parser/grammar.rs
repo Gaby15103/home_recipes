@@ -1,145 +1,95 @@
-use super::dictionary::WordType;
-use crate::dto::ingredient_dto::{IngredientInput, IngredientTranslationInput};
-use crate::dto::ingredient_group_dto::{IngredientGroupInput, IngredientGroupTranslationInput};
-use crate::dto::recipe_dto::{CreateRecipeInput, RecipeTranslationInput};
-use crate::dto::step_dto::{StepInput, StepTranslationInput};
-use crate::dto::step_group_dto::{StepGroupInput, StepGroupTranslationInput};
-use crate::dto::unit_dto::UnitDto;
-use rust_decimal::Decimal;
-use rust_decimal::prelude::FromPrimitive;
-use uuid::Uuid;
+use crate::recipe_parser::classifier::{ClassifiedLine, LineType};
+use crate::recipe_parser::dictionary;
+use crate::dto::recipe_ocr::{OcrResultResponse, ParsedIngredientLine, OcrStep, OcrIngredientGroup, OcrStepGroup};
+use sqlx::SqlitePool;
+use crate::errors::Error;
 
-pub fn map_to_dto(tokens: Vec<WordType>, known_units: Vec<UnitDto>) -> CreateRecipeInput {
-    let mut recipe = CreateRecipeInput {
-        primary_language: "en".to_string(),
-        translations: vec![RecipeTranslationInput {
-            language_code: "en".to_string(),
-            title: "Scanned Recipe".to_string(),
-            description: "".to_string(),
-        }],
-        image_url: "".to_string(),
-        servings: 1,
-        prep_time_minutes: 0,
-        cook_time_minutes: 0,
-        author_id: None,
-        author: None,
-        is_private: false,
-        tags: vec![],
-        ingredient_groups: vec![IngredientGroupInput {
-            position: 1,
-            translations: vec![IngredientGroupTranslationInput {
-                language_code: "en".to_string(),
-                title: "Ingredients".to_string(),
-            }],
-            ingredients: vec![],
-        }],
-        step_groups: vec![StepGroupInput {
-            position: 1,
-            translations: vec![StepGroupTranslationInput {
-                language_code: "en".to_string(),
-                title: "Instructions".to_string(),
-            }],
-            steps: vec![],
-        }],
+/// The Final Assembler: Converts classified lines into structured DTOs
+/// by resolving ingredients against the Lexicon.
+pub async fn assemble_recipe(
+    classified_lines: Vec<ClassifiedLine>,
+    pool: &SqlitePool,
+) -> Result<OcrResultResponse, Error> {
+    let mut ingredient_groups = Vec::new();
+    let mut step_groups = Vec::new();
+    let mut title = None;
+
+    // Initialize default groups
+    let mut current_ing_group = OcrIngredientGroup {
+        name: "Ingredients".into(),
+        ingredients: Vec::new(),
+    };
+    let mut current_step_group = OcrStepGroup {
+        name: "Instructions".into(),
+        steps: Vec::new(),
     };
 
-    let mut current_qty = Decimal::ZERO;
-    // Default to a fallback UUID or the first available unit
-    let mut current_unit_id = known_units
-        .first()
-        .map(|u| u.id)
-        .unwrap_or_else(Uuid::new_v4);
-    let mut is_parsing_ingredients = true;
-
-    for token in tokens {
-        match token {
-            WordType::Quantity(q) => {
-                current_qty = Decimal::from_f32(q).unwrap_or(Decimal::ZERO);
-                is_parsing_ingredients = true;
-            }
-
-            WordType::Unit(u_name) => {
-                // Match against name_en, name_fr, or the symbol (e.g., "g" or "ml")
-                if let Some(u) = known_units.iter().find(|u| {
-                    u.name_en.to_lowercase() == u_name.to_lowercase()
-                        || u.name_fr.to_lowercase() == u_name.to_lowercase()
-                        || u.symbol.to_lowercase() == u_name.to_lowercase()
-                }) {
-                    current_unit_id = u.id;
+    for line in classified_lines {
+        match line.line_type {
+            LineType::Title => {
+                if title.is_none() {
+                    title = Some(line.raw_text);
                 }
             }
 
-            WordType::Ingredient(name) => {
-                let ing = IngredientInput {
-                    quantity: current_qty,
-                    unit_id: current_unit_id,
-                    position: (recipe.ingredient_groups[0].ingredients.len() + 1) as i32,
-                    translations: vec![IngredientTranslationInput {
-                        language_code: "en".to_string(),
-                        data: name,
-                        note: None,
-                    }],
+            LineType::Header => {
+                // When we hit a header, check if the previous groups have content.
+                // If they do, push them and start fresh ones with the header name.
+                if !current_ing_group.ingredients.is_empty() {
+                    ingredient_groups.push(current_ing_group);
+                }
+                if !current_step_group.steps.is_empty() {
+                    step_groups.push(current_step_group);
+                }
+
+                current_ing_group = OcrIngredientGroup {
+                    name: line.raw_text.clone(),
+                    ingredients: Vec::new(),
                 };
-                recipe.ingredient_groups[0].ingredients.push(ing);
-                current_qty = Decimal::ZERO; // Reset qty after consumption
+                current_step_group = OcrStepGroup {
+                    name: line.raw_text,
+                    steps: Vec::new(),
+                };
             }
 
-            WordType::Text(t) => {
-                let lower = t.to_lowercase();
+            LineType::Ingredient => {
+                let (qty, unit, ing, actions) = dictionary::resolve_line(&line.raw_text, pool).await?;
 
-                // Switch detection
-                if ["steps", "instructions", "préparation", "preparation"].contains(&lower.as_str())
-                {
-                    is_parsing_ingredients = false;
-                    continue;
-                }
-
-                if is_parsing_ingredients {
-                    // If we haven't set a title, use the first free text as the title
-                    if recipe.translations[0].title == "Scanned Recipe" {
-                        recipe.translations[0].title = t;
-                    }
-                    // Otherwise, treat it as a generic ingredient name if no WordType::Ingredient was triggered
-                    else {
-                        let ing = IngredientInput {
-                            quantity: current_qty,
-                            unit_id: current_unit_id,
-                            position: (recipe.ingredient_groups[0].ingredients.len() + 1) as i32,
-                            translations: vec![IngredientTranslationInput {
-                                language_code: "en".to_string(),
-                                data: t,
-                                note: None,
-                            }],
-                        };
-                        recipe.ingredient_groups[0].ingredients.push(ing);
-                        current_qty = Decimal::ZERO;
-                    }
-                } else {
-                    // Add to steps
-                    let step = StepInput {
-                        position: (recipe.step_groups[0].steps.len() + 1) as i32,
-                        image_url: None,
-                        duration_minutes: None,
-                        translations: vec![StepTranslationInput {
-                            language_code: "en".to_string(),
-                            instruction: t,
-                        }],
-                    };
-                    recipe.step_groups[0].steps.push(step);
-                }
+                current_ing_group.ingredients.push(ParsedIngredientLine {
+                    quantity: qty,
+                    unit,
+                    ingredient: ing,
+                    actions,
+                    original_line: line.raw_text,
+                    position: line.index as i32,
+                });
             }
+
+            LineType::Instruction => {
+                current_step_group.steps.push(OcrStep {
+                    position: line.index as i32,
+                    raw_text: line.raw_text,
+                    detected_actions: vec![],
+                    detected_equipment: vec![],
+                });
+            }
+
+            LineType::Fluff => continue,
         }
     }
 
-    recipe
-}
-
-// Helper trait to check if title is still the placeholder
-trait TitleCheck {
-    fn name_is_default(&self) -> bool;
-}
-impl TitleCheck for CreateRecipeInput {
-    fn name_is_default(&self) -> bool {
-        self.translations[0].title == "Scanned Recipe"
+    // Push the final groups if they contain any data
+    if !current_ing_group.ingredients.is_empty() {
+        ingredient_groups.push(current_ing_group);
     }
+    if !current_step_group.steps.is_empty() {
+        step_groups.push(current_step_group);
+    }
+
+    Ok(OcrResultResponse {
+        primary_language: "en".into(),
+        title,
+        ingredient_groups,
+        step_groups,
+    })
 }

@@ -22,9 +22,17 @@ pub async fn start(config: Config) -> std::io::Result<()> {
         .expect("DB connection failed");
     Migrator::up(&db, None).await.expect("Migration failed");
 
-    let dict_db = sqlx::SqlitePool::connect("sqlite://resources/dictionary.db")
+    let cwd = std::env::current_dir().unwrap_or_default();
+
+    // 2. Build the path. If running from 'backend', this works.
+    let db_path = cwd.join("resources").join("dictionary.db");
+
+    // 3. Log it so you can see exactly where it's looking in your console
+    println!("🔍 Attempting to open SQLite at: {:?}", db_path);
+
+    let dict_db = sqlx::SqlitePool::connect(&format!("sqlite:{}", db_path.to_string_lossy()))
         .await
-        .expect("Failed to connect to SQLite dictionary. Is the file in /resources?");
+        .expect("Failed to connect to SQLite dictionary");
 
     let redis = Arc::new(
         Client::open(config.redis_url.clone())
