@@ -60,6 +60,10 @@ vite.svg
 
 backend/resources/foodb_2020_04_07_csv/
 
+*.db-shm
+*.db-wal
+*.db-journal
+
 # Ignore specific Cargo locks if you want them ignored
 backend/migration/Cargo.lock
 # backend/Cargo.lock  <-- Keep this tracked for reproducible builds!
