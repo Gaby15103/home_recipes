@@ -58,6 +58,8 @@ vite.svg
 # Ignore target folders anywhere in the project
 **/target/
 
+backend/resources/foodb_2020_04_07_csv/
+
 # Ignore specific Cargo locks if you want them ignored
 backend/migration/Cargo.lock
 # backend/Cargo.lock  <-- Keep this tracked for reproducible builds!
