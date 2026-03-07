@@ -49,18 +49,18 @@ pub async fn run_pipeline(
     let total_start = Instant::now();
 
     let scan_start = Instant::now();
-    let document = scanner::process_batch(Vec::from(paths), "eng+fra").await?;
+    let document = scanner::process_batch(Vec::from(paths), "eng+fra", ctx.sqlite_pool).await?;
     let scan_duration = scan_start.elapsed();
 
     let classify_start = Instant::now();
     let mut classifier = classifier::DocumentClassifier::new();
-    let classified_lines = classifier.segment_document(document);
+    let classified_lines = classifier.segment_document(document.clone());
     let classify_duration = classify_start.elapsed();
 
     // 3. Grammar & Dictionary: The "Brain" phase
     // We pass the classified_lines here to be assembled into the final DTO
     let dict_start = Instant::now();
-    let ocr_result = grammar::assemble_recipe(classified_lines, ctx.sqlite_pool).await?;
+    let ocr_result = grammar::assemble_recipe(classified_lines, ctx.sqlite_pool, document.raw_text).await?;
     let dict_duration = dict_start.elapsed();
 
     // --- 🛠️ Feedback Output ---
@@ -74,33 +74,52 @@ pub async fn run_pipeline(
     Ok(ocr_result)
 }
 pub async fn teach_lexicon(wrapper: &OcrCorrectionWrapper, pool: &SqlitePool) -> Result<(), Error> {
-    // We iterate through the original OCR results to get the 'raw_text'
-    // and match them by position/index to the user's 'confirmed_lexicon_id'
-    for ocr_group in &wrapper.original_ocr.ingredient_groups {
-        for ocr_line in &ocr_group.ingredients {
+    // 1. Process explicit feedback from the "Corrections" list
+    // This is for things like "h ile" -> "Huile"
+    for correction in &wrapper.lexicon_feedback {
+        let clean_token = correction.raw_token.to_lowercase().trim().to_string();
 
-            // Look for the matching ingredient in the modified input
-            if let Some(confirmed) = find_confirmed_ingredient(wrapper, ocr_line.position) {
-                let raw_text = ocr_line.original_line.to_lowercase().trim().to_string();
+        if !clean_token.is_empty() {
+            sqlx::query(
+                r#"
+                INSERT INTO aliases (raw_text, lexicon_id, confidence)
+                VALUES (?, ?, 1.0)
+                ON CONFLICT(raw_text) DO UPDATE SET lexicon_id = excluded.lexicon_id
+                "#
+            )
+                .bind(clean_token)
+                .bind(correction.lexicon_id)
+                .execute(pool)
+                .await?;
+        }
+    }
 
-                // If it's not empty, update the SQLite Brain
-                if !raw_text.is_empty() {
-                    sqlx::query(
-                        r#"
-                        INSERT INTO aliases (raw_text, lexicon_id, confidence)
-                        VALUES (?, ?, 1.0)
-                        ON CONFLICT(raw_text) DO UPDATE SET lexicon_id = excluded.lexicon_id
-                        "#
-                    )
-                        .bind(raw_text)
-                        .bind(confirmed.confirmed_lexicon_id)
-                        .execute(pool)
-                        .await
-                        .ok(); // Log error but don't crash if learning fails
+    // 2. Process the Ingredient Groups to catch merged lines
+    // This handles the "Poulet" + "Désossée" -> Chicken ID mapping
+    for group in &wrapper.modified_recipe.ingredient_groups {
+        for ing in &group.ingredients {
+            // If the user associated a Lexicon ID with these lines
+            if let Some(lex_id) = ing.confirmed_lexicon_id {
+                for raw_line in &ing.source_ocr_lines {
+                    let clean_line = raw_line.to_lowercase().trim().to_string();
+
+                    if !clean_line.is_empty() {
+                        sqlx::query(
+                            "INSERT INTO aliases (raw_text, lexicon_id, confidence)
+                             VALUES (?, ?, 0.9)
+                             ON CONFLICT(raw_text) DO NOTHING"
+                        )
+                            .bind(clean_line)
+                            .bind(lex_id)
+                            .execute(pool)
+                            .await
+                            .ok(); // We use .ok() here because we don't want to fail the whole save if one alias exists
+                    }
                 }
             }
         }
     }
+
     Ok(())
 }
 fn find_confirmed_ingredient(wrapper: &OcrCorrectionWrapper, pos: i32) -> Option<&ConfirmIngredient> {

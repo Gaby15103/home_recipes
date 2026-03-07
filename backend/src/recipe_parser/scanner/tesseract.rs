@@ -9,7 +9,7 @@ pub struct OcrLine {
     pub confidence: f32,
 }
 
-pub fn scan_single_image(path: &Path, lang: &str) -> Result<Vec<OcrLine>, Error> {
+pub fn scan_single_image(path: &Path, lang: &str) -> Result<(Vec<OcrLine>, String), Error> {
     let mut api = TesseractAPI::new(); // Usually needs to be mutable
     api.init("/usr/share/tessdata", lang)
         .map_err(|_| Error::InternalServerError)?;
@@ -52,5 +52,5 @@ pub fn scan_single_image(path: &Path, lang: &str) -> Result<Vec<OcrLine>, Error>
         })
         .collect();
 
-    Ok(lines)
+    Ok((lines,text))
 }

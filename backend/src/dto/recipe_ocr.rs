@@ -18,9 +18,9 @@ pub struct OcrMatchMetadata {
     pub lexicon_id: i32,
     pub term_en: String,
     pub term_fr: Option<String>,
-    pub category: String,
+    pub category: String, // "ingredient", "unit", "action"
     pub confidence: f32,
-    pub match_strategy: String,
+    pub match_strategy: String, // "exact", "fuzzy_alias", "stemmed"
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -53,22 +53,36 @@ pub struct OcrStepGroup {
     pub steps: Vec<OcrStep>,
 }
 
+/// The initial response from Backend -> Frontend after Tesseract runs
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OcrResultResponse {
     pub primary_language: String,
     pub title: Option<String>,
+    pub detected_servings: Option<i32>,
     pub ingredient_groups: Vec<OcrIngredientGroup>,
     pub step_groups: Vec<OcrStepGroup>,
+    /// Any text that couldn't be categorized (useful for user to drag-and-drop)
+    pub unparsed_segments: Vec<String>,
+    pub raw_text: String,
 }
 
-// --- 2. THE WRAPPER (The actual payload from Frontend) ---
+// --- 2. THE WRAPPER (The payload from Frontend -> Backend) ---
 
 #[derive(Debug, Deserialize)]
 pub struct OcrCorrectionWrapper {
-    /// The original OCR data (used to compare original_line vs final result for learning)
-    pub original_ocr: OcrResultResponse,
-    /// The final data modified by the user
+    /// The final recipe data to be saved in the main Application Database
     pub modified_recipe: OcrConfirmInput,
+    /// Explicit "Learning" data to be saved in the SQLite dictionary.db
+    pub lexicon_feedback: Vec<LexiconCorrection>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LexiconCorrection {
+    /// The "broken" text (e.g., "h ile")
+    pub raw_token: String,
+    /// The ID in dictionary.db it should have matched (e.g., ID for "Huile")
+    pub lexicon_id: i32,
+    pub category: String,
 }
 
 // --- 3. THE CONFIRMATION DATA (User's manual fixes) ---
@@ -105,9 +119,13 @@ pub struct ConfirmStepGroup {
 pub struct ConfirmIngredient {
     pub position: i32,
     pub quantity: f32,
-    pub raw_ocr_line: String,      // Keep this to teach the lexicon
-    pub confirmed_lexicon_id: i32,  // Keep this to teach the lexicon
+    /// To handle the "Poulet" multi-line issue, we send back all lines involved
+    pub source_ocr_lines: Vec<String>,
+    /// NEW: The ID from your dictionary.db (SQLite) to teach the system
+    pub confirmed_lexicon_id: Option<i32>,
+    /// The ID used for the Main App DB (PostgreSQL)
     pub main_db_ingredient_id: Uuid,
+    /// The ID used for the Main App DB (PostgreSQL)
     pub unit_id: Option<Uuid>,
 }
 
@@ -115,9 +133,11 @@ pub struct ConfirmIngredient {
 pub struct ConfirmStep {
     pub position: i32,
     pub text: String,
+    /// Optional: track which OCR segments this step originated from
+    pub source_ocr_segments: Vec<String>,
 }
 
-// --- 4. IMPLEMENTATIONS ---
+// --- 4. CONVERSION LOGIC (OCR -> App DB) ---
 
 impl OcrConfirmInput {
     pub fn to_create_input(&self) -> CreateRecipeInput {
@@ -138,9 +158,18 @@ impl OcrConfirmInput {
     }
 
     fn generate_translations(&self) -> Vec<RecipeTranslationInput> {
+        // Creates entries for both supported languages
         vec![
-            RecipeTranslationInput { language_code: "en".into(), title: self.title.clone(), description: "".into() },
-            RecipeTranslationInput { language_code: "fr".into(), title: self.title.clone(), description: "".into() },
+            RecipeTranslationInput {
+                language_code: "en".into(),
+                title: self.title.clone(),
+                description: format!("Imported via OCR from {}", self.primary_language)
+            },
+            RecipeTranslationInput {
+                language_code: "fr".into(),
+                title: self.title.clone(),
+                description: format!("Importé via OCR depuis {}", self.primary_language)
+            },
         ]
     }
 
@@ -157,8 +186,9 @@ impl OcrConfirmInput {
                         translations: vec![
                             IngredientTranslationInput {
                                 language_code: self.primary_language.clone(),
+                                // This ID refers to the Ingredient UUID in your main DB
                                 data: ing.main_db_ingredient_id.to_string(),
-                                note: None,
+                                note: Some(ing.source_ocr_lines.join(" ")),
                             }
                         ],
                     }

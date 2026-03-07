@@ -43,6 +43,9 @@ pub enum Error {
 
     #[error("OCR Service Unavailable")]
     OcrServiceError,
+
+    #[error("Database error")]
+    DatabaseError(JsonValue),
 }
 
 /* -------------------------------------------------------------------------- */
@@ -61,6 +64,7 @@ impl ResponseError for Error {
             Error::EmailAlreadyExists => StatusCode::CONFLICT,
             Error::EmailSend(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::OcrServiceError => StatusCode::SERVICE_UNAVAILABLE,
+            Error::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -82,6 +86,7 @@ impl ResponseError for Error {
                 "error": "OCR service is currently unreachable",
                 "details": "Check if the tesseract container is running"
             })),
+            Error::DatabaseError(v) => HttpResponse::InternalServerError().json(v),
         }
     }
 }
@@ -255,7 +260,7 @@ impl From<libreauth::pass::Error> for Error {
     }
 }
 
-/* ----- GENERAL ACTIX ERROR (REQUIRED FOR MULTIPART) ----- */
+
 
 impl From<actix_web::Error> for Error {
     fn from(err: actix_web::Error) -> Self {
@@ -264,6 +269,34 @@ impl From<actix_web::Error> for Error {
             "error": "Request error",
             "details": err.to_string()
         }))
+    }
+}
+/* ----- SQLX ----- */
+impl From<sqlx::Error> for Error {
+    fn from(err: sqlx::Error) -> Self {
+        match err {
+            sqlx::Error::RowNotFound => Error::NotFound(json!({
+                "error": "Resource not found in dictionary"
+            })),
+            sqlx::Error::Database(db_err) => {
+                // Check for specific constraint violations (unique, etc.)
+                if db_err.is_unique_violation() {
+                    Error::BadRequest(json!({
+                        "error": "This entry already exists in the lexicon"
+                    }))
+                } else {
+                    Error::DatabaseError(json!({
+                        "error": "Database constraint violation",
+                        "details": db_err.message()
+                    }))
+                }
+            }
+            _ => {
+                // Log the technical details for internal debugging
+                eprintln!("SQLx Error: {:?}", err);
+                Error::InternalServerError
+            }
+        }
     }
 }
 
