@@ -2,9 +2,11 @@ import {api} from "./client";
 import {OcrRoutes} from "./routes";
 import type {RecipeCreate} from "@/models/RecipeCreate";
 
-export async function createRecipeFromImage(recipe_image: File): Promise<RecipeCreate> {
+export async function createRecipeFromImages(recipe_image: File[]): Promise<RecipeCreate> {
     const form = new FormData();
-    form.append("image", recipe_image);
+    for (const file of recipe_image){
+        form.append("images", file);
+    }
 
     return api<RecipeCreate>(OcrRoutes.create(), {
         method: "POST",

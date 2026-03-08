@@ -19,7 +19,7 @@ import type {Language} from "@/models/Language.ts";
 import {getAllLanguage} from "@/api/Language.ts";
 import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {ROUTES} from "@/router/routes.ts";
-import {createRecipeFromImage} from "@/api/ocr.ts";
+import { createRecipeFromImages} from "@/api/ocr.ts";
 
 const { t } = useI18n()
 
@@ -85,17 +85,26 @@ onMounted(async () => {
   recipe.value.primary_language = defaultLang;
   currentLang.value = defaultLang; // Set initial tab
 })
-async function onImportFile(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
+async function onImportFiles(e: Event) {
+  const fileList = (e.target as HTMLInputElement).files;
+  if (!fileList || fileList.length === 0) return;
+
+  const files = Array.from(fileList);
 
   loading.value = true;
   error.value = null;
 
   try {
-    recipe.value = await createRecipeFromImage(file);
+    const ocrData = await createRecipeFromImages(files);
+
+    if (ocrData) {
+      localStorage.setItem('pending-ocr-data', JSON.stringify(ocrData));
+
+      router.push("/admin/recipe/ocr-review");
+    }
   } catch (err: any) {
-    error.value = err.message ?? "Failed to fetch recipe";
+    console.error("OCR Error:", err);
+    error.value = t('Admin.recipe.errors.scanFailed') || "Failed to scan images";
   } finally {
     loading.value = false;
   }
@@ -308,7 +317,7 @@ onUnmounted(() => {
           </div>
         </div>
         <Separator />
-        <Input type="file" accept="image/*" @change="onImportFile" :disabled="loading" />
+        <Input type="file" accept="image/*" @change="onImportFiles" :disabled="loading" />
         <Separator />
         <div class="pt-2">
           <Button :disabled="submitting || loading" @click="submit" class="w-full shadow-lg h-11">
