@@ -53,8 +53,8 @@ pub async fn run_pipeline(
     let scan_duration = scan_start.elapsed();
 
     let classify_start = Instant::now();
-    let mut classifier = classifier::DocumentClassifier::new();
-    let classified_lines = classifier.segment_document(document.clone());
+    let mut classifier = classifier::DocumentClassifier::new(&ctx.known_units, ctx.sqlite_pool);
+    let classified_lines = classifier.segment_document(document.clone()).await;
     let classify_duration = classify_start.elapsed();
 
     // 3. Grammar & Dictionary: The "Brain" phase

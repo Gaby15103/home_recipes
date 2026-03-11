@@ -1,13 +1,15 @@
-use serde::{Deserialize, Serialize};
+use crate::dto::unit_dto::UnitDto;
 use crate::recipe_parser::scanner::ScannedDocument;
+use serde::{Deserialize, Serialize};
+use sqlx::{Row, SqlitePool};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LineType {
-    Title,       // Recipe name
-    Header,      // Section headers like "For the sauce" or "Instructions"
-    Ingredient,  // Individual ingredient lines
-    Instruction, // Step-by-step paragraphs
-    Fluff,       // Junk like "Page 1", "Copyright", or ads
+    Title,
+    Header,
+    Ingredient,
+    Instruction,
+    Fluff,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,105 +20,182 @@ pub struct ClassifiedLine {
     pub confidence: f32,
 }
 
-pub struct DocumentClassifier {
+pub struct DocumentClassifier<'a> {
     last_type: LineType,
+    known_units: &'a [UnitDto],
+    pool: &'a SqlitePool,
 }
 
-impl DocumentClassifier {
-    pub fn new() -> Self {
+impl<'a> DocumentClassifier<'a> {
+    pub fn new(units: &'a [UnitDto], pool: &'a SqlitePool) -> Self {
         Self {
             last_type: LineType::Fluff,
+            known_units: units,
+            pool,
         }
     }
 
-    /// Primary entry point: Takes a ScannedDocument and returns tagged lines
-    pub fn segment_document(&mut self, doc: ScannedDocument) -> Vec<ClassifiedLine> {
-        doc.raw_lines
-            .into_iter()
-            .enumerate()
-            .map(|(i, line)| self.classify_single_line(line, i))
-            .filter(|l| l.line_type != LineType::Fluff) // Optional: remove fluff now or let frontend handle it
-            .collect()
+    pub async fn segment_document(&mut self, doc: ScannedDocument) -> Vec<ClassifiedLine> {
+        let mut results = Vec::new();
+        for (i, line) in doc.raw_lines.into_iter().enumerate() {
+            let mut classified = self.classify_single_line(line, i).await;
+            classified.index = i;
+            if classified.line_type != LineType::Fluff {
+                results.push(classified);
+            }
+        }
+        results
     }
 
-    fn classify_single_line(&mut self, line: String, index: usize) -> ClassifiedLine {
+    async fn classify_single_line(&mut self, line: String, index: usize) -> ClassifiedLine {
         let trimmed = line.trim();
         let lower = trimmed.to_lowercase();
 
-        // 1. RULE: IDENTIFY FLUFF (Highest Priority)
+        // 1. Kill the noise early
         if self.is_fluff(&lower) {
             return self.mark(line, LineType::Fluff, 1.0);
         }
 
-        // 2. RULE: IDENTIFY TITLE
-        // Usually the first short line that isn't fluff
-        if index < 2 && trimmed.len() < 60 && !self.is_ingredient_pattern(trimmed) {
-            return self.mark(line, LineType::Title, 0.9);
-        }
-
-        // 3. RULE: IDENTIFY EXPLICIT HEADERS
-        if self.is_section_marker(&lower) {
+        // 2. STAGE 1: Explicit Section Header check
+        if self.is_section_marker(&lower).await {
             return self.mark(line, LineType::Header, 1.0);
         }
 
-        // 4. RULE: IDENTIFY INGREDIENTS
-        if self.is_ingredient_pattern(trimmed) {
+        // 3. STAGE 2: Instruction Detection
+        if self.is_instruction_pattern(&trimmed).await {
+            return self.mark(line, LineType::Instruction, 0.9);
+        }
+
+        // 4. STAGE 3: Ingredient Check
+        let is_ing = self.is_ingredient_pattern(trimmed).await;
+        if is_ing {
             return self.mark(line, LineType::Ingredient, 0.85);
         }
 
-        // 5. RULE: CONTEXTUAL GUESSING (The "Sticky" Logic)
-        // If we were just in an ingredient block and find a short line, it's likely a sub-header
-        let detected_type = if self.last_type == LineType::Ingredient && trimmed.len() < 35 {
-            LineType::Header
-        } else if trimmed.len() > 45 {
-            LineType::Instruction
-        } else {
-            // Ambiguous short lines default to Instruction for safety,
-            // but the user can calibrate this.
-            LineType::Instruction
-        };
+        // --- NEW LOGIC START ---
+        // 5. STAGE 4: Continuation Check (The "Orphan" Recovery)
+        // If the previous line was an ingredient, and this line is NOT a header/instruction,
+        // and doesn't look like a title, it's likely a continuation (e.g., "haché finement").
+        if self.last_type == LineType::Ingredient && index > 3 {
+            return self.mark(line, LineType::Ingredient, 0.7);
+        }
+        // --- NEW LOGIC END ---
 
-        self.mark(line, detected_type, 0.6)
+        // 6. STAGE 5: Title Check
+        if index < 3 && trimmed.len() < 70 && !lower.ends_with(':') {
+            return self.mark(line, LineType::Title, 0.8);
+        }
+
+        // 7. DEFAULT: Everything else is a step
+        self.mark(line, LineType::Instruction, 0.5)
     }
 
-    /// Helper to update the state and return the struct
     fn mark(&mut self, text: String, l_type: LineType, conf: f32) -> ClassifiedLine {
         self.last_type = l_type.clone();
         ClassifiedLine {
             raw_text: text,
             line_type: l_type,
-            index: 0, // Will be set by enumerate in segment_document
+            index: 0,
             confidence: conf,
         }
     }
 
-    fn is_ingredient_pattern(&self, line: &str) -> bool {
-        // Starts with numbers, fractions, or Unicode vulgar fractions
-        let has_qty = line.chars().next().map(|c| {
-            c.is_ascii_digit() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c)
-        }).unwrap_or(false);
+    async fn is_ingredient_pattern(&self, line: &str) -> bool {
+        let trimmed = line.trim().to_lowercase();
 
-        // Contains unit keywords
-        let units = ["cup", "tbsp", "tsp", "gram", " ml ", " kg ", "clove", "pinch", "oz", " lb "];
-        let has_unit = units.iter().any(|u| line.to_lowercase().contains(u));
+        // 1. Check for a unit anywhere in the line using FTS (very strong signal)
+        // We bind "%trimmed%" or just the tokens to catch units buried after OCR noise
+        let has_unit: i32 = sqlx::query_scalar(
+            r#"
+        SELECT COUNT(*) FROM lexicon_fts f
+        JOIN lexicon l ON f.lexicon_id = l.id
+        WHERE l.category = 'unit' AND lexicon_fts MATCH ?
+        "#,
+        )
+            .bind(&trimmed)
+            .fetch_one(self.pool)
+            .await
+            .unwrap_or(0);
 
-        has_qty || has_unit
+        // 2. Look for any numeric/vulgar fraction
+        let has_numeric = trimmed.chars().any(|c| c.is_ascii_digit() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c));
+
+        // If it has a unit AND a number, it's an ingredient,
+        // even if it has a weird prefix.
+        if has_unit > 0 && has_numeric {
+            return true;
+        }
+
+        // 3. Fallback for items like "1 citron" (no unit, just quantity)
+        let first_word = trimmed.split_whitespace().next().unwrap_or("");
+        if first_word.chars().next().map_or(false, |c| c.is_ascii_digit()) {
+            // If it starts with a number and we aren't in a numbered list (1. 2.),
+            // it's likely an ingredient
+            if !self.is_instruction_pattern(line).await {
+                return true;
+            }
+        }
+
+        false
     }
 
-    fn is_section_marker(&self, lower: &str) -> bool {
-        lower.starts_with("prep")
-            || lower.starts_with("ingred")
-            || lower.starts_with("direct")
-            || lower.starts_with("method")
-            || lower.ends_with(':') && lower.len() < 30
+    async fn is_instruction_pattern(&self, line: &str) -> bool {
+        let trimmed = line.trim();
+        let first_word = trimmed.split_whitespace().next().unwrap_or("");
+
+        // Numbered list check (1., 2), etc.) - still logic-based
+        let is_numbered = first_word
+            .chars()
+            .next()
+            .map_or(false, |c| c.is_ascii_digit())
+            && (first_word.ends_with('.') || first_word.ends_with(')'));
+
+        if is_numbered {
+            return true;
+        }
+
+        // DYNAMIC VERB CHECK: Look for 'action' category in the DB
+        let first_token = first_word
+            .to_lowercase()
+            .replace(|c: char| !c.is_alphabetic(), "");
+        let is_verb: i32 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM lexicon l
+         JOIN aliases a ON a.lexicon_id = l.id
+         WHERE l.category = 'action' AND a.raw_text = ?",
+        )
+        .bind(&first_token)
+        .fetch_one(self.pool)
+        .await
+        .unwrap_or(0);
+
+        is_verb > 0
+    }
+
+    async fn is_section_marker(&self, lower: &str) -> bool {
+        // DYNAMIC MARKER CHECK: Look for 'text' category (Ingredients, Préparation, etc.)
+        for unit in self.known_units {
+            if lower.contains(&unit.name_fr) {
+                return false;
+            }
+        }
+
+        let is_text_marker: i32 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM lexicon l 
+         JOIN aliases a ON a.lexicon_id = l.id 
+         WHERE l.category = 'text' AND ? LIKE '%' || a.raw_text || '%'",
+        )
+        .bind(lower)
+        .fetch_one(self.pool)
+        .await
+        .unwrap_or(0);
+
+        is_text_marker > 0 || (lower.ends_with(':') && lower.len() < 30)
     }
 
     fn is_fluff(&self, lower: &str) -> bool {
         lower.len() < 2
             || lower.contains("copyright")
-            || lower.contains("all rights reserved")
-            || lower.contains("www.")
             || lower.starts_with("page")
-            || lower.contains("photo by")
+            || lower.contains("www.")
     }
 }

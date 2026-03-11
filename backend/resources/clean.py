@@ -1,37 +1,28 @@
-import sqlite3
 import os
 
 DB_PATH = "dictionary.db"
-SCHEMA_PATH = "up.sql"
 
-def reset_db():
-    # 1. Force remove the DB and any lock files (-journal or -wal)
-    for ext in ["", "-journal", "-wal"]:
-        file_to_del = DB_PATH + ext
-        if os.path.exists(file_to_del):
+def nuclear_wipe():
+    # Extensions created by WAL mode and transactions
+    targets = [DB_PATH, f"{DB_PATH}-wal", f"{DB_PATH}-shm", f"{DB_PATH}-journal"]
+
+    print(f"🧨 Initializing total wipe of {DB_PATH}...")
+
+    found_anything = False
+    for target in targets:
+        if os.path.exists(target):
             try:
-                os.remove(file_to_del)
-                print(f"🗑️ Deleted {file_to_del}")
+                os.remove(target)
+                print(f"🗑️  Removed: {target}")
+                found_anything = True
             except Exception as e:
-                print(f"⚠️ Could not delete {file_to_del}: {e}")
+                print(f"❌ Failed to remove {target}: {e}")
+                print("💡 Tip: Close any open connections in Rust or your IDE first.")
 
-    # 2. Re-create and Initialize
-    print(f"🏗️ Rebuilding schema from {SCHEMA_PATH}...")
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-
-        # Enable WAL mode immediately for better concurrency
-        cursor.execute("PRAGMA journal_mode=WAL;")
-
-        with open(SCHEMA_PATH, 'r') as f:
-            cursor.executescript(f.read())
-
-        conn.commit()
-        conn.close()
-        print("✨ Database is now clean and ready for a fresh migration.")
-    except Exception as e:
-        print(f"❌ Error rebuilding DB: {e}")
+    if not found_anything:
+        print("Empty: No database files were found to delete.")
+    else:
+        print("✨ Database successfully deleted. It no longer exists.")
 
 if __name__ == "__main__":
-    reset_db()
+    nuclear_wipe()

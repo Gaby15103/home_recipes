@@ -43,7 +43,7 @@ pub fn scan_single_image(path: &Path, lang: &str) -> Result<(Vec<OcrLine>, Strin
     let text = api.get_utf8_text().map_err(|_| Error::InternalServerError)?;
 
     let lines = text.lines()
-        .filter(|l| l.trim().len() > 1)
+        .filter(|l| !l.trim().is_empty())
         .map(|l| OcrLine {
             text: l.trim().to_string(),
             y_pos: 0,
