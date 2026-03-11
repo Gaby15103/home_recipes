@@ -1,17 +1,26 @@
 use sqlx::{Row, SqlitePool};
 use crate::dto::recipe_ocr::OcrMatchMetadata;
 use crate::errors::Error;
+use regex::Regex;
 
+/// Checks if a word is a functional "noise" word that should never trigger a DB search.
 fn is_stop_word(word: &str) -> bool {
-    let stops = ["de", "d'", "du", "des", "le", "la", "les", "au", "aux", "ou", "with", "and"];
-    stops.contains(&word.to_lowercase().as_str())
+    let stops = [
+        "de", "d'", "du", "des", "le", "la", "les", "au", "aux",
+        "ou", "en", "par", "pour", "with", "and", "d", "l", "un", "une",
+        "atab", "c.", "thé", "tab", "xde", "x", "—"
+    ];
+    // Trim non-alphabetic chars (like parentheses or punctuation) before checking
+    let clean = word.to_lowercase().trim_matches(|c: char| !c.is_alphabetic()).to_string();
+    stops.contains(&clean.as_str())
 }
 
 pub async fn resolve_line(
     line: &str,
     pool: &SqlitePool
-) -> Result<(Option<f32>, Option<OcrMatchMetadata>, Option<OcrMatchMetadata>, Vec<OcrMatchMetadata>), Error> {
-    let re_artifact = regex::Regex::new(r"(?i)^[^a-z\d¼½¾⅓⅔⅛⅜⅝⅞]+").unwrap();
+) -> Result<(Option<f32>, Option<OcrMatchMetadata>, Option<OcrMatchMetadata>, Vec<OcrMatchMetadata>, String), Error> {
+    // 1. Remove leading artifacts and noise
+    let re_artifact = Regex::new(r"(?i)^[^a-z\d¼½¾⅓⅔⅛⅜⅝⅞]+").unwrap();
     let cleaned_line = re_artifact.replace(line, "").to_string();
 
     let tokens: Vec<String> = cleaned_line.split_whitespace().map(|s| s.to_string()).collect();
@@ -21,25 +30,39 @@ pub async fn resolve_line(
     let mut ingredient = None;
     let mut actions = Vec::new();
 
+    // We track which token indices are part of the "name" of the ingredient
+    let mut display_indices = Vec::new();
+
     let mut i = 0;
     while i < tokens.len() {
-        if is_stop_word(&tokens[i]) || (tokens[i].len() <= 1 && !tokens[i].chars().all(|c| c.is_numeric() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c))) {
-            i += 1;
-            continue;
-        }
+        let current_token = &tokens[i];
+        let has_letters = current_token.chars().any(|c| c.is_alphabetic());
+        let is_fraction = current_token.chars().all(|c| "¼½¾⅓⅔⅛⅜⅝⅞/".contains(c) || c.is_numeric());
 
         let mut matched = false;
 
-        // Multi-word greedy matching (e.g., "olive oil" or "pomme de terre")
-        for size in (1..=3).rev() {
+        // 3. Multi-word greedy matching
+        for size in (1..=5).rev() {
             if i + size <= tokens.len() {
                 let chunk = tokens[i..i+size].join(" ");
 
+                if is_stop_word(&chunk) {
+                    continue;
+                }
+
                 if let Some(metadata) = lookup_lexicon(&chunk, pool).await? {
                     match metadata.category.as_str() {
-                        "unit" => unit = Some(metadata),
-                        "ingredient" => ingredient = Some(metadata),
-                        "action" | "descriptor" | "text" => actions.push(metadata),
+                        "unit" => if unit.is_none() { unit = Some(metadata) },
+                        "ingredient" => {
+                            ingredient = Some(metadata.clone());
+                            // Keep words that are actual ingredients
+                            for j in 0..size { display_indices.push(i + j); }
+                        },
+                        "action" | "descriptor" | "text" => {
+                            actions.push(metadata);
+                            // Keep descriptors/actions for the display name
+                            for j in 0..size { display_indices.push(i + j); }
+                        },
                         _ => {}
                     }
                     i += size;
@@ -50,52 +73,70 @@ pub async fn resolve_line(
         }
 
         if !matched {
-            if quantity.is_none() {
-                if let Ok(val) = parse_numeric(&tokens[i]) {
+            // Check if it's a number/quantity
+            if quantity.is_none() && !has_letters && is_fraction {
+                if let Ok(val) = parse_numeric(current_token) {
                     quantity = Some(val);
                 }
+            } else if !is_stop_word(current_token) && has_letters {
+                // If it's not a stop word and contains letters, it's part of the name
+                display_indices.push(i);
             }
             i += 1;
         }
     }
 
-    Ok((quantity, unit, ingredient, actions))
+    // Rebuild the clean string from the saved indices
+    display_indices.sort_unstable();
+    display_indices.dedup();
+    let display_name = display_indices.iter()
+        .map(|&idx| tokens[idx].as_str())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    Ok((quantity, unit, ingredient, actions, display_name))
 }
 
-
 async fn lookup_lexicon(text: &str, pool: &SqlitePool) -> Result<Option<OcrMatchMetadata>, Error> {
-    // 1. Clean the input and handle empty strings immediately
     let word = text.to_lowercase().trim().to_string();
-
-    // FTS5 will crash on empty queries or just punctuation
     let clean_query = word.replace(|c: char| !c.is_alphanumeric() && !c.is_whitespace(), "");
 
     if clean_query.is_empty() {
         return Ok(None);
     }
 
-    // FTS5 Match query. We use the rank to adjust confidence.
-    // We join back to lexicon to get the category and standardized terms.
-    let fts_query = format!("\"{}\"", clean_query);
+    // Two-stage Search:
+    // 1. Exact match (High priority)
+    // 2. Prefix match (Fuzzy/Partial fallback)
+    let exact_query = format!("\"{}\"", clean_query);
+    let prefix_query = format!("\"{}\"*", clean_query);
 
     let row = sqlx::query(
         r#"
-        SELECT
-            l.id, l.term_en, l.term_fr, l.category, f.rank,
-            a.confidence as base_confidence
-        FROM lexicon_fts f
-        JOIN lexicon l ON l.id = f.lexicon_id
-        LEFT JOIN aliases a ON a.lexicon_id = l.id AND a.raw_text = f.raw_text
-        WHERE lexicon_fts MATCH ?
-        ORDER BY rank
-        LIMIT 1
-        "#
+            WITH fts_results AS (
+                SELECT lexicon_id, rank, raw_text
+                FROM lexicon_fts
+                WHERE raw_text MATCH ?
+                LIMIT 10
+            )
+            SELECT
+                l.id, l.term_en, l.term_fr, l.category, f.rank,
+                a.confidence as base_confidence
+            FROM fts_results f
+            JOIN lexicon l ON l.id = f.lexicon_id
+            LEFT JOIN aliases a ON a.lexicon_id = l.id AND a.raw_text = f.raw_text
+            ORDER BY
+                (f.raw_text = ?) DESC, -- Prioritize exact match
+                f.rank ASC
+            LIMIT 1
+    "#
     )
-        .bind(&fts_query)
+        .bind(&prefix_query) // e.g. "ail*"
+        .bind(&clean_query)  // e.g. "ail"
         .fetch_optional(pool)
         .await
         .map_err(|e| {
-            eprintln!("FTS Search Error for query [{}]: {:?}", fts_query, e);
+            eprintln!("FTS Search Error for query [{}]: {:?}", clean_query, e);
             Error::InternalServerError
         })?;
 
@@ -103,7 +144,8 @@ async fn lookup_lexicon(text: &str, pool: &SqlitePool) -> Result<Option<OcrMatch
         let rank: f64 = r.get("rank");
         let base_conf: f32 = r.get::<Option<f64>, _>("base_confidence").unwrap_or(1.0) as f32;
 
-        let final_confidence = if rank > -0.5 { base_conf * 0.8 } else { base_conf };
+        // If it's a prefix match but not high quality, penalize confidence
+        let final_confidence = if rank > -0.5 { base_conf * 0.75 } else { base_conf };
 
         Ok(Some(OcrMatchMetadata {
             raw_token: text.to_string(),
@@ -120,7 +162,6 @@ async fn lookup_lexicon(text: &str, pool: &SqlitePool) -> Result<Option<OcrMatch
 }
 
 pub fn parse_numeric(token: &str) -> Result<f32, ()> {
-    // Handle Unicode Vulgar Fractions
     let unicode_fractions = [
         ('¼', 0.25), ('½', 0.5), ('¾', 0.75), ('⅓', 0.333),
         ('⅔', 0.666), ('⅛', 0.125), ('⅜', 0.375), ('⅝', 0.625), ('⅞', 0.875)
@@ -134,7 +175,6 @@ pub fn parse_numeric(token: &str) -> Result<f32, ()> {
         }
     }
 
-    // Handle standard ASCII fractions
     if token.contains('/') {
         let parts: Vec<&str> = token.split('/').collect();
         if parts.len() == 2 {
@@ -145,19 +185,4 @@ pub fn parse_numeric(token: &str) -> Result<f32, ()> {
     }
 
     token.parse::<f32>().map_err(|_| ())
-}
-
-/// Helper for planned improvement #4: extracting actions from instructions
-pub async fn find_actions_in_text(text: &str, pool: &SqlitePool) -> Result<Vec<OcrMatchMetadata>, Error> {
-    let tokens: Vec<String> = text.split_whitespace().map(|s| s.to_string()).collect();
-    let mut detected = Vec::new();
-
-    for token in tokens {
-        if let Some(meta) = lookup_lexicon(&token, pool).await? {
-            if meta.category == "action" {
-                detected.push(meta);
-            }
-        }
-    }
-    Ok(detected)
 }

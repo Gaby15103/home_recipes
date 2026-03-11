@@ -30,6 +30,7 @@ pub struct ParsedIngredientLine {
     pub ingredient: Option<OcrMatchMetadata>,
     pub actions: Vec<OcrMatchMetadata>,
     pub original_line: String,
+    pub display_name: String,
     pub position: i32,
 }
 

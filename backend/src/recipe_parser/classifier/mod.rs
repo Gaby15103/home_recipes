@@ -51,42 +51,39 @@ impl<'a> DocumentClassifier<'a> {
         let trimmed = line.trim();
         let lower = trimmed.to_lowercase();
 
-        // 1. Kill the noise early
         if self.is_fluff(&lower) {
             return self.mark(line, LineType::Fluff, 1.0);
         }
 
-        // 2. STAGE 1: Explicit Section Header check
+        // 1. Check for section markers (Ingrédients, Préparation)
         if self.is_section_marker(&lower).await {
             return self.mark(line, LineType::Header, 1.0);
         }
 
-        // 3. STAGE 2: Instruction Detection
+        // 2. Check for Instruction (Verbs or numbered lists)
         if self.is_instruction_pattern(&trimmed).await {
             return self.mark(line, LineType::Instruction, 0.9);
         }
 
-        // 4. STAGE 3: Ingredient Check
-        let is_ing = self.is_ingredient_pattern(trimmed).await;
-        if is_ing {
+        // 3. Check for Ingredients (Quantity + Uniform Symbol)
+        if self.is_ingredient_pattern(trimmed).await {
             return self.mark(line, LineType::Ingredient, 0.85);
         }
 
-        // --- NEW LOGIC START ---
-        // 5. STAGE 4: Continuation Check (The "Orphan" Recovery)
-        // If the previous line was an ingredient, and this line is NOT a header/instruction,
-        // and doesn't look like a title, it's likely a continuation (e.g., "haché finement").
-        if self.last_type == LineType::Ingredient && index > 3 {
-            return self.mark(line, LineType::Ingredient, 0.7);
+        // 4. Orphan/Continuation Recovery
+        // If the last line was an ingredient and this one is short/untyped, merge it.
+        if self.last_type == LineType::Ingredient && index > 0 {
+            if trimmed.len() < 40 && !trimmed.contains('.') {
+                return self.mark(line, LineType::Ingredient, 0.7);
+            }
         }
-        // --- NEW LOGIC END ---
 
-        // 6. STAGE 5: Title Check
+        // 5. Title Check (Document head)
         if index < 3 && trimmed.len() < 70 && !lower.ends_with(':') {
             return self.mark(line, LineType::Title, 0.8);
         }
 
-        // 7. DEFAULT: Everything else is a step
+        // 6. Default fallback
         self.mark(line, LineType::Instruction, 0.5)
     }
 
@@ -101,36 +98,29 @@ impl<'a> DocumentClassifier<'a> {
     }
 
     async fn is_ingredient_pattern(&self, line: &str) -> bool {
-        let trimmed = line.trim().to_lowercase();
+        let lower = line.trim().to_lowercase();
 
-        // 1. Check for a unit anywhere in the line using FTS (very strong signal)
-        // We bind "%trimmed%" or just the tokens to catch units buried after OCR noise
-        let has_unit: i32 = sqlx::query_scalar(
-            r#"
-        SELECT COUNT(*) FROM lexicon_fts f
-        JOIN lexicon l ON f.lexicon_id = l.id
-        WHERE l.category = 'unit' AND lexicon_fts MATCH ?
-        "#,
-        )
-            .bind(&trimmed)
-            .fetch_one(self.pool)
-            .await
-            .unwrap_or(0);
+        // 1. FAST PATH: Check against your uniform English symbols (e.g., ml, g, tbsp)
+        let has_unit = self.known_units.iter().any(|u| {
+            let sym = u.symbol.to_lowercase();
+            // Word boundary check: ensure 'g' doesn't match 'oignon'
+            lower.split_whitespace().any(|word| {
+                // Strip trailing periods from OCR (e.g., "5g." -> "5g")
+                let clean_word = word.trim_end_matches('.');
+                clean_word == sym || clean_word.ends_with(&sym) && clean_word.chars().next().map_or(false, |c| c.is_numeric())
+            })
+        });
 
-        // 2. Look for any numeric/vulgar fraction
-        let has_numeric = trimmed.chars().any(|c| c.is_ascii_digit() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c));
+        // 2. Identify numeric values or fractions
+        let has_numeric = lower.chars().any(|c| c.is_ascii_digit() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c));
 
-        // If it has a unit AND a number, it's an ingredient,
-        // even if it has a weird prefix.
-        if has_unit > 0 && has_numeric {
+        if has_unit && has_numeric {
             return true;
         }
 
-        // 3. Fallback for items like "1 citron" (no unit, just quantity)
-        let first_word = trimmed.split_whitespace().next().unwrap_or("");
-        if first_word.chars().next().map_or(false, |c| c.is_ascii_digit()) {
-            // If it starts with a number and we aren't in a numbered list (1. 2.),
-            // it's likely an ingredient
+        // 3. Fallback for unitless items (e.g., "1 oignon", "2 poitrines")
+        let first_word = lower.split_whitespace().next().unwrap_or("");
+        if first_word.chars().next().map_or(false, |c| c.is_numeric()) {
             if !self.is_instruction_pattern(line).await {
                 return true;
             }
@@ -143,51 +133,44 @@ impl<'a> DocumentClassifier<'a> {
         let trimmed = line.trim();
         let first_word = trimmed.split_whitespace().next().unwrap_or("");
 
-        // Numbered list check (1., 2), etc.) - still logic-based
-        let is_numbered = first_word
-            .chars()
-            .next()
-            .map_or(false, |c| c.is_ascii_digit())
+        // Check for "1." or "1)"
+        let is_numbered = first_word.chars().next().map_or(false, |c| c.is_numeric())
             && (first_word.ends_with('.') || first_word.ends_with(')'));
 
         if is_numbered {
             return true;
         }
 
-        // DYNAMIC VERB CHECK: Look for 'action' category in the DB
-        let first_token = first_word
-            .to_lowercase()
-            .replace(|c: char| !c.is_alphabetic(), "");
+        // Check for French action verbs in your lexicon
+        let first_token = first_word.to_lowercase().replace(|c: char| !c.is_alphabetic(), "");
         let is_verb: i32 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM lexicon l
-         JOIN aliases a ON a.lexicon_id = l.id
-         WHERE l.category = 'action' AND a.raw_text = ?",
+            "SELECT COUNT(*) FROM lexicon l JOIN aliases a ON a.lexicon_id = l.id WHERE l.category = 'action' AND a.raw_text = ?"
         )
-        .bind(&first_token)
-        .fetch_one(self.pool)
-        .await
-        .unwrap_or(0);
+            .bind(&first_token)
+            .fetch_one(self.pool)
+            .await
+            .unwrap_or(0);
 
         is_verb > 0
     }
 
     async fn is_section_marker(&self, lower: &str) -> bool {
-        // DYNAMIC MARKER CHECK: Look for 'text' category (Ingredients, Préparation, etc.)
+        // Ensure symbols like "t" (tbsp) aren't flagged as section headers
         for unit in self.known_units {
-            if lower.contains(&unit.name_fr) {
+            if lower == unit.symbol.to_lowercase() {
                 return false;
             }
         }
 
         let is_text_marker: i32 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM lexicon l 
-         JOIN aliases a ON a.lexicon_id = l.id 
-         WHERE l.category = 'text' AND ? LIKE '%' || a.raw_text || '%'",
+            "SELECT COUNT(*) FROM lexicon l
+             JOIN aliases a ON a.lexicon_id = l.id
+             WHERE l.category = 'text' AND ? LIKE '%' || a.raw_text || '%'",
         )
-        .bind(lower)
-        .fetch_one(self.pool)
-        .await
-        .unwrap_or(0);
+            .bind(lower)
+            .fetch_one(self.pool)
+            .await
+            .unwrap_or(0);
 
         is_text_marker > 0 || (lower.ends_with(':') && lower.len() < 30)
     }
@@ -197,5 +180,6 @@ impl<'a> DocumentClassifier<'a> {
             || lower.contains("copyright")
             || lower.starts_with("page")
             || lower.contains("www.")
+            || lower.contains("http")
     }
 }

@@ -44,15 +44,23 @@ pub async fn process_batch(
 }
 
 fn clean_ocr_typos(text: String) -> String {
+    // 1. Normalize vulgar fractions immediately
     let mut t = text
-        .replace("mi", "ml")
-        .replace("I/2", "1/2")
-        .replace("l/4", "1/4")
-        .replace(['@', '©', '®', 'ù', 'î', 'Ë'], "");
+        .replace('½', " 1/2")
+        .replace('¼', " 1/4")
+        .replace('¾', " 3/4")
+        .replace("I/2", "1/2") // Common Tesseract error
+        .replace("I/4", "1/4")
+        .replace("mlnute", "minute")
+        .replace("atab)", "c. à tab"); // Specific to your recipe's handwritten-style OCR
 
-    // REMOVE LEADING NOISE: Strip single characters followed by dots/spaces at line start
-    // Matches patterns like "G 4", "î : 250", "d 30", "E, '"
-    let re_junk_prefix = Regex::new(r"(?i)^[a-z0-9\W]{1,3}[:.\s'|]+").unwrap();
+    // 2. Remove "Stray Vertical Bars" often caused by the lines in your photo
+    let re_pipes = regex::Regex::new(r"[|¦!]").unwrap();
+    t = re_pipes.replace_all(&t, "").to_string();
+
+    // 3. Strip leading junk characters like "î" or "%"
+    // that appear before the actual quantity "250 ml"
+    let re_junk_prefix = regex::Regex::new(r"^[^a-zA-Z\d\s/¼½¾]{1,2}\s+").unwrap();
     t = re_junk_prefix.replace(&t, "").to_string();
 
     t.trim().to_string()
