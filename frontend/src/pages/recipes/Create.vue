@@ -19,7 +19,9 @@ import type {Language} from "@/models/Language.ts";
 import {getAllLanguage} from "@/api/Language.ts";
 import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {ROUTES} from "@/router/routes.ts";
-import { createRecipeFromImages} from "@/api/ocr.ts";
+import {createRecipeFromRegions} from "@/api/ocr.ts";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import RecipeRegionSelector from "@/components/recipe/forms/RecipeRegionSelector.vue";
 
 const { t } = useI18n()
 
@@ -45,6 +47,10 @@ const available_language = ref<Language[]>()
 const loading = ref(false);
 const error = ref<string | null>(null);
 const currentAbortController = ref<AbortController | null>(null);
+
+const isOcrModalOpen = ref(false);
+const ocrFiles = ref<File[]>([]);
+const ocrPreviewUrls = ref<string[]>([]);
 
 function onMainImageChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0] ?? null
@@ -90,25 +96,43 @@ async function onImportFiles(e: Event) {
   if (!fileList || fileList.length === 0) return;
 
   const files = Array.from(fileList);
+  ocrFiles.value = files;
 
+  // Cleanup old URLs to prevent memory leaks
+  ocrPreviewUrls.value.forEach(url => URL.revokeObjectURL(url));
+
+  // Create an array of URLs for all selected images
+  ocrPreviewUrls.value = files.map(file => URL.createObjectURL(file));
+  isOcrModalOpen.value = true;
+}
+
+// Update your handleOcrProcessing function in <script setup>
+async function handleOcrProcessing(payload: { regions: any[], sourceLang: string }) {
+  isOcrModalOpen.value = false;
   loading.value = true;
   error.value = null;
 
   try {
-    const ocrData = await createRecipeFromImages(files);
+    // Call the regional API instead of the generic image one
+    const ocrData = await createRecipeFromRegions(
+        ocrFiles.value,
+        payload.regions,
+        payload.sourceLang
+    );
 
     if (ocrData) {
+      // Store the result for the next step (Review)
       localStorage.setItem('pending-ocr-data', JSON.stringify(ocrData));
-
       router.push("/admin/recipe/ocr-review");
     }
   } catch (err: any) {
-    console.error("OCR Error:", err);
-    error.value = t('Admin.recipe.errors.scanFailed') || "Failed to scan images";
+    console.error("OCR Regional Processing Error:", err);
+    error.value = t('Admin.recipe.errors.scanFailed') || "Failed to process selected regions";
   } finally {
     loading.value = false;
   }
 }
+
 onUnmounted(() => {
   if (currentAbortController.value) {
     currentAbortController.value.abort();
@@ -327,4 +351,15 @@ onUnmounted(() => {
       </div>
     </aside>
   </div>
+  <Dialog v-model:open="isOcrModalOpen">
+    <DialogContent class="sm:max-w-[95vw] w-[95vw] h-[90vh] p-0 flex flex-col overflow-hidden">
+      <RecipeRegionSelector
+          v-if="ocrPreviewUrls.length > 0"
+          :images="ocrPreviewUrls"
+          :default-lang="recipe.primary_language"
+          @zones-completed="handleOcrProcessing"
+          @cancel="isOcrModalOpen = false"
+      />
+    </DialogContent>
+  </Dialog>
 </template>
