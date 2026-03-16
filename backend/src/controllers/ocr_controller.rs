@@ -3,7 +3,7 @@ use actix_web::{web, HttpResponse};
 use crate::app::state::AppState;
 use crate::errors::Error;
 use crate::domain::user::{AuthenticatedUser, Role};
-use crate::dto::upload_dto::MultiImageForm; // New DTO for multiple files
+use crate::dto::upload_dto::{MultiImageForm, RegionDto, RegionOcrForm}; // New DTO for multiple files
 use crate::dto::recipe_dto::CreateRecipeInput;
 use crate::dto::recipe_ocr::{OcrConfirmInput, OcrCorrectionWrapper};
 use crate::services::{ocr_service, recipe_service};
@@ -24,13 +24,19 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 pub async fn get_ocr_suggestions(
     state: web::Data<AppState>,
     auth: AuthenticatedUser,
-    MultipartForm(form): MultipartForm<MultiImageForm>,
+    MultipartForm(form): MultipartForm<RegionOcrForm>,
 ) -> Result<HttpResponse, Error> {
     auth.require_roles(&[Role::Admin, Role::Moderator, Role::Superuser])?;
+
+    let regions: Vec<RegionDto> = serde_json::from_str(&form.regions.0)?;
+
+    let source_lang = form.source_lang.0;
 
     // Pass the Vec<TempFile> to the service
     let suggestions = ocr_service::recipe_from_files(
         form.images,
+        regions,
+        source_lang,
         &state.db,
         &state.dict_db
     ).await?;
