@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
-import { Plus, Trash2 } from "lucide-vue-next"
+import {ref} from "vue"
+import {Button} from "@/components/ui/button"
+import {Textarea} from "@/components/ui/textarea"
+import {Input} from "@/components/ui/input"
+import {Check, Edit3, Plus, Trash2} from "lucide-vue-next"
 
-const props = defineProps<{ modelValue: any[], currentLang: string }>()
+const props = defineProps<{ modelValue: any[], currentLang: string, originalOcrGroups?: any[] }>()
+const editingStep = ref<string | null>(null)
 
 const getTrans = (obj: any, lang: string) => {
   let trans = obj.translations.find((t: any) => t.language_code === lang)
@@ -14,45 +16,45 @@ const getTrans = (obj: any, lang: string) => {
   }
   return trans
 }
-
-const removeStep = (gIdx: number, sIdx: number) => {
-  props.modelValue[gIdx].steps.splice(sIdx, 1)
-}
 </script>
 
 <template>
   <div class="space-y-10">
-    <div v-for="(group, gIdx) in modelValue" :key="gIdx" class="space-y-6">
-      <div class="flex items-center gap-4">
-        <Input v-model="getTrans(group, currentLang).title" class="w-auto min-w-[200px] text-center font-black uppercase tracking-widest text-[10px] border-none bg-slate-100 dark:bg-slate-800 rounded-full h-8" placeholder="Step Group (e.g. Preparation)" />
-        <div class="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+    <div v-for="(group, gIdx) in modelValue" :key="gIdx" class="border rounded-xl p-6 bg-card">
+      <div class="flex items-center gap-4 mb-8">
+        <Input v-model="getTrans(group, currentLang).title" class="w-auto font-bold uppercase text-[10px] tracking-widest h-8 px-4 rounded-full bg-muted border-none" />
+        <div class="h-px flex-1 bg-border" />
       </div>
 
       <div class="space-y-6">
         <div v-for="(step, sIdx) in group.steps" :key="sIdx" class="relative group/step flex gap-4">
           <div class="flex flex-col items-center">
-            <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 group-hover/step:bg-primary group-hover/step:text-white transition-colors">
+            <div class="w-8 h-8 rounded-full border bg-background flex items-center justify-center text-[10px] font-bold">
               {{ sIdx + 1 }}
             </div>
-            <div class="flex-1 w-px bg-slate-100 dark:bg-slate-800 my-2" />
+            <div class="flex-1 w-px bg-border my-2" />
           </div>
 
-          <div class="flex-1 space-y-2 pb-6">
-            <div class="flex items-start gap-4">
-              <Textarea
-                  v-model="getTrans(step, currentLang).text"
-                  class="flex-1 min-h-[80px] text-sm leading-relaxed border-none bg-slate-50 dark:bg-slate-900/50 focus:bg-white dark:focus:bg-slate-950 resize-none transition-all p-4 rounded-2xl"
-                  placeholder="Write step instruction..."
-              />
-              <Button variant="ghost" size="icon" @click="removeStep(gIdx, sIdx)" class="text-slate-300 hover:text-destructive opacity-0 group-hover/step:opacity-100 transition-opacity">
-                <Trash2 class="w-4 h-4" />
-              </Button>
+          <div class="flex-1 space-y-3 pb-6">
+            <div v-if="editingStep !== `${gIdx}-${sIdx}`" class="flex items-start justify-between gap-4">
+              <p class="text-sm leading-relaxed text-muted-foreground">{{ getTrans(step, currentLang).text || 'No instructions...' }}</p>
+              <div class="flex gap-1 opacity-0 group-hover/step:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" @click="editingStep = `${gIdx}-${sIdx}`" class="h-8 w-8"><Edit3 class="w-3.5 h-3.5" /></Button>
+                <Button variant="ghost" size="icon" @click="group.steps.splice(sIdx, 1)" class="h-8 w-8 hover:text-destructive"><Trash2 class="w-3.5 h-3.5" /></Button>
+              </div>
+            </div>
+
+            <div v-else class="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+              <Textarea v-model="getTrans(step, currentLang).text" class="min-h-[100px] text-sm bg-muted/30 focus-visible:ring-1" />
+              <div class="flex justify-end">
+                <Button size="sm" @click="editingStep = null"><Check class="w-3.5 h-3.5 mr-2" /> Save Step</Button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <Button variant="ghost" class="w-full border-dashed border-2 text-slate-400 hover:text-primary rounded-xl" @click="group.steps.push({ translations: [], position: group.steps.length })">
+      <Button variant="outline" class="w-full border-dashed h-12" @click="group.steps.push({ translations: [], position: group.steps.length })">
         <Plus class="w-4 h-4 mr-2" /> Add Step
       </Button>
     </div>
