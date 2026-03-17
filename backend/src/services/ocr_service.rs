@@ -13,8 +13,6 @@ use crate::dto::upload_dto::RegionDto;
 
 pub async fn recipe_from_files(
     images: Vec<TempFile>,
-    regions: Vec<RegionDto>,
-    lang: String,
     db: &DatabaseConnection,
     sqlite_pool: &SqlitePool,
 ) -> Result<OcrResultResponse, Error> {
@@ -34,6 +32,19 @@ pub async fn recipe_from_files(
     let ocr_suggestions = recipe_parser::run_pipeline(&paths, context).await?;
 
     Ok(ocr_suggestions)
+}
+pub async fn recipe_from_regions(
+    images: Vec<TempFile>,
+    regions: Vec<RegionDto>,
+    lang: String,
+    db: &DatabaseConnection,
+    sqlite_pool: &SqlitePool,
+) -> Result<OcrResultResponse, Error> {
+    let units = unit_repository::get_all_admin(db).await?;
+    let context = ParserContext { sqlite_pool, known_units: units };
+
+    // Just pass the raw images and regions into the parser
+    recipe_parser::run_region_pipeline(images, regions, &lang, context).await
 }
 pub async fn process_ocr_confirmation(
     payload: OcrCorrectionWrapper,

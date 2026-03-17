@@ -167,6 +167,14 @@ pub fn parse_numeric(token: &str) -> Result<f32, ()> {
         ('⅔', 0.666), ('⅛', 0.125), ('⅜', 0.375), ('⅝', 0.625), ('⅞', 0.875)
     ];
 
+    let re_mixed = Regex::new(r"(\d+)\s+(\d+)/(\d+)").unwrap();
+    if let Some(caps) = re_mixed.captures(token) {
+        let whole = caps[1].parse::<f32>().unwrap_or(0.0);
+        let num = caps[2].parse::<f32>().unwrap_or(0.0);
+        let den = caps[3].parse::<f32>().unwrap_or(1.0);
+        return Ok(whole + (num / den));
+    }
+
     for (c, val) in unicode_fractions {
         if token.contains(c) {
             let clean = token.replace(c, "").trim().to_string();

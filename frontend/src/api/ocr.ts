@@ -8,7 +8,7 @@ export async function createRecipeFromImages(recipe_image: File[]): Promise<Reci
         form.append("images", file);
     }
 
-    return api<RecipeCreate>(OcrRoutes.create(), {
+    return api<RecipeCreate>(OcrRoutes.process(), {
         method: "POST",
         data: form,
     });
@@ -28,8 +28,15 @@ export async function createRecipeFromRegions(
     form.append('source_lang', lang);
 
     // Use your specific endpoint for regional processing
-    return api<RecipeCreate>(OcrRoutes.create(), {
+    return api<RecipeCreate>(OcrRoutes.process_regions(), {
         method: "POST",
         data: form,
+    });
+}
+// Add this to your OCR api file
+export async function confirmOcrRecipe(payload: any): Promise<any> {
+    return api<any>(OcrRoutes.create(), {
+        method: "POST",
+        data: payload,
     });
 }

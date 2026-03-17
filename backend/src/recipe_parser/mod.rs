@@ -1,10 +1,13 @@
 use std::time::Instant;
 use std::path::Path;
+use actix_multipart::form::tempfile::TempFile;
 use crate::errors::Error;
 use crate::dto::recipe_dto::CreateRecipeInput;
 use crate::dto::unit_dto::UnitDto;
 use sqlx::SqlitePool;
 use crate::dto::recipe_ocr::{ConfirmIngredient, OcrConfirmInput, OcrCorrectionWrapper, OcrResultResponse};
+use crate::dto::upload_dto::RegionDto;
+use crate::recipe_parser::classifier::{ClassifiedLine, LineType};
 
 pub mod dictionary;
 pub mod grammar;
@@ -72,6 +75,78 @@ pub async fn run_pipeline(
     println!("---------------------------------");
 
     Ok(ocr_result)
+}
+pub async fn run_region_pipeline(
+    images: Vec<TempFile>,
+    mut regions: Vec<RegionDto>,
+    lang: &str,
+    ctx: ParserContext<'_>
+) -> Result<OcrResultResponse, Error> {
+    // 1. Sort logic belongs here
+    regions.sort_by(|a, b| a.image_index.cmp(&b.image_index).then(a.y.cmp(&b.y)));
+
+    let mut title_acc = String::new();
+    let mut ingredients_acc = String::new();
+    let mut steps_acc = String::new();
+
+    for region in regions {
+        let file = images.get(region.image_index)
+            .ok_or_else(|| Error::BadRequest("Invalid image index".into()))?;
+
+        // 2. Wrap the image processing in a dedicated scanner call
+        let text = scanner::scan_region(file.file.path(), &region, lang)?;
+
+        match region.r#type.as_str() {
+            "title" => title_acc.push_str(&format!("{} ", text)),
+            "ingredients" => ingredients_acc.push_str(&format!("{}\n", text)),
+            "steps" => steps_acc.push_str(&format!("{}\n", text)),
+            _ => {}
+        }
+    }
+
+    // 3. Assemble using your existing grammar logic
+    let lines = manual_to_classified(title_acc, ingredients_acc, steps_acc);
+    grammar::assemble_recipe(lines, ctx.sqlite_pool, String::new()).await
+}
+
+fn manual_to_classified(title: String, ingredients: String, steps: String) -> Vec<ClassifiedLine> {
+    let mut results = Vec::new();
+    let mut global_idx = 0;
+
+    // 1. Process Title
+    if !title.trim().is_empty() {
+        results.push(ClassifiedLine {
+            raw_text: title.trim().to_string(),
+            line_type: LineType::Title,
+            index: global_idx,
+            confidence: 1.0,
+        });
+        global_idx += 1;
+    }
+
+    // 2. Process Ingredients
+    for line in ingredients.lines().filter(|l| !l.trim().is_empty()) {
+        results.push(ClassifiedLine {
+            raw_text: line.to_string(),
+            line_type: LineType::Ingredient,
+            index: global_idx,
+            confidence: 1.0,
+        });
+        global_idx += 1;
+    }
+
+    // 3. Process Steps
+    for line in steps.lines().filter(|l| !l.trim().is_empty()) {
+        results.push(ClassifiedLine {
+            raw_text: line.to_string(),
+            line_type: LineType::Instruction,
+            index: global_idx,
+            confidence: 1.0,
+        });
+        global_idx += 1;
+    }
+
+    results
 }
 pub async fn teach_lexicon(wrapper: &OcrCorrectionWrapper, pool: &SqlitePool) -> Result<(), Error> {
     // 1. Process explicit feedback from the "Corrections" list

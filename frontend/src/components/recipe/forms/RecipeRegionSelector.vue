@@ -163,8 +163,18 @@ const renderAll = () => {
 };
 
 const finish = () => {
+
+  const cleanRegions = regions.map(r => ({
+    ...r,
+    x: Math.round(r.x),
+    y: Math.round(r.y),
+    w: Math.round(r.w),
+    h: Math.round(r.h),
+    image_index: Math.round(r.image_index)
+  }));
+
   emit('zones-completed', {
-    regions: JSON.parse(JSON.stringify(regions)),
+    regions: JSON.parse(JSON.stringify(cleanRegions)),
     sourceLang: sourceLang.value
   });
 };

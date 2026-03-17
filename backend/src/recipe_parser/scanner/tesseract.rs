@@ -2,7 +2,7 @@ use crate::errors::Error;
 use tesseract_rs::TesseractAPI;
 use std::path::Path;
 use std::sync::Once;
-use image::GenericImageView;
+use image::{DynamicImage, GenericImageView};
 use magick_rust::{MagickWand, magick_wand_genesis, ColorspaceType};
 
 pub struct OcrLine {
@@ -32,8 +32,29 @@ pub fn scan_single_image(path: &Path, lang: &str) -> Result<(Vec<OcrLine>, Strin
     Ok((lines, full_text))
 }
 
+pub fn scan_image_segment(img: DynamicImage, lang: &str) -> Result<String, Error> {
+    // 1. Convert to RGB8 as Tesseract expects
+    let (w, h) = img.dimensions();
+    let raw_data = img.to_rgb8();
+
+    // 2. Init API (Same as your run_tesseract_engine)
+    let mut api = TesseractAPI::new();
+    api.init("/usr/share/tessdata", lang).map_err(|_| Error::InternalServerError)?;
+
+    // For single regions, PSM 7 (Single line) or PSM 6 (Block) is often better
+    api.set_variable("tessedit_pageseg_mode", "6").map_err(|_| Error::InternalServerError)?;
+
+    api.set_image(&raw_data.into_raw(), w as i32, h as i32, 3, (w * 3) as i32)
+        .map_err(|_| Error::InternalServerError)?;
+
+    api.recognize().map_err(|_| Error::InternalServerError)?;
+    let text = api.get_utf8_text().map_err(|_| Error::InternalServerError)?;
+
+    Ok(text.trim().to_string())
+}
+
 // Helper function to prevent code duplication
-fn run_tesseract_engine(img_bytes: &[u8], lang: &str, psm: &str) -> Result<(Vec<OcrLine>, String), Error> {
+pub(crate) fn run_tesseract_engine(img_bytes: &[u8], lang: &str, psm: &str) -> Result<(Vec<OcrLine>, String), Error> {
     let mut api = TesseractAPI::new();
     api.init("/usr/share/tessdata", lang).map_err(|_| Error::InternalServerError)?;
 
