@@ -1,5 +1,5 @@
 use crate::recipe_parser::classifier::{ClassifiedLine, LineType};
-use crate::recipe_parser::dictionary;
+use crate::recipe_parser::{dictionary, translator};
 use crate::dto::recipe_ocr::{OcrResultResponse, ParsedIngredientLine, OcrStep, OcrIngredientGroup, OcrStepGroup};
 use sqlx::SqlitePool;
 use crate::errors::Error;
@@ -9,18 +9,32 @@ pub async fn assemble_recipe(
     classified_lines: Vec<ClassifiedLine>,
     pool: &SqlitePool,
     raw_text: String,
+    source_lang: String,
 ) -> Result<OcrResultResponse, Error> {
     let mut ingredient_groups = Vec::new();
     let mut step_groups = Vec::new();
     let mut unparsed_segments = Vec::new();
-    let mut title = None;
+
+    let mut title_en = String::new();
+    let mut title_fr = String::new();
     let mut detected_servings = None;
 
-    // Regex for: "6 portions", "Pour 4 personnes", "Serves 4", etc.
-    let serving_re = Regex::new(r"(?i)(\d+)\s*(portions?|personnes?|servings?|serves)").unwrap();
+    // Initialize the default groups with bilingual names
+    let mut current_ing_group = OcrIngredientGroup {
+        name_en: "Ingredients".into(),
+        name_fr: "Ingrédients".into(),
+        ingredients: Vec::new()
+    };
+    let mut current_step_group = OcrStepGroup {
+        name_en: "Preparation".into(),
+        name_fr: "Préparation".into(),
+        steps: Vec::new()
+    };
 
-    let mut current_ing_group = OcrIngredientGroup { name: "Ingrédients".into(), ingredients: Vec::new() };
-    let mut current_step_group = OcrStepGroup { name: "Préparation".into(), steps: Vec::new() };
+    let mut ing_buffer: Vec<String> = Vec::new();
+    let mut step_buffer: Vec<String> = Vec::new();
+    let mut last_ing_index = 0;
+    let mut last_step_index = 0;
 
     for line in classified_lines {
         let text = line.raw_text.trim();
@@ -28,117 +42,148 @@ pub async fn assemble_recipe(
 
         match line.line_type {
             LineType::Title => {
-                if title.is_none() { title = Some(text.to_string()); }
+                if title_en.is_empty() && title_fr.is_empty() {
+                    title_en = if source_lang == "fr" { translator::translate_text(text, "fr", "en").await? } else { text.to_string() };
+                    title_fr = if source_lang == "en" { translator::translate_text(text, "en", "fr").await? } else { text.to_string() };
+                }
             }
 
             LineType::Header => {
-                let lower = text.to_lowercase();
-                let is_step_trigger: i32 = sqlx::query_scalar(
-                    "SELECT COUNT(*) FROM lexicon WHERE category = 'text' AND (term_en LIKE '%instruction%' OR term_fr LIKE '%prépar%') AND (term_en = ? OR term_fr = ?)"
-                ).bind(&lower).bind(&lower).fetch_one(pool).await.unwrap_or(0);
+                flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang).await?;
+                flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang).await?;
 
-                if is_step_trigger > 0 {
+                let h_en = if source_lang == "fr" { translator::translate_text(text, "fr", "en").await? } else { text.to_string() };
+                let h_fr = if source_lang == "en" { translator::translate_text(text, "en", "fr").await? } else { text.to_string() };
+
+                if is_step_header(text) {
                     if !current_step_group.steps.is_empty() { step_groups.push(current_step_group.clone()); }
-                    current_step_group = OcrStepGroup { name: text.to_string(), steps: Vec::new() };
+                    current_step_group = OcrStepGroup { name_en: h_en, name_fr: h_fr, steps: Vec::new() };
                 } else {
                     if !current_ing_group.ingredients.is_empty() { ingredient_groups.push(current_ing_group.clone()); }
-                    current_ing_group = OcrIngredientGroup { name: text.to_string(), ingredients: Vec::new() };
+                    current_ing_group = OcrIngredientGroup { name_en: h_en, name_fr: h_fr, ingredients: Vec::new() };
                 }
             }
 
             LineType::Ingredient => {
-                let lower = text.to_lowercase();
-
-                // 1. Check for Servings (and prevent them from becoming ingredients)
-                if let Some(caps) = serving_re.captures(&lower) {
-                    if let Some(val) = caps.get(1) {
-                        detected_servings = val.as_str().parse::<i32>().ok();
-                        continue;
-                    }
+                if (starts_with_quantity(text) || starts_with_vulgar_fraction(text)) && !ing_buffer.is_empty() {
+                    flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang).await?;
                 }
-
-                // Updated to receive the cleaned display_name from resolve_line
-                let (qty, unit, mut ing, actions, cleaned_name) = dictionary::resolve_line(text, pool).await?;
-
-                // 2. Filter out "Hallucinations"
-                if let Some(ref i) = ing {
-                    if i.raw_token.len() <= 2 && qty.is_none() {
-                        ing = None;
-                    }
-                }
-
-                let mut merged = false;
-                if !current_ing_group.ingredients.is_empty() {
-                    let last = current_ing_group.ingredients.last_mut().unwrap();
-                    let last_raw = last.original_line.to_lowercase();
-                    let current_raw = text.to_lowercase();
-
-                    let is_suffix: i32 = sqlx::query_scalar(
-                        "SELECT COUNT(*) FROM line_continuation_rules WHERE rule_type = 'SUFFIX' AND ? LIKE '%' || pattern"
-                    ).bind(&last_raw).fetch_one(pool).await.unwrap_or(0);
-
-                    let is_prefix: i32 = sqlx::query_scalar(
-                        "SELECT COUNT(*) FROM line_continuation_rules WHERE rule_type = 'PREFIX' AND ? LIKE pattern || '%'"
-                    ).bind(&current_raw).fetch_one(pool).await.unwrap_or(0);
-
-                    if is_suffix > 0 || is_prefix > 0 || (qty.is_none() && ing.is_none()) {
-                        last.original_line = format!("{} {}", last.original_line, text);
-
-                        // Re-resolve the merged line and update all fields including display_name
-                        let (nq, nu, ni, na, n_dn) = dictionary::resolve_line(&last.original_line, pool).await?;
-                        last.quantity = nq;
-                        last.unit = nu;
-                        last.ingredient = ni;
-                        last.actions = na;
-                        last.display_name = n_dn;
-                        merged = true;
-                    }
-                }
-
-                if !merged {
-                    current_ing_group.ingredients.push(ParsedIngredientLine {
-                        quantity: qty,
-                        unit,
-                        ingredient: ing,
-                        actions,
-                        original_line: text.to_string(),
-                        display_name: cleaned_name,
-                        position: line.index as i32,
-                    });
-                }
+                if ing_buffer.is_empty() { last_ing_index = line.index; }
+                ing_buffer.push(text.to_string());
             }
 
             LineType::Instruction => {
-                current_step_group.steps.push(OcrStep {
-                    position: line.index as i32,
-                    raw_text: text.to_string(),
-                    detected_actions: vec![],
-                    detected_equipment: vec![],
-                });
+                if starts_with_step_indicator(text) && !step_buffer.is_empty() {
+                    flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang).await?;
+                }
+                if step_buffer.is_empty() { last_step_index = line.index; }
+                step_buffer.push(text.to_string());
             }
 
             _ => { unparsed_segments.push(text.to_string()); }
         }
     }
 
+    flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang).await?;
+    flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang).await?;
+
     if !current_ing_group.ingredients.is_empty() { ingredient_groups.push(current_ing_group); }
     if !current_step_group.steps.is_empty() { step_groups.push(current_step_group); }
 
-    if ingredient_groups.len() > 1 {
-        let name = ingredient_groups[0].name.to_lowercase();
-        if name == "ingrédients" || name == "ingredients" {
-            let mut second = ingredient_groups.remove(1);
-            ingredient_groups[0].ingredients.append(&mut second.ingredients);
-        }
-    }
-
     Ok(OcrResultResponse {
-        primary_language: "fr".into(),
-        title,
+        primary_language: source_lang,
+        title_en,
+        title_fr,
         detected_servings,
         ingredient_groups,
         step_groups,
         unparsed_segments,
         raw_text,
     })
+}
+
+async fn flush_ing_buffer(
+    buffer: &mut Vec<String>,
+    group: &mut OcrIngredientGroup,
+    index: usize,
+    pool: &SqlitePool,
+    source_lang: &str,
+) -> Result<(), Error> {
+    if buffer.is_empty() { return Ok(()); }
+
+    let combined = buffer.join(" ");
+
+    // Dictionary analysis is always done in French for consistency
+    let analysis_text = if source_lang == "en" {
+        translator::translate_text(&combined, "en", "fr").await?
+    } else {
+        combined.clone()
+    };
+
+    // Fix: Destructure the 6-item tuple from dictionary::resolve_line
+    let (qty, unit, ing, actions, disp_en, disp_fr) = dictionary::resolve_line(&analysis_text, pool).await?;
+
+    // Ensure English display name is translated if it came from French analysis
+    let final_disp_en = if source_lang == "fr" {
+        translator::translate_text(&disp_fr, "fr", "en").await?
+    } else {
+        disp_en
+    };
+
+    group.ingredients.push(ParsedIngredientLine {
+        quantity: qty,
+        unit,
+        ingredient: ing,
+        actions,
+        original_line: combined,
+        display_name_en: final_disp_en,
+        display_name_fr: disp_fr,
+        position: index as i32,
+    });
+
+    buffer.clear();
+    Ok(())
+}
+
+async fn flush_step_buffer(
+    buffer: &mut Vec<String>,
+    group: &mut OcrStepGroup,
+    index: usize,
+    source_lang: &str
+) -> Result<(), Error> {
+    if buffer.is_empty() { return Ok(()); }
+
+    let combined = buffer.join(" ");
+
+    let text_en = if source_lang == "fr" { translator::translate_text(&combined, "fr", "en").await? } else { combined.clone() };
+    let text_fr = if source_lang == "en" { translator::translate_text(&combined, "en", "fr").await? } else { combined.clone() };
+
+    group.steps.push(OcrStep {
+        position: index as i32,
+        raw_text_en: text_en,
+        raw_text_fr: text_fr,
+        detected_actions: Vec::new(),
+        detected_equipment: Vec::new(),
+    });
+
+    buffer.clear();
+    Ok(())
+}
+
+fn starts_with_quantity(text: &str) -> bool {
+    text.chars().next().map_or(false, |c| c.is_ascii_digit())
+}
+
+fn starts_with_vulgar_fraction(text: &str) -> bool {
+    text.chars().next().map_or(false, |c| "¼½¾⅓⅔⅛⅜⅝⅞".contains(c))
+}
+
+fn starts_with_step_indicator(text: &str) -> bool {
+    let re = Regex::new(r"^(\d+[\.\)]|[-•*])").unwrap();
+    re.is_match(text.trim())
+}
+
+fn is_step_header(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    lower.contains("prépar") || lower.contains("étape") || lower.contains("instruc") || lower.contains("method")
 }

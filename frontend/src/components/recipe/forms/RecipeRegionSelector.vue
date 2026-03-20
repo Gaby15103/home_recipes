@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 const props = defineProps<{
   images: string[];
-  defaultLang: string;
+  defaultLang?: string; // Made optional since we provide a hard default
 }>();
 
 const emit = defineEmits(['zones-completed', 'cancel']);
 
 const canvasRefs = ref<HTMLCanvasElement[]>([]);
 const imageRefs = ref<HTMLImageElement[]>([]);
-const sourceLang = ref(props.defaultLang);
-const currentType = ref('ingredients');
+
+// 1. Set Defaults
+const sourceLang = ref(props.defaultLang || 'fr');
+const currentType = ref('title');
 
 const history = ref<string[]>([]);
 const redoStack = ref<string[]>([]);
@@ -75,7 +77,6 @@ const initCanvas = (idx: number) => {
 const handleMouseDown = (e: MouseEvent, imgIdx: number) => {
   const pos = getMousePos(e, imgIdx);
 
-  // Find if we clicked an existing region on THIS page
   const hitIdx = regions.findIndex(r =>
       r.image_index === imgIdx &&
       pos.x >= r.x && pos.x <= r.x + r.w &&
@@ -124,7 +125,6 @@ const handleMouseMove = (e: MouseEvent, imgIdx: number) => {
 const handleMouseUp = () => {
   isDrawing.value = false;
   isMoving.value = false;
-  // Clean up tiny accidental clicks
   if (selectedIdx.value !== null) {
     const r = regions[selectedIdx.value];
     if (r && r.w < 5 && r.h < 5) regions.splice(selectedIdx.value, 1);
@@ -140,10 +140,8 @@ const renderAll = () => {
 
     regions.forEach((r, globalIdx) => {
       if (r.image_index !== idx) return;
-
       const isSelected = globalIdx === selectedIdx.value;
 
-      // Draw Box
       ctx.fillStyle = colors[r.type] + (isSelected ? '77' : '33');
       ctx.fillRect(r.x, r.y, r.w, r.h);
 
@@ -151,7 +149,6 @@ const renderAll = () => {
       ctx.lineWidth = isSelected ? 8 : 4;
       ctx.strokeRect(r.x, r.y, r.w, r.h);
 
-      // Label
       ctx.fillStyle = "white";
       ctx.font = "bold 24px sans-serif";
       ctx.shadowBlur = 4;
@@ -163,18 +160,17 @@ const renderAll = () => {
 };
 
 const finish = () => {
-
   const cleanRegions = regions.map(r => ({
-    ...r,
     x: Math.round(r.x),
     y: Math.round(r.y),
     w: Math.round(r.w),
     h: Math.round(r.h),
-    image_index: Math.round(r.image_index)
+    label: r.type,
+    image_index: r.image_index
   }));
 
   emit('zones-completed', {
-    regions: JSON.parse(JSON.stringify(cleanRegions)),
+    regions: cleanRegions,
     sourceLang: sourceLang.value
   });
 };
@@ -183,22 +179,38 @@ const finish = () => {
 <template>
   <div class="flex flex-col h-full bg-zinc-950 select-none">
     <div class="flex items-center justify-between p-3 border-b border-zinc-800 bg-zinc-900 shrink-0 sticky top-0 z-50">
+
       <div class="flex items-center gap-2">
         <button v-for="t in ['title', 'ingredients', 'steps']" :key="t"
                 @click="currentType = t"
-                :class="['px-4 py-1.5 text-xs font-bold uppercase rounded-md transition-all border',
+                :class="['px-4 py-1.5 text-xs font-bold uppercase rounded-md transition-all border flex items-center gap-2',
                 currentType === t ? 'bg-white text-black border-white' : 'text-zinc-400 bg-zinc-800 border-zinc-700 hover:bg-zinc-700']">
+          <div v-if="currentType === t" class="w-2 h-2 rounded-full" :style="{ backgroundColor: colors[t] }"></div>
           {{ t }}
         </button>
       </div>
 
-      <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" @click="undo" :disabled="history.length === 0" class="h-8 text-xs">Undo</Button>
-        <Button variant="outline" size="sm" @click="redo" :disabled="redoStack.length === 0" class="h-8 text-xs">Redo</Button>
-        <Separator orientation="vertical" class="h-6 mx-2 bg-zinc-700" />
-        <Button @click="finish" class="bg-blue-600 hover:bg-blue-700 h-8 px-6 text-xs font-bold uppercase tracking-wider">
-          Process Recipe
-        </Button>
+      <div class="flex items-center gap-4">
+        <div class="flex bg-zinc-800 p-1 rounded-lg border border-zinc-700">
+          <button
+              @click="sourceLang = 'fr'"
+              :class="['px-3 py-1 text-[10px] font-bold rounded-md transition-all', sourceLang === 'fr' ? 'bg-zinc-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300']"
+          >FR</button>
+          <button
+              @click="sourceLang = 'en'"
+              :class="['px-3 py-1 text-[10px] font-bold rounded-md transition-all', sourceLang === 'en' ? 'bg-zinc-600 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300']"
+          >EN</button>
+        </div>
+
+        <Separator orientation="vertical" class="h-6 bg-zinc-700" />
+
+        <div class="flex items-center gap-2">
+          <Button variant="outline" size="sm" @click="undo" :disabled="history.length === 0" class="h-8 text-xs">Undo</Button>
+          <Button variant="outline" size="sm" @click="redo" :disabled="redoStack.length === 0" class="h-8 text-xs">Redo</Button>
+          <Button @click="finish" class="bg-blue-600 hover:bg-blue-700 h-8 px-6 text-xs font-bold uppercase tracking-wider ml-2">
+            Process Recipe
+          </Button>
+        </div>
       </div>
     </div>
 
@@ -229,20 +241,3 @@ const finish = () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-canvas {
-  image-rendering: auto;
-}
-/* Visual indicator for multi-page flow */
-.group:not(:last-child)::after {
-  content: '';
-  position: absolute;
-  bottom: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 2px;
-  height: 24px;
-  background: repeating-linear-gradient(to bottom, #3f3f46, #3f3f46 4px, transparent 4px, transparent 8px);
-}
-</style>

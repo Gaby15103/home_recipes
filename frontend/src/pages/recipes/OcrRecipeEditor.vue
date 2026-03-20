@@ -40,69 +40,99 @@ const recipe = ref<RecipeCreate>({
 })
 
 const hydrateFromBackend = () => {
-  if (!storedOcr.value) return
-  const data = storedOcr.value
-  const pLang = data.primary_language || "fr"
+  if (!storedOcr.value) return;
+  const data = storedOcr.value;
 
-  recipe.value.primary_language = pLang
-  recipe.value.servings = data.detected_servings || 1
+  recipe.value.primary_language = data.primary_language || "fr";
+  recipe.value.servings = data.detected_servings || 1;
 
-  const titleTrans = recipe.value.translations.find(t => t.language_code === pLang)
-  if (titleTrans) titleTrans.title = data.title
+  // 1. Recipe Title/Desc
+  recipe.value.translations = [
+    { language_code: "fr", title: data.title_fr, description: "" },
+    { language_code: "en", title: data.title_en, description: "" }
+  ];
 
-  recipe.value.ingredient_groups = data.ingredient_groups.map(group => ({
+  // 2. Ingredient Groups
+  recipe.value.ingredient_groups = data.ingredient_groups.map((group, gIdx) => ({
+    position: gIdx,
     translations: [
-      {language_code: "fr", name: pLang === "fr" ? group.name : ""},
-      {language_code: "en", name: pLang === "en" ? group.name : ""}
+      { language_code: "fr", title: group.name_fr }, // Note: IngredientGroupTranslation uses 'title'
+      { language_code: "en", title: group.name_en }
     ],
     ingredients: group.ingredients.map(ing => ({
-      quantity: ing.quantity?.toString() || "",
-      unit_id: ing.unit?.lexicon_id?.toString() || null,
-      ingredient_id: ing.ingredient?.lexicon_id?.toString() || null,
+      quantity: ing.quantity || 0,
+      unit_id: ing.unit?.lexicon_id?.toString() || "",
+      position: ing.position,
       translations: [
-        {language_code: "fr", name: pLang === "fr" ? (ing.ingredient?.term_fr || ing.original_line) : ""},
-        {language_code: "en", name: pLang === "en" ? (ing.ingredient?.term_en || ing.original_line) : ""}
-      ],
-      note: [{language_code: "fr", text: ing.actions.join(", ")}, {language_code: "en", text: ing.actions.join(", ")}]
-    }))
-  }))
-
-  recipe.value.step_groups = data.step_groups.map(group => ({
-    translations: [
-      {language_code: "fr", title: pLang === "fr" ? group.name : ""},
-      {language_code: "en", title: pLang === "en" ? group.name : ""}
-    ],
-    steps: group.steps.map(step => ({
-      position: step.position,
-      duration_minutes: null,
-      translations: [
-        {language_code: pLang, text: step.raw_text},
-        {language_code: pLang === "fr" ? "en" : "fr", text: ""}
+        {
+          language_code: "fr",
+          data: ing.display_name_fr,
+          note: ing.actions.map(a => a.term_fr).join(", ")
+        },
+        {
+          language_code: "en",
+          data: ing.display_name_en,
+          note: ing.actions.map(a => a.term_en).join(", ")
+        }
       ]
     }))
-  }))
-}
+  }));
+
+  // 3. Step Groups
+  recipe.value.step_groups = data.step_groups.map((group, gIdx) => ({
+    position: gIdx,
+    translations: [ // Note: Your model has StepGroupTranslationCreate as a single object or array?
+      // Based on your code 'translations: StepGroupTranslationCreate', it's an object.
+      // But typically it's an array for bilingual. Assuming array based on IngredientGroups:
+      { language_code: "fr", title: group.name_fr },
+      { language_code: "en", title: group.name_en }
+    ] as any,
+    steps: group.steps.map(step => ({
+      position: step.position,
+      image_url: null,
+      duration_minutes: null,
+      translations: [
+        { language_code: "fr", instruction: step.raw_text_fr },
+        { language_code: "en", instruction: step.raw_text_en }
+      ]
+    }))
+  }));
+};
 
 const previewRecipe = computed(() => {
+  const lang = currentEditLang.value;
+
   return {
     ...recipe.value,
-    title: recipe.value.translations.find(t => t.language_code === currentEditLang.value)?.title || "",
+    // Recipe Title
+    title: recipe.value.translations.find(t => t.language_code === lang)?.title || "",
+
     ingredient_groups: recipe.value.ingredient_groups.map(g => ({
-      title: g.translations.find(t => t.language_code === currentEditLang.value)?.name,
-      ingredients: g.ingredients.map(i => ({
-        ...i,
-        display_name: i.translations.find(t => t.language_code === currentEditLang.value)?.name,
-        unit: {symbol: i.unit_id}
-      }))
+      // Group Title
+      title: g.translations.find(t => t.language_code === lang)?.title || "",
+      ingredients: g.ingredients.map(i => {
+        const trans = i.translations.find(t => t.language_code === lang);
+        return {
+          ...i,
+          // Ingredient Name is '.data' in IngredientTranslationCreate
+          display_name: trans?.data || "",
+          note: trans?.note || "",
+          unit: { symbol: i.unit_id }
+        };
+      })
     })),
+
     step_groups: recipe.value.step_groups.map(g => ({
-      title: g.translations.find(t => t.language_code === currentEditLang.value)?.title,
+      // Step Group Title
+      title: (g.translations as any).find?.((t: any) => t.language_code === lang)?.title || "",
       steps: g.steps.map(s => ({
-        instruction: s.translations.find(t => t.language_code === currentEditLang.value)?.text
+        ...s,
+        // Step Instruction is '.instruction' in StepTranslationCreate
+        instruction: s.translations.find(t => t.language_code === lang)?.instruction || ""
       }))
     }))
-  } as any
-})
+  } as any;
+});
 
 const submit = async () => {
   const res = await confirmOcrRecipe({recipe: recipe.value})
@@ -185,6 +215,7 @@ onMounted(async () => {
           <StepsEditor
               v-model="recipe.step_groups"
               :current-lang="currentEditLang"
+              :original-ocr-groups="storedOcr.step_groups"
           />
         </div>
 

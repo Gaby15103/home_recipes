@@ -14,32 +14,43 @@ export interface OcrIngredient {
     quantity: number | null;
     unit: LexiconMatch | null;
     ingredient: LexiconMatch | null;
-    actions: string[];
+    actions: LexiconMatch[]; // Changed from string[] to LexiconMatch[] to get bilingual terms
     original_line: string;
+    // New Bilingual Display Names
+    display_name_en: string;
+    display_name_fr: string;
     position: number;
 }
 
 export interface OcrIngredientGroup {
-    name: string;
+    // New Bilingual Names
+    name_en: string;
+    name_fr: string;
     ingredients: OcrIngredient[];
 }
 
 export interface OcrStep {
     position: number;
-    raw_text: string;
-    detected_actions: string[];
-    detected_equipment: string[];
+    // New Bilingual Steps
+    raw_text_en: string;
+    raw_text_fr: string;
+    detected_actions: LexiconMatch[];
+    detected_equipment: LexiconMatch[];
 }
 
 export interface OcrStepGroup {
-    name: string;
+    // New Bilingual Names
+    name_en: string;
+    name_fr: string;
     steps: OcrStep[];
 }
 
 export interface OcrRecipeResponse {
     primary_language: string;
-    title: string;
-    detected_servings: number;
+    // New Bilingual Titles
+    title_en: string;
+    title_fr: string;
+    detected_servings: number | null;
     ingredient_groups: OcrIngredientGroup[];
     step_groups: OcrStepGroup[];
     unparsed_segments: string[];

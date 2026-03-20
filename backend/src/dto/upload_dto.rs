@@ -20,7 +20,7 @@ pub struct RegionDto {
     pub y: u32,
     pub w: u32,
     pub h: u32,
-    pub r#type: String, // "title", "ingredients", "steps"
+    pub label: String,
     pub image_index: usize,
 }
 

@@ -18,6 +18,7 @@
             VIEW: (id: string ) =>  `/admin/recipe/${id}`,
             EDIT: (id: string ) => `/admin/recipe/edit/${id}`,
             CATEGORIES: "/admin/recipe/categories",
+            OCR_REVIEW: "/admin/recipe/ocr-review",
         },
         USER: {
             BASE: "/admin/user",

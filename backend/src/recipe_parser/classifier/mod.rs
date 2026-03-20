@@ -1,3 +1,4 @@
+use regex::Regex;
 use crate::dto::unit_dto::UnitDto;
 use crate::recipe_parser::scanner::ScannedDocument;
 use serde::{Deserialize, Serialize};
@@ -70,11 +71,19 @@ impl<'a> DocumentClassifier<'a> {
             return self.mark(line, LineType::Ingredient, 0.85);
         }
 
-        // 4. Orphan/Continuation Recovery
-        // If the last line was an ingredient and this one is short/untyped, merge it.
-        if self.last_type == LineType::Ingredient && index > 0 {
-            if trimmed.len() < 40 && !trimmed.contains('.') {
-                return self.mark(line, LineType::Ingredient, 0.7);
+        // 4. Continuation Logic
+        if self.last_type == LineType::Ingredient {
+            // If it doesn't start with a number, but we just had an ingredient,
+            // it's likely a continuation (e.g., "peeled and diced")
+            if !trimmed.chars().next().map_or(false, |c| c.is_numeric()) {
+                return self.mark(line, LineType::Ingredient, 0.8);
+            }
+        }
+
+        if self.last_type == LineType::Instruction {
+            // Call the static method on the struct and await the result
+            if !Self::starts_with_step_indicator(trimmed).await {
+                return self.mark(line, LineType::Instruction, 0.8);
             }
         }
 
@@ -95,6 +104,13 @@ impl<'a> DocumentClassifier<'a> {
             index: 0,
             confidence: conf,
         }
+    }
+
+    async fn starts_with_step_indicator(text: &str) -> bool {
+        let t = text.trim();
+        let re = Regex::new(r"^(\d+[\.\)]|[-•*])").unwrap();
+
+        re.is_match(t)
     }
 
     async fn is_ingredient_pattern(&self, line: &str) -> bool {

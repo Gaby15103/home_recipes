@@ -8,12 +8,13 @@ use sqlx::SqlitePool;
 use crate::dto::recipe_ocr::{ConfirmIngredient, OcrConfirmInput, OcrCorrectionWrapper, OcrResultResponse};
 use crate::dto::upload_dto::RegionDto;
 use crate::recipe_parser::classifier::{ClassifiedLine, LineType};
+use crate::recipe_parser::scanner::ScannedDocument;
 
 pub mod dictionary;
 pub mod grammar;
 mod scanner;
 mod classifier;
-
+mod translator;
 /*
   TODO: ENHANCEMENTS FOR RECIPE PARSER
   ---------------------------------------------------------------------
@@ -63,7 +64,7 @@ pub async fn run_pipeline(
     // 3. Grammar & Dictionary: The "Brain" phase
     // We pass the classified_lines here to be assembled into the final DTO
     let dict_start = Instant::now();
-    let ocr_result = grammar::assemble_recipe(classified_lines, ctx.sqlite_pool, document.raw_text).await?;
+    let ocr_result = grammar::assemble_recipe(classified_lines, ctx.sqlite_pool, document.raw_text, document.detected_lang).await?;
     let dict_duration = dict_start.elapsed();
 
     // --- 🛠️ Feedback Output ---
@@ -82,31 +83,61 @@ pub async fn run_region_pipeline(
     lang: &str,
     ctx: ParserContext<'_>
 ) -> Result<OcrResultResponse, Error> {
-    // 1. Sort logic belongs here
-    regions.sort_by(|a, b| a.image_index.cmp(&b.image_index).then(a.y.cmp(&b.y)));
+    // 1. Coordinate-Aware Sorting: Image index first, then Top-to-Bottom (Y), then Left-to-Right (X)
+    regions.sort_by(|a, b| {
+        a.image_index.cmp(&b.image_index)
+            .then(a.y.cmp(&b.y))
+            .then(a.x.cmp(&b.x))
+    });
 
-    let mut title_acc = String::new();
-    let mut ingredients_acc = String::new();
-    let mut steps_acc = String::new();
+    let mut virtual_lines = Vec::new();
+    let mut raw_text_acc = String::new();
 
     for region in regions {
-        let file = images.get(region.image_index)
-            .ok_or_else(|| Error::BadRequest("Invalid image index".into()))?;
+        let temp_file = images.get(region.image_index)
+            .ok_or_else(|| Error::BadRequest(serde_json::json!({"error": "Index d'image invalide"})))?;
 
-        // 2. Wrap the image processing in a dedicated scanner call
-        let text = scanner::scan_region(file.file.path(), &region, lang)?;
+        // Use your existing scanner logic to crop and OCR the specific region
+        let region_text = scanner::scan_region(temp_file.file.path(), &region, lang)?;
 
-        match region.r#type.as_str() {
-            "title" => title_acc.push_str(&format!("{} ", text)),
-            "ingredients" => ingredients_acc.push_str(&format!("{}\n", text)),
-            "steps" => steps_acc.push_str(&format!("{}\n", text)),
-            _ => {}
+        // 2. Label Injection: Help the classifier by "tagging" the block based on its UI label
+        let hinted_text = match region.label.as_str() {
+            "title" => format!("# TITLE\n{}", region_text),
+            "ingredients" => format!("### Ingrédients\n{}", region_text),
+            "steps" => format!("### Préparation\n{}", region_text),
+            _ => region_text
+        };
+
+        raw_text_acc.push_str(&hinted_text);
+        raw_text_acc.push('\n');
+
+        // Break the region text into individual lines for the classifier
+        for line in hinted_text.lines() {
+            if !line.trim().is_empty() {
+                virtual_lines.push(line.trim().to_string());
+            }
         }
     }
 
-    // 3. Assemble using your existing grammar logic
-    let lines = manual_to_classified(title_acc, ingredients_acc, steps_acc);
-    grammar::assemble_recipe(lines, ctx.sqlite_pool, String::new()).await
+    // 3. Construct a virtual document from the aggregated regions
+    let doc = ScannedDocument {
+        raw_lines: virtual_lines,
+        detected_lang: lang.to_string(),
+        raw_text: raw_text_acc,
+    };
+
+    // 4. Run through the standard Brain (Classifier -> Grammar)
+    let mut classifier = classifier::DocumentClassifier::new(&ctx.known_units, ctx.sqlite_pool);
+    let classified_lines = classifier.segment_document(doc.clone()).await;
+
+    let ocr_result = grammar::assemble_recipe(
+        classified_lines,
+        ctx.sqlite_pool,
+        doc.raw_text,
+        doc.detected_lang
+    ).await?;
+
+    Ok(ocr_result)
 }
 
 fn manual_to_classified(title: String, ingredients: String, steps: String) -> Vec<ClassifiedLine> {

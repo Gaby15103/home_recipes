@@ -10,17 +10,17 @@ use crate::dto::step_group_dto::{StepGroupInput, StepGroupTranslationInput};
 use crate::dto::step_dto::{StepInput, StepTranslationInput};
 use crate::dto::tag_dto::InputTag;
 
-// --- 1. OCR RAW DATA (What the parser found) ---
+// --- 1. OCR RAW DATA (Enhanced with dual-translation) ---
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OcrMatchMetadata {
     pub raw_token: String,
     pub lexicon_id: i32,
     pub term_en: String,
-    pub term_fr: Option<String>,
+    pub term_fr: String, // Made mandatory to ensure consistency
     pub category: String, // "ingredient", "unit", "action"
     pub confidence: f32,
-    pub match_strategy: String, // "exact", "fuzzy_alias", "stemmed"
+    pub match_strategy: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -29,40 +29,44 @@ pub struct ParsedIngredientLine {
     pub unit: Option<OcrMatchMetadata>,
     pub ingredient: Option<OcrMatchMetadata>,
     pub actions: Vec<OcrMatchMetadata>,
-    pub original_line: String,
-    pub display_name: String,
+    pub original_line: String, // What OCR actually saw
+    // Dual display names for the UI list
+    pub display_name_en: String,
+    pub display_name_fr: String,
     pub position: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OcrStep {
     pub position: i32,
-    pub raw_text: String,
+    pub raw_text_en: String,
+    pub raw_text_fr: String,
     pub detected_actions: Vec<OcrMatchMetadata>,
     pub detected_equipment: Vec<OcrMatchMetadata>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OcrIngredientGroup {
-    pub name: String,
+    pub name_en: String,
+    pub name_fr: String,
     pub ingredients: Vec<ParsedIngredientLine>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OcrStepGroup {
-    pub name: String,
+    pub name_en: String,
+    pub name_fr: String,
     pub steps: Vec<OcrStep>,
 }
 
-/// The initial response from Backend -> Frontend after Tesseract runs
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OcrResultResponse {
     pub primary_language: String,
-    pub title: Option<String>,
+    pub title_en: String,
+    pub title_fr: String,
     pub detected_servings: Option<i32>,
     pub ingredient_groups: Vec<OcrIngredientGroup>,
     pub step_groups: Vec<OcrStepGroup>,
-    /// Any text that couldn't be categorized (useful for user to drag-and-drop)
     pub unparsed_segments: Vec<String>,
     pub raw_text: String,
 }
@@ -137,6 +141,7 @@ pub struct ConfirmStep {
     /// Optional: track which OCR segments this step originated from
     pub source_ocr_segments: Vec<String>,
 }
+
 
 // --- 4. CONVERSION LOGIC (OCR -> App DB) ---
 

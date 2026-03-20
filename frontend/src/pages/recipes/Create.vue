@@ -113,7 +113,7 @@ async function handleOcrProcessing(payload: { regions: any[], sourceLang: string
   error.value = null;
 
   try {
-    // Call the regional API instead of the generic image one
+
     const ocrData = await createRecipeFromRegions(
         ocrFiles.value,
         payload.regions,
@@ -121,13 +121,12 @@ async function handleOcrProcessing(payload: { regions: any[], sourceLang: string
     );
 
     if (ocrData) {
-      // Store the result for the next step (Review)
       localStorage.setItem('pending-ocr-data', JSON.stringify(ocrData));
-      router.push("/admin/recipe/ocr-review");
+      await router.push(ROUTES.ADMIN.RECIPE.OCR_REVIEW);
     }
   } catch (err: any) {
     console.error("OCR Regional Processing Error:", err);
-    error.value = t('Admin.recipe.errors.scanFailed') || "Failed to process selected regions";
+    error.value = t('Admin.recipe.errors.scanFailed') || "OCR failed";
   } finally {
     loading.value = false;
   }
