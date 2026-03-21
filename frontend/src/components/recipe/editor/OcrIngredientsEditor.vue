@@ -12,11 +12,13 @@ import type {
   IngredientTranslationCreate
 } from "@/models/RecipeCreate.ts";
 import type { OcrIngredientGroup } from "@/models/OcrResult.ts";
+import type {Unit} from "@/models/Recipe.ts";
 
 const props = defineProps<{
   modelValue: IngredientGroupCreate[],
   currentLang: string,
-  originalOcrGroups?: OcrIngredientGroup[]
+  originalOcrGroups?: OcrIngredientGroup[],
+  units: Unit[]
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -92,7 +94,9 @@ const removeGroup = (idx: number) => {
             <div v-if="editingRow !== `${gIdx}-${iIdx}`" class="flex-1 flex items-center gap-4">
               <div class="min-w-[80px] font-mono text-sm">
                 <span class="font-bold text-foreground">{{ ing.quantity || '—' }}</span>
-                <span class="ml-1 text-[10px] text-muted-foreground uppercase">{{ ing.unit_id || '' }}</span>
+                <span class="ml-1 text-[10px] text-muted-foreground uppercase">{{
+                    units.find(u => u.id == ing.unit_id)?.symbol || ''
+                  }}</span>
               </div>
               <span class="text-sm font-medium flex-1">{{ getTrans(ing, currentLang).data || 'Unnamed ingredient' }}</span>
 

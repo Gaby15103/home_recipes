@@ -15,11 +15,14 @@ import router from "@/router"
 import {ROUTES} from "@/router/routes"
 import type {Language} from "@/models/Language.ts"
 import {getAllLanguage} from "@/api/Language.ts"
+import type {Unit} from "@/models/Recipe.ts";
+import {getUnits} from "@/api/unit.ts";
 
 const storedOcr = ref<OcrRecipeResponse | null>(null)
 const currentEditLang = ref("fr")
 const available_languages = ref<Language[]>([])
 const viewMode = ref<'editor' | 'preview' | 'split'>('split')
+const units = ref<Unit[]>([]);
 
 const recipe = ref<RecipeCreate>({
   author: null,
@@ -61,7 +64,7 @@ const hydrateFromBackend = () => {
     ],
     ingredients: group.ingredients.map(ing => ({
       quantity: ing.quantity || 0,
-      unit_id: ing.unit?.lexicon_id?.toString() || "",
+      unit_id: units.value.find(u => u.name_en.toLowerCase() == ing.unit?.term_en.toLowerCase())?.id || "",
       position: ing.position,
       translations: [
         {
@@ -141,16 +144,30 @@ const submit = async () => {
 }
 
 onMounted(async () => {
+  // 1. Load the raw OCR data immediately
   const raw = localStorage.getItem('pending-ocr-data')
   if (raw) {
     storedOcr.value = JSON.parse(raw)
-    hydrateFromBackend()
   }
 
-  const langs = await getAllLanguage()
-  available_languages.value = langs
-  currentEditLang.value = langs.find(l => l.is_default)?.code || "fr"
-})
+  // 2. Fetch all necessary metadata in parallel
+  const [langs, fetchedUnits] = await Promise.all([
+    getAllLanguage(),
+    getUnits()
+  ]);
+
+  // 3. Set the reactive refs
+  available_languages.value = langs;
+  units.value = fetchedUnits;
+
+  // Set default language based on fetched data
+  currentEditLang.value = langs.find(l => l.is_default)?.code || "fr";
+
+  // 4. Finally, hydrate the recipe now that units.value is populated
+  if (storedOcr.value) {
+    hydrateFromBackend();
+  }
+});
 </script>
 <template>
   <div v-if="storedOcr" class="min-h-screen bg-background text-foreground antialiased">
@@ -210,6 +227,7 @@ onMounted(async () => {
               v-model="recipe.ingredient_groups"
               :current-lang="currentEditLang"
               :original-ocr-groups="storedOcr.ingredient_groups"
+              :units="units"
           />
 
           <StepsEditor

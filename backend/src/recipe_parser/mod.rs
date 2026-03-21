@@ -95,7 +95,7 @@ pub async fn run_region_pipeline(
 
     for region in regions {
         let temp_file = images.get(region.image_index)
-            .ok_or_else(|| Error::BadRequest(serde_json::json!({"error": "Index d'image invalide"})))?;
+            .ok_or_else(|| Error::BadRequest(serde_json::json!({"error": "Index image invalid"})))?;
 
         // Use your existing scanner logic to crop and OCR the specific region
         let region_text = scanner::scan_region(temp_file.file.path(), &region, lang)?;
