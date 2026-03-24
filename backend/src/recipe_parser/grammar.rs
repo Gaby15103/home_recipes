@@ -1,5 +1,5 @@
 use crate::recipe_parser::classifier::{ClassifiedLine, LineType};
-use crate::recipe_parser::{dictionary, translator};
+use crate::recipe_parser::{classifier, dictionary, translator};
 use crate::dto::recipe_ocr::{OcrResultResponse, ParsedIngredientLine, OcrStep, OcrIngredientGroup, OcrStepGroup};
 use sqlx::SqlitePool;
 use crate::errors::Error;
@@ -111,35 +111,48 @@ async fn flush_ing_buffer(
 ) -> Result<(), Error> {
     if buffer.is_empty() { return Ok(()); }
 
+    // 1. Combine the buffer into one string
     let combined = buffer.join(" ");
 
-    // Dictionary analysis is always done in French for consistency
-    let analysis_text = if source_lang == "en" {
-        translator::translate_text(&combined, "en", "fr").await?
-    } else {
-        combined.clone()
-    };
+    // 2. Use the cleaner to split multi-ingredient lines (e.g., items separated by commas)
+    // This assumes you updated clean_ingredient_text to replace ", " with "\n"
+    let cleaned_content = crate::recipe_parser::classifier::DocumentClassifier::clean_ingredient_text(&combined);
 
-    // Fix: Destructure the 6-item tuple from dictionary::resolve_line
-    let (qty, unit, ing, actions, disp_en, disp_fr) = dictionary::resolve_line(&analysis_text, pool).await?;
+    // 3. Process each segment (line) as a potential individual ingredient
+    for (sub_idx, segment) in cleaned_content.lines().enumerate() {
+        let segment = segment.trim();
+        if segment.is_empty() { continue; }
 
-    // Ensure English display name is translated if it came from French analysis
-    let final_disp_en = if source_lang == "fr" {
-        translator::translate_text(&disp_fr, "fr", "en").await?
-    } else {
-        disp_en
-    };
+        // Analysis is always in French for the lexicon
+        let analysis_text = if source_lang == "en" {
+            translator::translate_text(segment, "en", "fr").await?
+        } else {
+            segment.to_string()
+        };
 
-    group.ingredients.push(ParsedIngredientLine {
-        quantity: qty,
-        unit,
-        ingredient: ing,
-        actions,
-        original_line: combined,
-        display_name_en: final_disp_en,
-        display_name_fr: disp_fr,
-        position: index as i32,
-    });
+        // Resolve the specific segment against the dictionary
+        let (qty, unit, ing, actions, disp_en, disp_fr) =
+            dictionary::resolve_line(&analysis_text, pool).await?;
+
+        // Translate the display name back to English if the source was French
+        let final_disp_en = if source_lang == "fr" {
+            translator::translate_text(&disp_fr, "fr", "en").await?
+        } else {
+            disp_en
+        };
+
+        // Push the individual ingredient to the group
+        group.ingredients.push(ParsedIngredientLine {
+            quantity: qty,
+            unit,
+            ingredient: ing,
+            actions,
+            original_line: segment.to_string(),
+            display_name_en: final_disp_en,
+            display_name_fr: disp_fr,
+            position: (index + sub_idx) as i32,
+        });
+    }
 
     buffer.clear();
     Ok(())

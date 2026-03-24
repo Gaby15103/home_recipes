@@ -83,58 +83,70 @@ pub async fn run_region_pipeline(
     lang: &str,
     ctx: ParserContext<'_>
 ) -> Result<OcrResultResponse, Error> {
-    // 1. Coordinate-Aware Sorting: Image index first, then Top-to-Bottom (Y), then Left-to-Right (X)
     regions.sort_by(|a, b| {
         a.image_index.cmp(&b.image_index)
             .then(a.y.cmp(&b.y))
             .then(a.x.cmp(&b.x))
     });
 
-    let mut virtual_lines = Vec::new();
+    let mut classified_lines = Vec::new();
     let mut raw_text_acc = String::new();
+    let mut classifier = classifier::DocumentClassifier::new(&ctx.known_units, ctx.sqlite_pool);
 
-    for region in regions {
+    for (i, region) in regions.into_iter().enumerate() {
         let temp_file = images.get(region.image_index)
             .ok_or_else(|| Error::BadRequest(serde_json::json!({"error": "Index image invalid"})))?;
 
-        // Use your existing scanner logic to crop and OCR the specific region
         let region_text = scanner::scan_region(temp_file.file.path(), &region, lang)?;
+        if region_text.is_empty() { continue; }
 
-        // 2. Label Injection: Help the classifier by "tagging" the block based on its UI label
-        let hinted_text = match region.label.as_str() {
-            "title" => format!("# TITLE\n{}", region_text),
-            "ingredients" => format!("### Ingrédients\n{}", region_text),
-            "steps" => format!("### Préparation\n{}", region_text),
-            _ => region_text
-        };
-
-        raw_text_acc.push_str(&hinted_text);
+        raw_text_acc.push_str(&region_text);
         raw_text_acc.push('\n');
 
-        // Break the region text into individual lines for the classifier
-        for line in hinted_text.lines() {
-            if !line.trim().is_empty() {
-                virtual_lines.push(line.trim().to_string());
+        // Logic to buffer ingredients that span multiple lines
+        let mut current_buffer: Option<String> = None;
+
+        for line in region_text.lines() {
+            let trimmed = line.trim();
+            if trimmed.is_empty() { continue; }
+
+            if region.label == "ingredients" {
+                // Check if this line starts a NEW ingredient (starts with number/fraction)
+                let is_new = trimmed.chars().next().map_or(false, |c| {
+                    c.is_numeric() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c)
+                });
+
+                if is_new {
+                    // Process the previous buffered ingredient if it exists
+                    if let Some(prev) = current_buffer {
+                        classified_lines.push(classifier.classify_labeled_region(prev, &region.label, i));
+                    }
+                    current_buffer = Some(trimmed.to_string());
+                } else if let Some(ref mut buffer) = current_buffer {
+                    // It's a continuation (e.g., "crues, décortiquées...")
+                    buffer.push(' ');
+                    buffer.push_str(trimmed);
+                } else {
+                    // Fallback if the first line of a region doesn't start with a number
+                    current_buffer = Some(trimmed.to_string());
+                }
+            } else {
+                // For "steps" or "title", just process normally
+                classified_lines.push(classifier.classify_labeled_region(trimmed.to_string(), &region.label, i));
             }
         }
+
+        // Push the final buffered ingredient for this region
+        if let Some(last_buffered) = current_buffer {
+            classified_lines.push(classifier.classify_labeled_region(last_buffered, &region.label, i));
+        }
     }
-
-    // 3. Construct a virtual document from the aggregated regions
-    let doc = ScannedDocument {
-        raw_lines: virtual_lines,
-        detected_lang: lang.to_string(),
-        raw_text: raw_text_acc,
-    };
-
-    // 4. Run through the standard Brain (Classifier -> Grammar)
-    let mut classifier = classifier::DocumentClassifier::new(&ctx.known_units, ctx.sqlite_pool);
-    let classified_lines = classifier.segment_document(doc.clone()).await;
 
     let ocr_result = grammar::assemble_recipe(
         classified_lines,
         ctx.sqlite_pool,
-        doc.raw_text,
-        doc.detected_lang
+        raw_text_acc,
+        lang.to_string()
     ).await?;
 
     Ok(ocr_result)

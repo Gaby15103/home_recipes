@@ -96,6 +96,23 @@ impl<'a> DocumentClassifier<'a> {
         self.mark(line, LineType::Instruction, 0.5)
     }
 
+    pub(crate) fn classify_labeled_region(&mut self, text: String, label: &str, _index: usize) -> ClassifiedLine {
+        let (processed_text, l_type) = match label {
+            "title" => (text.clone(), LineType::Title),
+            "ingredients" => {
+                (Self::clean_ingredient_text(&text), LineType::Ingredient)
+            },
+            "steps" => (text.clone(), LineType::Instruction),
+            _ => (text.clone(), LineType::Fluff),
+        };
+
+        if processed_text.is_empty() {
+            return self.mark(text, LineType::Fluff, 0.0);
+        }
+
+        self.mark(processed_text, l_type, 1.0)
+    }
+
     fn mark(&mut self, text: String, l_type: LineType, conf: f32) -> ClassifiedLine {
         self.last_type = l_type.clone();
         ClassifiedLine {
@@ -119,11 +136,12 @@ impl<'a> DocumentClassifier<'a> {
         // 1. FAST PATH: Check against your uniform English symbols (e.g., ml, g, tbsp)
         let has_unit = self.known_units.iter().any(|u| {
             let sym = u.symbol.to_lowercase();
-            // Word boundary check: ensure 'g' doesn't match 'oignon'
             lower.split_whitespace().any(|word| {
-                // Strip trailing periods from OCR (e.g., "5g." -> "5g")
                 let clean_word = word.trim_end_matches('.');
-                clean_word == sym || clean_word.ends_with(&sym) && clean_word.chars().next().map_or(false, |c| c.is_numeric())
+                // Add OCR aliases for 'ml' specifically
+                let is_ml_alias = (clean_word == "mi" || clean_word == "mt" || clean_word == "m1") && sym == "ml";
+
+                clean_word == sym || is_ml_alias || (clean_word.ends_with(&sym) && clean_word.chars().next().map_or(false, |c| c.is_numeric()))
             })
         });
 
@@ -197,5 +215,18 @@ impl<'a> DocumentClassifier<'a> {
             || lower.starts_with("page")
             || lower.contains("www.")
             || lower.contains("http")
+    }
+
+    pub(crate) fn clean_ingredient_text(text: &str) -> String {
+        let mut cleaned = text.to_lowercase();
+
+        // Fix the specific (1 1) -> (1 t) error before classification
+        let re_tasse = Regex::new(r"\((\d+)\s+1\)").unwrap();
+        cleaned = re_tasse.replace_all(&cleaned, "($1 t)").to_string();
+
+        let re_artifacts = Regex::new(r"(?i)\b(zd'|xde|mi7|mt7|mt|mi)\b|^x\s+").unwrap();
+        cleaned = re_artifacts.replace_all(&cleaned, " ").to_string();
+
+        cleaned.trim().to_string()
     }
 }

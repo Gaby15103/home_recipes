@@ -3,7 +3,7 @@ use crate::dto::recipe_ocr::OcrMatchMetadata;
 use crate::errors::Error;
 use regex::Regex;
 
-/// Checks if a word is a functional "noise" word that should never trigger a DB search.
+/// Checks if a word is a functional "noise" word that should never trigger a DB search[cite: 2, 3].
 fn is_stop_word(word: &str) -> bool {
     let stops = [
         "de", "d'", "du", "des", "le", "la", "les", "au", "aux",
@@ -14,21 +14,34 @@ fn is_stop_word(word: &str) -> bool {
     stops.contains(&clean.as_str())
 }
 
+/// Normalizes specific OCR failures into searchable terms[cite: 58, 123].
+fn normalize_ocr_typos(token: &str) -> String {
+    match token.to_lowercase().as_str() {
+        "mt" | "mi" | "mi7" => "ml".to_string(),
+        "1/2 1" | "12 t" | "1 1)" => "1/2 t".to_string(),
+        "0ignons" => "oignons".to_string(),
+        _ => token.to_string(),
+    }
+}
+
 pub async fn resolve_line(
     line: &str,
     pool: &SqlitePool
 ) -> Result<(Option<f32>, Option<OcrMatchMetadata>, Option<OcrMatchMetadata>, Vec<OcrMatchMetadata>, String, String), Error> {
-    // 1. Remove leading artifacts and noise
+    // 1. Pre-process artifacts [cite: 4, 5]
     let re_artifact = Regex::new(r"(?i)^[^a-z\d¼½¾⅓⅔⅛⅜⅝⅞]+").unwrap();
     let cleaned_line = re_artifact.replace(line, "").to_string();
 
-    let tokens: Vec<String> = cleaned_line.split_whitespace().map(|s| s.to_string()).collect();
+    // 2. Tokenize and Normalize [cite: 5, 58]
+    let tokens: Vec<String> = cleaned_line
+        .split_whitespace()
+        .map(|s| normalize_ocr_typos(s))
+        .collect();
 
     let mut quantity = None;
     let mut unit = None;
     let mut ingredient = None;
     let mut actions = Vec::new();
-
     let mut display_indices = Vec::new();
 
     let mut i = 0;
@@ -39,25 +52,28 @@ pub async fn resolve_line(
 
         let mut matched = false;
 
-        // Multi-word greedy matching
+        // 3. Multi-word greedy matching (Size 5 down to 1) [cite: 9]
         for size in (1..=5).rev() {
             if i + size <= tokens.len() {
                 let chunk = tokens[i..i+size].join(" ");
 
-                if is_stop_word(&chunk) {
-                    continue;
-                }
+                if is_stop_word(&chunk) { continue; }
 
                 if let Some(metadata) = lookup_lexicon(&chunk, pool).await? {
                     match metadata.category.as_str() {
                         "unit" => if unit.is_none() { unit = Some(metadata) },
                         "ingredient" => {
-                            ingredient = Some(metadata.clone());
+                            if ingredient.is_none() {
+                                ingredient = Some(metadata.clone());
+                            } else {
+                                actions.push(metadata.clone());
+                            }
                             for j in 0..size { display_indices.push(i + j); }
                         },
                         "action" | "descriptor" | "text" => {
                             actions.push(metadata);
-                            for j in 0..size { display_indices.push(i + j); }
+                            for j in 0..size { display_indices.push(i + j);
+                            }
                         },
                         _ => {}
                     }
@@ -68,12 +84,13 @@ pub async fn resolve_line(
             }
         }
 
+        // 4. CATCH-ALL: Numeric recovery or valid word display [cite: 18, 20]
         if !matched {
             if quantity.is_none() && !has_letters && is_fraction {
                 if let Ok(val) = parse_numeric(current_token) {
                     quantity = Some(val);
                 }
-            } else if !is_stop_word(current_token) && has_letters {
+            } else if has_letters && !is_stop_word(current_token) {
                 display_indices.push(i);
             }
             i += 1;
@@ -83,53 +100,37 @@ pub async fn resolve_line(
     display_indices.sort_unstable();
     display_indices.dedup();
 
-    // Create the base display name (usually in the analyzed language)
     let display_name = display_indices.iter()
         .map(|&idx| tokens[idx].as_str())
         .collect::<Vec<_>>()
         .join(" ");
 
-    // Return the tuple with 6 elements to match the bilingual requirements in grammar.rs
-    Ok((
-        quantity,
-        unit,
-        ingredient,
-        actions,
-        display_name.clone(), // disp_en
-        display_name          // disp_fr (will be overridden/translated in grammar.rs if needed)
-    ))
+    Ok((quantity, unit, ingredient, actions, display_name.clone(), display_name))
 }
 
 async fn lookup_lexicon(text: &str, pool: &SqlitePool) -> Result<Option<OcrMatchMetadata>, Error> {
     let word = text.to_lowercase().trim().to_string();
-    let clean_query = word.replace(|c: char| !c.is_alphanumeric() && !c.is_whitespace(), "");
 
-    if clean_query.is_empty() {
+    // Skip small tokens unless they are common units [cite: 27]
+    if word.len() < 4 && !["ml", "g", "lb", "oz", "t.", "c."].contains(&word.as_str()) {
         return Ok(None);
     }
 
-    let exact_query = format!("\"{}\"", clean_query);
+    let clean_query = word.replace(|c: char| !c.is_alphanumeric() && !c.is_whitespace(), "");
+    if clean_query.is_empty() { return Ok(None); }
+
     let prefix_query = format!("\"{}\"*", clean_query);
 
     let row = sqlx::query(
         r#"
-            WITH fts_results AS (
-                SELECT lexicon_id, rank, raw_text
-                FROM lexicon_fts
-                WHERE raw_text MATCH ?
-                LIMIT 10
-            )
-            SELECT
-                l.id, l.term_en, l.term_fr, l.category, f.rank,
-                a.confidence as base_confidence
-            FROM fts_results f
+            SELECT l.id, l.term_en, l.term_fr, l.category, f.rank, a.confidence as base_confidence
+            FROM lexicon_fts f
             JOIN lexicon l ON l.id = f.lexicon_id
             LEFT JOIN aliases a ON a.lexicon_id = l.id AND a.raw_text = f.raw_text
-            ORDER BY
-                (f.raw_text = ?) DESC,
-                f.rank ASC
+            WHERE f.raw_text MATCH ?
+            ORDER BY (f.raw_text = ?) DESC, f.rank ASC
             LIMIT 1
-    "#
+        "#
     )
         .bind(&prefix_query)
         .bind(&clean_query)

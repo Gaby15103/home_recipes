@@ -79,28 +79,35 @@ pub fn scan_region(path: &std::path::Path, region: &RegionDto, lang: &str) -> Re
     let clean_png_bytes = tesseract::preprocess_for_ocr(&buf.into_inner());
 
     // Using PSM 6 for specific regions is usually the sweet spot
-    let (_, text) = tesseract::run_tesseract_engine(&clean_png_bytes, "eng+fra", "6")?;
+    let (_, text) = tesseract::run_tesseract_engine(&clean_png_bytes, "eng+fra", "4")?;
 
-    Ok(text.trim().to_string())
+    Ok(clean_ocr_typos(text.trim().to_string()))
 }
 
 fn clean_ocr_typos(text: String) -> String {
-    // 1. Normalize vulgar fractions immediately
     let mut t = text
         .replace('½', " 1/2")
         .replace('¼', " 1/4")
         .replace('¾', " 3/4")
-        .replace("I/2", "1/2") // Common Tesseract error
+        .replace("I/2", "1/2")
         .replace("I/4", "1/4")
         .replace("mlnute", "minute")
-        .replace("atab)", "c. à tab"); // Specific to your recipe's handwritten-style OCR
+        .replace("atab)", "c. à tab");
 
-    // 2. Remove "Stray Vertical Bars" often caused by the lines in your photo
+    let re_ml = regex::Regex::new(r"(?i)\b(mi|mt|m1|mln)\b").unwrap();
+    t = re_ml.replace_all(&t, "ml").to_string();
+
+    let re_tasse = regex::Regex::new(r"\((\d+)\s+1\)").unwrap();
+    t = re_tasse.replace_all(&t, "($1 t)").to_string();
+
+    t = t.replace("atab.", "à tab.")
+        .replace("atab}", "à tab.")
+        .replace("—", "") // Supprime les longs tirets de tableau
+        .replace("_", "");
+
     let re_pipes = regex::Regex::new(r"[|¦!]").unwrap();
     t = re_pipes.replace_all(&t, "").to_string();
 
-    // 3. Strip leading junk characters like "î" or "%"
-    // that appear before the actual quantity "250 ml"
     let re_junk_prefix = regex::Regex::new(r"^[^a-zA-Z\d\s/¼½¾]{1,2}\s+").unwrap();
     t = re_junk_prefix.replace(&t, "").to_string();
 

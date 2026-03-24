@@ -1,8 +1,8 @@
 use crate::errors::Error;
-use tesseract_rs::TesseractAPI;
+use tesseract_rs::{TessPageIteratorLevel, TesseractAPI};
 use std::path::Path;
 use std::sync::Once;
-use image::{DynamicImage, GenericImageView};
+use image::{DynamicImage, GenericImageView, Luma};
 use magick_rust::{MagickWand, magick_wand_genesis, ColorspaceType};
 
 pub struct OcrLine {
@@ -53,7 +53,6 @@ pub fn scan_image_segment(img: DynamicImage, lang: &str) -> Result<String, Error
     Ok(text.trim().to_string())
 }
 
-// Helper function to prevent code duplication
 pub(crate) fn run_tesseract_engine(img_bytes: &[u8], lang: &str, psm: &str) -> Result<(Vec<OcrLine>, String), Error> {
     let mut api = TesseractAPI::new();
     api.init("/usr/share/tessdata", lang).map_err(|_| Error::InternalServerError)?;
@@ -64,25 +63,63 @@ pub(crate) fn run_tesseract_engine(img_bytes: &[u8], lang: &str, psm: &str) -> R
     let img = image::load_from_memory(img_bytes)
         .map_err(|e| Error::BadRequest(serde_json::json!({"error": e.to_string()})))?;
 
-    let (w, h) = img.dimensions();
-    let raw_data = img.to_rgb8();
+    let mut gray_img = img.grayscale().to_luma8();
 
-    api.set_image(&raw_data.into_raw(), w as i32, h as i32, 3, (w * 3) as i32)
+    for pixel in gray_img.pixels_mut() {
+        if pixel.0[0] < 140 {
+            *pixel = Luma([0u8]);
+        } else {
+            *pixel = Luma([255u8]);
+        }
+    }
+
+    let (w, h) = gray_img.dimensions();
+    let final_rgb = DynamicImage::ImageLuma8(gray_img).to_rgb8();
+
+    api.set_image(&final_rgb.into_raw(), w as i32, h as i32, 3, (w * 3) as i32)
         .map_err(|_| Error::InternalServerError)?;
 
     api.recognize().map_err(|_| Error::InternalServerError)?;
     let full_text = api.get_utf8_text().map_err(|_| Error::InternalServerError)?;
 
-    let ocr_lines = full_text.lines()
-        .enumerate()
-        .filter(|(_, line)| !line.trim().is_empty())
-        .map(|(i, line)| OcrLine {
-            text: line.trim().to_string(),
-            y_pos: i as i32,
-            height: 10,
-            confidence: 0.9,
-        })
-        .collect();
+    let mut ocr_lines = Vec::new();
+
+    if let Ok(it) = api.get_iterator() {
+        loop {
+            if let Ok(text) = it.get_utf8_text(TessPageIteratorLevel::RIL_TEXTLINE) {
+
+                let trimmed = text.trim();
+
+                if !trimmed.is_empty() {
+                    let cleaned_text = trimmed
+                        .replace("mi ", "ml ")
+                        .replace("mt ", "ml ")
+                        .replace("(1 1)", "(1 t)")
+                        .replace("—", "")
+                        .replace("_", "")
+                        .replace("  ", " ")
+                        .trim()
+                        .to_string();
+
+                    if let Ok((_, top, _, bottom)) = it.get_bounding_box(TessPageIteratorLevel::RIL_TEXTLINE) {
+                        let conf = it.confidence(TessPageIteratorLevel::RIL_TEXTLINE).unwrap_or(0.0);
+
+                        ocr_lines.push(OcrLine {
+                            text: cleaned_text,
+                            y_pos: top,
+                            height: bottom - top,
+                            confidence: conf / 100.0,
+                        });
+                    }
+                }
+            }
+
+            match it.next(TessPageIteratorLevel::RIL_TEXTLINE) {
+                Ok(true) => continue,
+                _ => break,
+            }
+        }
+    }
 
     Ok((ocr_lines, full_text))
 }
