@@ -1,6 +1,7 @@
 use std::time::Instant;
 use std::path::Path;
 use actix_multipart::form::tempfile::TempFile;
+use regex::Regex;
 use crate::errors::Error;
 use crate::dto::recipe_dto::CreateRecipeInput;
 use crate::dto::unit_dto::UnitDto;
@@ -106,39 +107,39 @@ pub async fn run_region_pipeline(
         // Logic to buffer ingredients that span multiple lines
         let mut current_buffer: Option<String> = None;
 
+        // Dans mod.rs (run_region_pipeline)
+
         for line in region_text.lines() {
             let trimmed = line.trim();
             if trimmed.is_empty() { continue; }
 
-            if region.label == "ingredients" {
-                // Check if this line starts a NEW ingredient (starts with number/fraction)
-                let is_new = trimmed.chars().next().map_or(false, |c| {
-                    c.is_numeric() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c)
-                });
+            // Utilise la regex plus permissive qu'on a vue (chiffre + n'importe quel signe)
+            let is_new_step = region.label == "steps" && Regex::new(r"^(\d+[\.\),\s]|[-•*])").unwrap().is_match(trimmed);
+            let is_new_ing = region.label == "ingredients" && trimmed.chars().next().map_or(false, |c| c.is_numeric() || "¼½¾⅓⅔⅛⅜⅝⅞".contains(c));
 
-                if is_new {
-                    // Process the previous buffered ingredient if it exists
-                    if let Some(prev) = current_buffer {
-                        classified_lines.push(classifier.classify_labeled_region(prev, &region.label, i));
-                    }
-                    current_buffer = Some(trimmed.to_string());
-                } else if let Some(ref mut buffer) = current_buffer {
-                    // It's a continuation (e.g., "crues, décortiquées...")
+            if is_new_step || is_new_ing {
+                // 1. On vide ce qu'il y avait avant
+                if let Some(prev) = current_buffer {
+                    classified_lines.push(classifier.classify_labeled_region(prev, &region.label, i).await);
+                }
+                // 2. On commence le nouveau buffer
+                current_buffer = Some(trimmed.to_string());
+            } else {
+                // C'est une continuation (comme la fin de l'étape 6 qui n'a pas de chiffre)
+                if let Some(ref mut buffer) = current_buffer {
                     buffer.push(' ');
                     buffer.push_str(trimmed);
                 } else {
-                    // Fallback if the first line of a region doesn't start with a number
+                    // Cas de secours : si on a du texte sans buffer au début d'une région
                     current_buffer = Some(trimmed.to_string());
                 }
-            } else {
-                // For "steps" or "title", just process normally
-                classified_lines.push(classifier.classify_labeled_region(trimmed.to_string(), &region.label, i));
             }
         }
 
         // Push the final buffered ingredient for this region
         if let Some(last_buffered) = current_buffer {
-            classified_lines.push(classifier.classify_labeled_region(last_buffered, &region.label, i));
+            // ADD .await HERE
+            classified_lines.push(classifier.classify_labeled_region(last_buffered, &region.label, i).await);
         }
     }
 

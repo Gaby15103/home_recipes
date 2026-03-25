@@ -19,7 +19,6 @@ pub async fn assemble_recipe(
     let mut title_fr = String::new();
     let mut detected_servings = None;
 
-    // Initialize the default groups with bilingual names
     let mut current_ing_group = OcrIngredientGroup {
         name_en: "Ingredients".into(),
         name_fr: "Ingrédients".into(),
@@ -105,43 +104,35 @@ pub async fn assemble_recipe(
 async fn flush_ing_buffer(
     buffer: &mut Vec<String>,
     group: &mut OcrIngredientGroup,
-    index: usize,
+    _index: usize,
     pool: &SqlitePool,
     source_lang: &str,
 ) -> Result<(), Error> {
     if buffer.is_empty() { return Ok(()); }
 
-    // 1. Combine the buffer into one string
     let combined = buffer.join(" ");
 
-    // 2. Use the cleaner to split multi-ingredient lines (e.g., items separated by commas)
-    // This assumes you updated clean_ingredient_text to replace ", " with "\n"
-    let cleaned_content = crate::recipe_parser::classifier::DocumentClassifier::clean_ingredient_text(&combined);
+    let cleaned_content = classifier::DocumentClassifier::clean_ingredient_text(&combined);
 
-    // 3. Process each segment (line) as a potential individual ingredient
-    for (sub_idx, segment) in cleaned_content.lines().enumerate() {
+    for segment in cleaned_content.lines() {
         let segment = segment.trim();
         if segment.is_empty() { continue; }
 
-        // Analysis is always in French for the lexicon
         let analysis_text = if source_lang == "en" {
             translator::translate_text(segment, "en", "fr").await?
         } else {
             segment.to_string()
         };
 
-        // Resolve the specific segment against the dictionary
         let (qty, unit, ing, actions, disp_en, disp_fr) =
             dictionary::resolve_line(&analysis_text, pool).await?;
 
-        // Translate the display name back to English if the source was French
         let final_disp_en = if source_lang == "fr" {
             translator::translate_text(&disp_fr, "fr", "en").await?
         } else {
             disp_en
         };
 
-        // Push the individual ingredient to the group
         group.ingredients.push(ParsedIngredientLine {
             quantity: qty,
             unit,
@@ -150,7 +141,8 @@ async fn flush_ing_buffer(
             original_line: segment.to_string(),
             display_name_en: final_disp_en,
             display_name_fr: disp_fr,
-            position: (index + sub_idx) as i32,
+            // FIX: Use length for position
+            position: group.ingredients.len() as i32,
         });
     }
 
@@ -161,23 +153,43 @@ async fn flush_ing_buffer(
 async fn flush_step_buffer(
     buffer: &mut Vec<String>,
     group: &mut OcrStepGroup,
-    index: usize,
+    _index: usize,
     source_lang: &str
 ) -> Result<(), Error> {
     if buffer.is_empty() { return Ok(()); }
 
     let combined = buffer.join(" ");
 
-    let text_en = if source_lang == "fr" { translator::translate_text(&combined, "fr", "en").await? } else { combined.clone() };
-    let text_fr = if source_lang == "en" { translator::translate_text(&combined, "en", "fr").await? } else { combined.clone() };
+    let re_step_split = Regex::new(r"(?m)(?:\s+|^)(\d+[\.\)]|[-•*])\s+").unwrap();
 
-    group.steps.push(OcrStep {
-        position: index as i32,
-        raw_text_en: text_en,
-        raw_text_fr: text_fr,
-        detected_actions: Vec::new(),
-        detected_equipment: Vec::new(),
-    });
+    let mut step_texts = Vec::new();
+    let mut last_pos = 0;
+
+    for mat in re_step_split.find_iter(&combined) {
+        if mat.start() > last_pos {
+            let part = combined[last_pos..mat.start()].trim().to_string();
+            if !part.is_empty() {
+                step_texts.push(part);
+            }
+        }
+        last_pos = mat.start();
+    }
+    step_texts.push(combined[last_pos..].trim().to_string());
+
+    for text in step_texts {
+        if text.is_empty() { continue; }
+
+        let text_en = if source_lang == "fr" { translator::translate_text(&text, "fr", "en").await? } else { text.clone() };
+        let text_fr = if source_lang == "en" { translator::translate_text(&text, "en", "fr").await? } else { text.clone() };
+
+        group.steps.push(OcrStep {
+            position: group.steps.len() as i32,
+            raw_text_en: text_en,
+            raw_text_fr: text_fr,
+            detected_actions: Vec::new(),
+            detected_equipment: Vec::new(),
+        });
+    }
 
     buffer.clear();
     Ok(())
@@ -192,7 +204,7 @@ fn starts_with_vulgar_fraction(text: &str) -> bool {
 }
 
 fn starts_with_step_indicator(text: &str) -> bool {
-    let re = Regex::new(r"^(\d+[\.\)]|[-•*])").unwrap();
+    let re = Regex::new(r"^(\d+[\.\),\s]|[-•*])").unwrap();
     re.is_match(text.trim())
 }
 

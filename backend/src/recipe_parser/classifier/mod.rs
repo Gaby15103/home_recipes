@@ -96,19 +96,28 @@ impl<'a> DocumentClassifier<'a> {
         self.mark(line, LineType::Instruction, 0.5)
     }
 
-    pub(crate) fn classify_labeled_region(&mut self, text: String, label: &str, _index: usize) -> ClassifiedLine {
+    // In classifier/mod.rs
+    pub(crate) async fn classify_labeled_region(&mut self, text: String, label: &str, _index: usize) -> ClassifiedLine {
+        let lower = text.to_lowercase();
+
+        // 1. Check if it's a section marker (PRÉPARATION, Instructions, etc.) [cite: 358]
+        if self.is_section_marker(&lower).await {
+            return self.mark(text, LineType::Header, 1.0);
+        }
+
         let (processed_text, l_type) = match label {
             "title" => (text.clone(), LineType::Title),
-            "ingredients" => {
-                (Self::clean_ingredient_text(&text), LineType::Ingredient)
+            "ingredients" => (Self::clean_ingredient_text(&text), LineType::Ingredient),
+            "steps" => {
+                // Safety check: short lines with no numbers are often sub-headers
+                if text.len() < 25 && !text.chars().next().map_or(false, |c| c.is_numeric()) {
+                    (text, LineType::Header)
+                } else {
+                    (text, LineType::Instruction)
+                }
             },
-            "steps" => (text.clone(), LineType::Instruction),
             _ => (text.clone(), LineType::Fluff),
         };
-
-        if processed_text.is_empty() {
-            return self.mark(text, LineType::Fluff, 0.0);
-        }
 
         self.mark(processed_text, l_type, 1.0)
     }

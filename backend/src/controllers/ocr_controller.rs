@@ -67,7 +67,7 @@ pub async fn get_ocr_suggestions(
 pub async fn confirm_ocr_recipe(
     state: web::Data<AppState>,
     auth: AuthenticatedUser,
-    web::Json(payload): web::Json<OcrCorrectionWrapper>, // Changed from OcrConfirmInput
+    web::Json(payload): web::Json<OcrCorrectionWrapper>,
 ) -> Result<HttpResponse, Error> {
     auth.require_roles(&[Role::Admin, Role::Moderator, Role::Superuser])?;
 
