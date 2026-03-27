@@ -13,7 +13,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         web::scope("/ocr")
             .app_data(web::PayloadConfig::new(20 * 1024 * 1024)) // Increased for multiple images
             // Phase 1: Upload images, get back structured suggestions for calibration
-            .route("/process", web::post().to(get_ocr_suggestions))
+            .route("/process", web::post().to(recipe_from_image))
             .route("/process_regions", web::post().to(recipe_from_regions))
             // Phase 2: Accept the final calibrated data to create the actual recipe
             .route("/confirm", web::post().to(confirm_ocr_recipe))
@@ -45,7 +45,7 @@ pub async fn recipe_from_regions(
 }
 /// POST /ocr/suggest
 /// Takes images, returns OcrResultResponse (Bridge DTO)
-pub async fn get_ocr_suggestions(
+pub async fn recipe_from_image(
     state: web::Data<AppState>,
     auth: AuthenticatedUser,
     MultipartForm(form): MultipartForm<MultiImageForm>,
@@ -56,7 +56,7 @@ pub async fn get_ocr_suggestions(
     let suggestions = ocr_service::recipe_from_files(
         form.images,
         &state.db,
-        &state.dict_db
+        &state.config.gemini_api_key
     ).await?;
 
     Ok(HttpResponse::Ok().json(suggestions))

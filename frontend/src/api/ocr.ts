@@ -33,6 +33,19 @@ export async function createRecipeFromRegions(
         data: form,
     });
 }
+
+export async function suggestRecipeFromFiles(files: File[]): Promise<RecipeCreate> {
+    const form = new FormData();
+
+    for (const file of files) {
+        form.append("images", file);
+    }
+
+    return api<RecipeCreate>(OcrRoutes.process(), {
+        method: "POST",
+        data: form,
+    });
+}
 // Add this to your OCR api file
 export async function confirmOcrRecipe(payload: any): Promise<any> {
     return api<any>(OcrRoutes.create(), {

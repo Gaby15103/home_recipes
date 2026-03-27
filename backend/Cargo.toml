@@ -62,6 +62,7 @@ reqwest = { version = "0.13.2", features = ["json"] }
 image = { version = "0.25.5", features = ["jpeg", "png", "webp", "tiff"] }
 imageproc = "0.25.0"
 rust_decimal = "1.40.0"
+base64 = "0.22.1"
 
 [workspace]
 members = [
