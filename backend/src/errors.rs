@@ -232,6 +232,14 @@ impl From<serde_json::Error> for Error {
     }
 }
 
+/* ----- Uuid ----- */
+
+impl From<uuid::Error> for Error {
+    fn from(err: uuid::Error) -> Self {
+        Error::BadRequest(format!("Invalid UUID: {}", err).into())
+    }
+}
+
 /* ----- reqwest ----- */
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Self {

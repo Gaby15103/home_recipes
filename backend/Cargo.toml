@@ -64,6 +64,9 @@ imageproc = "0.25.0"
 rust_decimal = "1.40.0"
 base64 = "0.22.1"
 
+sha2 = "0.10"
+hex = "0.4"
+
 [workspace]
 members = [
     ".",

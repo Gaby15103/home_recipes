@@ -1,3 +1,5 @@
+use std::fs;
+use std::path::Path;
 use crate::dto::recipe_dto::{CreateRecipeInput, RecipeDto, RecipeViewDto};
 use crate::dto::recipe_ocr::{OcrConfirmInput, OcrCorrectionWrapper, OcrResultResponse}; // Returning the bridge DTO instead
 use crate::errors::Error;
@@ -10,6 +12,8 @@ use sea_orm::DatabaseConnection;
 use serde_json::json;
 use sqlx::SqlitePool;
 use base64::{Engine as _, engine::general_purpose};
+use sha2::{Digest, Sha256};
+use uuid::Uuid;
 use crate::dto::upload_dto::RegionDto;
 use crate::utils::schema::get_cleaned_gemini_schema;
 
@@ -18,30 +22,33 @@ pub async fn recipe_from_files(
     db: &DatabaseConnection,
     gemini_api_key: &str,
 ) -> Result<CreateRecipeInput, Error> {
-    let units = unit_repository::get_all_admin(db).await?;
-    let schema_object = get_cleaned_gemini_schema();
+    // 1. Generate a Hash for Cache Check
+    let mut hasher = Sha256::new();
+    let mut image_data = Vec::new();
 
-    let unit_hints: String = units.iter()
-        .map(|u| format!("{}: {}", u.symbol, u.id))
-        .collect::<Vec<_>>()
-        .join(", ");
+    for img in &images {
+        let bytes = fs::read(img.file.path()).map_err(|_| Error::InternalServerError)?;
+        hasher.update(&bytes);
+        image_data.push(bytes);
+    }
+    let hash_str = hex::encode(hasher.finalize());
+    let cache_dir = Path::new("api_cache");
+    let cache_path = cache_dir.join(format!("{}.json", hash_str));
 
+    // 2. Try to Load from Cache
+    if cache_path.exists() {
+        log::info!("Cache hit for image hash: {}", hash_str);
+        let cached_json = fs::read_to_string(&cache_path).map_err(|_| Error::InternalServerError)?;
+        return Ok(serde_json::from_str(&cached_json)?);
+    }
+
+    // 3. Prepare Prompt (No UUIDs!)
     let mut parts = Vec::new();
     parts.push(json!({
-        "text": format!(
-            "Extract this recipe into the provided JSON schema. \
-            Unit mapping (symbol: UUID): {}. \
-            If a unit symbol isn't found, use '00000000-0000-0000-0000-000000000000'. \
-            Provide translations for both 'fr' and 'en'.",
-            unit_hints
-        )
+        "text": "Extract this recipe. For 'unit_id', just write the unit symbol found in the text (e.g., 'g', 'ml', 'tsp', 'cup', 'unit'). I will map these to IDs later. Provide 'fr' and 'en' translations."
     }));
 
-    for img in images {
-        let bytes = std::fs::read(img.file.path()).map_err(|e| {
-            log::error!("File read error: {}", e);
-            Error::BadRequest("Could not read uploaded image".into())
-        })?;
+    for bytes in image_data {
         parts.push(json!({
             "inline_data": {
                 "mime_type": "image/jpeg",
@@ -50,74 +57,60 @@ pub async fn recipe_from_files(
         }));
     }
 
+    // 4. Call Gemini API
     let client = reqwest::Client::new();
     let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}", gemini_api_key);
+    let schema_object = get_cleaned_gemini_schema();
 
-    let mut attempts = 0;
-    let res_json = loop {
-        let response = client
-            .post(&url)
-            .json(&json!({
-                "contents": [{ "parts": parts }],
-                "generationConfig": {
-                    "response_mime_type": "application/json",
-                    "response_schema": schema_object,
-                    "temperature": 0.1
-                }
-            }))
-            .send()
-            .await.map_err(|_| Error::InternalServerError)?;
-
-        let status = response.status();
-
-        if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
-            attempts += 1;
-            if attempts >= 3 {
-                return Err(Error::BadRequest("Gemini Quota exhausted. Try again in a minute.".into()));
+    let res_json: serde_json::Value = client
+        .post(&url)
+        .json(&json!({
+            "contents": [{ "parts": parts }],
+            "generationConfig": {
+                "response_mime_type": "application/json",
+                "response_schema": schema_object,
+                "temperature": 0.1
             }
-            tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-            continue;
-        }
+        }))
+        .send()
+        .await
+        .map_err(|_| Error::InternalServerError)?
+        .json()
+        .await
+        .map_err(|_| Error::InternalServerError)?;
 
-        if !status.is_success() {
-            let err_body: serde_json::Value = response.json().await.map_err(|_| Error::InternalServerError)?;
-            let msg = err_body["error"]["message"].as_str().unwrap_or("Unknown Gemini Error");
-            log::error!("Gemini API Error ({}): {}", status, msg);
-            // Return the ACTUAL error message from Google to the user
-            return Err(Error::BadRequest(format!("Gemini Error: {}", msg).into()));
-        }
+    println!("{:#?}", res_json);
 
-        break response.json::<serde_json::Value>().await.map_err(|_| Error::InternalServerError)?;
-    };
+    // 5. Extract and Clean JSON
+    let json_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
+        .as_str()
+        .ok_or_else(|| Error::BadRequest("Gemini returned no content".into()))?;
 
-    // Check for Safety Blocks (FinishReason)
-    let candidate = res_json["candidates"].get(0).ok_or_else(|| {
-        let block_reason = res_json["promptFeedback"]["blockReason"].as_str().unwrap_or("Unknown");
-        Error::BadRequest(format!("Content blocked by Google Safety: {}", block_reason).into())
+    // 6. Post-Process: Map Symbols back to Database UUIDs
+    let units = unit_repository::get_all_admin(db).await?;
+    let mut recipe_input: CreateRecipeInput = serde_json::from_str(json_text).map_err(|e| {
+        Error::BadRequest(format!("Schema mismatch: {}", e).into())
     })?;
 
-    if let Some(reason) = candidate["finishReason"].as_str() {
-        if reason == "SAFETY" || reason == "OTHER" {
-            return Err(Error::BadRequest(format!("Gemini failed to finish: {}", reason).into()));
+    // Reassemble UUIDs based on symbols Gemini returned
+    for group in &mut recipe_input.ingredient_groups {
+        for ing in &mut group.ingredients {
+            // Find the ID in our DB that matches the symbol Gemini gave us
+            let matched_unit = units.iter().find(|u| {
+                u.symbol.to_lowercase() == ing.unit_id.to_string().to_lowercase()
+            });
+
+            ing.unit_id = match matched_unit {
+                Some(u) => u.id,
+                None => Uuid::parse_str("00000000-0000-0000-0000-000000000000")?,
+            };
         }
     }
 
-    let json_text = candidate["content"]["parts"]
-        .get(0)
-        .and_then(|part| part["text"].as_str())
-        .ok_or_else(|| Error::BadRequest("Gemini returned no text content".into()))?;
-
-    let clean_json = json_text
-        .trim()
-        .trim_start_matches("```json")
-        .trim_start_matches("```")
-        .trim_end_matches("```")
-        .trim();
-
-    let recipe_input: CreateRecipeInput = serde_json::from_str(clean_json).map_err(|e| {
-        log::error!("JSON Parse Error: {}. Raw text: {}", e, clean_json);
-        Error::BadRequest(format!("Failed to parse JSON into Recipe: {}", e).into())
-    })?;
+    // 7. Save to Cache and Return
+    fs::create_dir_all(cache_dir).ok();
+    let final_json = serde_json::to_string(&recipe_input).map_err(|_| Error::InternalServerError)?;
+    fs::write(cache_path, &final_json).ok();
 
     Ok(recipe_input)
 }
