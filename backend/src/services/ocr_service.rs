@@ -20,12 +20,11 @@ use crate::utils::schema::get_cleaned_gemini_schema;
 pub async fn recipe_from_files(
     images: Vec<TempFile>,
     db: &DatabaseConnection,
-    gemini_api_key: &str,
+    open_router_key: &str, // Changed name for clarity
 ) -> Result<CreateRecipeInput, Error> {
-    // 1. Generate a Hash for Cache Check
+    // 1. Generate a Hash for Cache Check (Keep as is)
     let mut hasher = Sha256::new();
     let mut image_data = Vec::new();
-
     for img in &images {
         let bytes = fs::read(img.file.path()).map_err(|_| Error::InternalServerError)?;
         hasher.update(&bytes);
@@ -35,82 +34,110 @@ pub async fn recipe_from_files(
     let cache_dir = Path::new("api_cache");
     let cache_path = cache_dir.join(format!("{}.json", hash_str));
 
-    // 2. Try to Load from Cache
+    // 2. Try to Load from Cache (Keep as is)
     if cache_path.exists() {
-        log::info!("Cache hit for image hash: {}", hash_str);
         let cached_json = fs::read_to_string(&cache_path).map_err(|_| Error::InternalServerError)?;
         return Ok(serde_json::from_str(&cached_json)?);
     }
 
-    // 3. Prepare Prompt (No UUIDs!)
-    let mut parts = Vec::new();
-    parts.push(json!({
-        "text": "Extract this recipe. For 'unit_id', just write the unit symbol found in the text (e.g., 'g', 'ml', 'tsp', 'cup', 'unit'). I will map these to IDs later. Provide 'fr' and 'en' translations."
+    // 3. Prepare OpenRouter Payload
+    let mut content_parts = Vec::new();
+    content_parts.push(json!({
+        "type": "text",
+        "text": "Extract this recipe into JSON. For 'unit_id', use the unit symbol (e.g. 'g', 'ml', 'cup'). Map 'fr' and 'en' translations."
     }));
 
     for bytes in image_data {
-        parts.push(json!({
-            "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": general_purpose::STANDARD.encode(bytes)
-            }
+        let b64 = general_purpose::STANDARD.encode(bytes);
+        content_parts.push(json!({
+            "type": "image_url",
+            "image_url": { "url": format!("data:image/jpeg;base64,{}", b64) }
         }));
     }
 
-    // 4. Call Gemini API
+
+    content_parts.push(json!({
+    "type": "text",
+    "text": "Extract recipe to JSON.
+             IMPORTANT RULES:
+             1. 'amount' MUST be a NUMBER, not a string (e.g., 6, not '6').
+             2. 'unit_id' MUST be the unit SYMBOL string (e.g., 'g').
+             3. Omit null fields."
+}));
+
+    // 4. Call OpenRouter API
     let client = reqwest::Client::new();
-    let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}", gemini_api_key);
-    let schema_object = get_cleaned_gemini_schema();
+    let models = vec![
+        "openrouter/free",
+        "google/gemma-3-12b:free",
+        "google/gemma-3-4b:free",
+        "nvidia/llama-nemotron-embed-vl-1b-v2:free",
+    ];
 
-    let res_json: serde_json::Value = client
-        .post(&url)
-        .json(&json!({
-            "contents": [{ "parts": parts }],
-            "generationConfig": {
-                "response_mime_type": "application/json",
-                "response_schema": schema_object,
-                "temperature": 0.1
-            }
+    let mut attempts = 0;
+
+    let json_text = loop {
+        // Pick a model based on the current attempt
+        let current_model = models[attempts % models.len()];
+
+        let res: serde_json::Value = client
+            .post("https://openrouter.ai/api/v1/chat/completions")
+            .header("Authorization", format!("Bearer {}", open_router_key))
+            .header("HTTP-Referer", "http://localhost:5173")
+            .header("X-Title", "HomeRecipes")
+            .json(&json!({
+            "model": current_model, // Just one string here!
+            "messages": [{ "role": "user", "content": content_parts }],
+            "response_format": { "type": "json_object" },
+            "temperature": 0.1
         }))
-        .send()
-        .await
-        .map_err(|_| Error::InternalServerError)?
-        .json()
-        .await
-        .map_err(|_| Error::InternalServerError)?;
+            .send()
+            .await.map_err(|_| Error::InternalServerError)?
+            .json().await.map_err(|_| Error::InternalServerError)?;
 
-    println!("{:#?}", res_json);
+        println!("{:#?}", res);
 
-    // 5. Extract and Clean JSON
-    let json_text = res_json["candidates"][0]["content"]["parts"][0]["text"]
-        .as_str()
-        .ok_or_else(|| Error::BadRequest("Gemini returned no content".into()))?;
+        // Check for success
+        if let Some(content) = res["choices"][0]["message"]["content"].as_str() {
+            if !content.is_empty() {
+                break content.to_string();
+            }
+        }
 
-    // 6. Post-Process: Map Symbols back to Database UUIDs
+        // If we get here, it failed or was empty
+        attempts += 1;
+        if attempts >= models.len() {
+            log::error!("All free models failed. Last response: {:?}", res);
+            return Err(Error::BadRequest("All providers failed to return content. Try again later.".into()));
+        }
+
+        log::warn!("Model {} failed, trying {}...", current_model, models[attempts % models.len()]);
+        // Small sleep to avoid spamming
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    };
+
+    // 6. Post-Process (Mapping symbols to UUIDs)
     let units = unit_repository::get_all_admin(db).await?;
-    let mut recipe_input: CreateRecipeInput = serde_json::from_str(json_text).map_err(|e| {
+    let mut recipe_input: CreateRecipeInput = serde_json::from_str(&*json_text).map_err(|e| {
         Error::BadRequest(format!("Schema mismatch: {}", e).into())
     })?;
 
-    // Reassemble UUIDs based on symbols Gemini returned
     for group in &mut recipe_input.ingredient_groups {
         for ing in &mut group.ingredients {
-            // Find the ID in our DB that matches the symbol Gemini gave us
             let matched_unit = units.iter().find(|u| {
                 u.symbol.to_lowercase() == ing.unit_id.to_string().to_lowercase()
             });
 
             ing.unit_id = match matched_unit {
                 Some(u) => u.id,
-                None => Uuid::parse_str("00000000-0000-0000-0000-000000000000")?,
+                None => Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap(),
             };
         }
     }
 
-    // 7. Save to Cache and Return
+    // 7. Save to Cache
     fs::create_dir_all(cache_dir).ok();
-    let final_json = serde_json::to_string(&recipe_input).map_err(|_| Error::InternalServerError)?;
-    fs::write(cache_path, &final_json).ok();
+    fs::write(cache_path, serde_json::to_string(&recipe_input)?).ok();
 
     Ok(recipe_input)
 }
@@ -136,11 +163,8 @@ pub async fn process_ocr_confirmation(
     // 1. TEACH: Compare original strings to the user's final selections
     teach_lexicon(&payload, sqlite_pool).await?;
 
-    // 2. CONVERT: Use the internal method of the modified part of the payload
-    let create_input = payload.modified_recipe.to_create_input();
-
     // 3. PERSIST: Save the clean recipe to Postgres
-    let result = recipe_service::create(pg_db, create_input, preferred_language).await?;
+    let result = recipe_service::create(pg_db, payload.modified_recipe, preferred_language).await?;
 
     Ok(result)
 }

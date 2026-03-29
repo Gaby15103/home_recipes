@@ -6,6 +6,7 @@ use crate::errors::Error;
 use crate::dto::recipe_dto::CreateRecipeInput;
 use crate::dto::unit_dto::UnitDto;
 use sqlx::SqlitePool;
+use crate::dto::ingredient_dto::IngredientInput;
 use crate::dto::recipe_ocr::{ConfirmIngredient, OcrConfirmInput, OcrCorrectionWrapper, OcrResultResponse};
 use crate::dto::upload_dto::RegionDto;
 use crate::recipe_parser::classifier::{ClassifiedLine, LineType};
@@ -194,7 +195,7 @@ fn manual_to_classified(title: String, ingredients: String, steps: String) -> Ve
 }
 pub async fn teach_lexicon(wrapper: &OcrCorrectionWrapper, pool: &SqlitePool) -> Result<(), Error> {
     // 1. Process explicit feedback from the "Corrections" list
-    // This is for things like "h ile" -> "Huile"
+    // This remains mostly the same, as it's independent of the recipe structure
     for correction in &wrapper.lexicon_feedback {
         let clean_token = correction.raw_token.to_lowercase().trim().to_string();
 
@@ -213,35 +214,20 @@ pub async fn teach_lexicon(wrapper: &OcrCorrectionWrapper, pool: &SqlitePool) ->
         }
     }
 
-    // 2. Process the Ingredient Groups to catch merged lines
-    // This handles the "Poulet" + "Désossée" -> Chicken ID mapping
-    for group in &wrapper.modified_recipe.ingredient_groups {
-        for ing in &group.ingredients {
-            // If the user associated a Lexicon ID with these lines
-            if let Some(lex_id) = ing.confirmed_lexicon_id {
-                for raw_line in &ing.source_ocr_lines {
-                    let clean_line = raw_line.to_lowercase().trim().to_string();
+    // 2. IMPORTANT: If you want to catch "merged lines" from the new structure,
+    // you have to look at the translations data in CreateRecipeInput.
+    // However, since CreateRecipeInput is "clean", it usually doesn't
+    // contain the raw source lines anymore unless you put them in the 'note' or 'data'.
 
-                    if !clean_line.is_empty() {
-                        sqlx::query(
-                            "INSERT INTO aliases (raw_text, lexicon_id, confidence)
-                             VALUES (?, ?, 0.9)
-                             ON CONFLICT(raw_text) DO NOTHING"
-                        )
-                            .bind(clean_line)
-                            .bind(lex_id)
-                            .execute(pool)
-                            .await
-                            .ok(); // We use .ok() here because we don't want to fail the whole save if one alias exists
-                    }
-                }
-            }
-        }
-    }
+    // If your frontend still sends "unconfirmed" raw strings in the 'data' field
+    // of translations for new ingredients, you could loop through them here.
+    // Otherwise, the explicit `lexicon_feedback` loop above is your primary teacher.
 
     Ok(())
 }
-fn find_confirmed_ingredient(wrapper: &OcrCorrectionWrapper, pos: i32) -> Option<&ConfirmIngredient> {
+
+// Updated helper to find an ingredient in the NEW CreateRecipeInput structure
+fn find_confirmed_ingredient(wrapper: &OcrCorrectionWrapper, pos: i32) -> Option<&IngredientInput> {
     wrapper.modified_recipe.ingredient_groups.iter()
         .flat_map(|g| &g.ingredients)
         .find(|i| i.position == pos)

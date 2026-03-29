@@ -76,7 +76,7 @@ pub struct OcrResultResponse {
 #[derive(Debug, Deserialize)]
 pub struct OcrCorrectionWrapper {
     /// The final recipe data to be saved in the main Application Database
-    pub modified_recipe: OcrConfirmInput,
+    pub modified_recipe: CreateRecipeInput,
     /// Explicit "Learning" data to be saved in the SQLite dictionary.db
     pub lexicon_feedback: Vec<LexiconCorrection>,
 }
@@ -94,7 +94,7 @@ pub struct LexiconCorrection {
 
 #[derive(Debug, Deserialize)]
 pub struct OcrConfirmInput {
-    pub title: String,
+    pub translations: ComfirmRecipeTranslations,
     pub primary_language: String,
     pub image_url: String,
     pub author_id: Option<Uuid>,
@@ -106,6 +106,11 @@ pub struct OcrConfirmInput {
     pub tags: Vec<InputTag>,
     pub ingredient_groups: Vec<ConfirmIngredientGroup>,
     pub step_groups: Vec<ConfirmStepGroup>,
+}
+#[derive(Debug, Deserialize)]
+pub struct ComfirmRecipeTranslations{
+    pub language_code: String,
+    pub title: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -145,6 +150,8 @@ pub struct ConfirmStep {
 
 // --- 4. CONVERSION LOGIC (OCR -> App DB) ---
 
+// --- 4. CONVERSION LOGIC (OCR -> App DB) ---
+
 impl OcrConfirmInput {
     pub fn to_create_input(&self) -> CreateRecipeInput {
         CreateRecipeInput {
@@ -164,64 +171,68 @@ impl OcrConfirmInput {
     }
 
     fn generate_translations(&self) -> Vec<RecipeTranslationInput> {
-        // Creates entries for both supported languages
+        // Now accesses title through the translations struct
         vec![
             RecipeTranslationInput {
                 language_code: "en".into(),
-                title: self.title.clone(),
-                description: format!("Imported via OCR from {}", self.primary_language)
+                title: self.translations.title.clone(),
+                description: format!("Imported via OCR from {}", self.primary_language),
             },
             RecipeTranslationInput {
                 language_code: "fr".into(),
-                title: self.title.clone(),
-                description: format!("Importé via OCR depuis {}", self.primary_language)
+                title: self.translations.title.clone(),
+                description: format!("Importé via OCR depuis {}", self.primary_language),
             },
         ]
     }
 
     fn map_ingredient_groups(&self) -> Vec<IngredientGroupInput> {
-        self.ingredient_groups.iter().enumerate().map(|(idx, group)| {
-            IngredientGroupInput {
+        self.ingredient_groups
+            .iter()
+            .enumerate()
+            .map(|(idx, group)| IngredientGroupInput {
                 position: idx as i32,
                 translations: group.translations.clone(),
-                ingredients: group.ingredients.iter().map(|ing| {
-                    IngredientInput {
+                ingredients: group
+                    .ingredients
+                    .iter()
+                    .map(|ing| IngredientInput {
                         position: ing.position,
                         quantity: Decimal::from_f32(ing.quantity).unwrap_or(Decimal::ZERO),
                         unit_id: ing.unit_id.unwrap_or_else(Uuid::nil),
-                        translations: vec![
-                            IngredientTranslationInput {
-                                language_code: self.primary_language.clone(),
-                                // This ID refers to the Ingredient UUID in your main DB
-                                data: ing.main_db_ingredient_id.to_string(),
-                                note: Some(ing.source_ocr_lines.join(" ")),
-                            }
-                        ],
-                    }
-                }).collect(),
-            }
-        }).collect()
+                        translations: vec![IngredientTranslationInput {
+                            language_code: self.primary_language.clone(),
+                            // This ID refers to the Ingredient UUID in your main DB
+                            data: ing.main_db_ingredient_id.to_string(),
+                            note: Some(ing.source_ocr_lines.join(" ")),
+                        }],
+                    })
+                    .collect(),
+            })
+            .collect()
     }
 
     fn map_step_groups(&self) -> Vec<StepGroupInput> {
-        self.step_groups.iter().enumerate().map(|(idx, group)| {
-            StepGroupInput {
+        self.step_groups
+            .iter()
+            .enumerate()
+            .map(|(idx, group)| StepGroupInput {
                 position: idx as i32,
                 translations: group.translations.clone(),
-                steps: group.steps.iter().map(|s| {
-                    StepInput {
+                steps: group
+                    .steps
+                    .iter()
+                    .map(|s| StepInput {
                         position: s.position,
                         image_url: None,
                         duration_minutes: None,
-                        translations: vec![
-                            StepTranslationInput {
-                                language_code: self.primary_language.clone(),
-                                instruction: s.text.clone()
-                            },
-                        ],
-                    }
-                }).collect(),
-            }
-        }).collect()
+                        translations: vec![StepTranslationInput {
+                            language_code: self.primary_language.clone(),
+                            instruction: s.text.clone(),
+                        }],
+                    })
+                    .collect(),
+            })
+            .collect()
     }
 }

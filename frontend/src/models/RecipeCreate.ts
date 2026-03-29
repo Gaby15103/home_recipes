@@ -34,7 +34,7 @@ export interface StepCreate {
 }
 
 export interface StepGroupCreate {
-    translations: StepGroupTranslationCreate
+    translations: StepGroupTranslationCreate[]
     position: number
     steps: StepCreate[]
 }

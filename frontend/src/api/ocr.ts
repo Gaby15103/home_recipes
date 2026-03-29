@@ -1,10 +1,13 @@
 import {api} from "./client";
 import {OcrRoutes} from "./routes";
 import type {RecipeCreate} from "@/models/RecipeCreate";
+import {uploadSingleFile} from "@/api/upload.ts";
+import type {RecipeView} from "@/models/Recipe.ts";
+import type {OcrRecipeResponse} from "@/models/OcrResult.ts";
 
 export async function createRecipeFromImages(recipe_image: File[]): Promise<RecipeCreate> {
     const form = new FormData();
-    for (const file of recipe_image){
+    for (const file of recipe_image) {
         form.append("images", file);
     }
 
@@ -13,11 +16,12 @@ export async function createRecipeFromImages(recipe_image: File[]): Promise<Reci
         data: form,
     });
 }
+
 export async function createRecipeFromRegions(
     files: File[],
     regions: any[],
     lang: string
-): Promise<RecipeCreate> {
+): Promise<OcrRecipeResponse> {
     const form = new FormData();
 
     // Append all raw image files
@@ -28,7 +32,7 @@ export async function createRecipeFromRegions(
     form.append('source_lang', lang);
 
     // Use your specific endpoint for regional processing
-    return api<RecipeCreate>(OcrRoutes.process_regions(), {
+    return api<OcrRecipeResponse>(OcrRoutes.process_regions(), {
         method: "POST",
         data: form,
     });
@@ -46,10 +50,30 @@ export async function suggestRecipeFromFiles(files: File[]): Promise<RecipeCreat
         data: form,
     });
 }
+
 // Add this to your OCR api file
-export async function confirmOcrRecipe(payload: any): Promise<any> {
+export async function confirmOcrRecipe(recipe: RecipeCreate): Promise<RecipeView> {
+    if (recipe.image_url instanceof File) {
+        const res = await uploadSingleFile(recipe.image_url);
+        recipe.image_url = res.temp_id;
+    }
+
+    for (const step_group of recipe.step_groups) {
+        for (const step of step_group.steps) {
+            if (step.image_url instanceof File) {
+                const res = await uploadSingleFile(step.image_url);
+                step.image_url = res.temp_id;
+            }
+        }
+    }
+
+    const wrapper = {
+        modified_recipe: recipe,
+        lexicon_feedback: []
+    };
+
     return api<any>(OcrRoutes.create(), {
         method: "POST",
-        data: payload,
+        data: wrapper,
     });
 }
