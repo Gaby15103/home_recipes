@@ -25,6 +25,7 @@ import TwoFactor from "@/pages/settings/TwoFactor.vue";
 import Appearance from "@/pages/settings/Appearance.vue";
 import TwoFactorChallenge from "@/pages/auth/TwoFactorChallenge.vue";
 import ConfirmEmail from "@/pages/auth/ConfirmEmail.vue";
+import OcrRecipeEditor from "@/pages/recipes/OcrRecipeEditor.vue";
 
 const routes = [
 
@@ -83,6 +84,19 @@ const routes = [
                         {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
                         {title: "Show", href: ROUTES.ADMIN.RECIPE.BASE},
                         {title: "Create"},
+                    ],
+                },
+            },
+            {
+                path: "recipe/ocr-review",
+                component: OcrRecipeEditor,
+                meta: {
+                    requiresAuth: true,
+                    roles: ["ADMIN", "MODERATOR"],
+                    breadcrumb: [
+                        {title: "Admin", href: ROUTES.ADMIN.DASHBOARD},
+                        {title: "Recipe", href: ROUTES.ADMIN.RECIPE.BASE},
+                        {title: "OCR Review"},
                     ],
                 },
             },

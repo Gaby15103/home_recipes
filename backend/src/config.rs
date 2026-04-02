@@ -16,6 +16,9 @@ pub struct Config {
     pub smtp_pass: Option<String>,
     pub mail_from_address: String,
     pub mail_from_name: String,
+
+    pub gemini_api_key: String,
+    pub groq_cloud_api_key: String,
 }
 
 #[derive(Debug, Error)]
@@ -59,7 +62,10 @@ impl Config {
 
         let mail_from_name =
             env::var("MAIL_FROM_NAME").unwrap_or_else(|_| "HomeRecipes".to_string());
-            
+
+        let gemini_api_key = env::var("GEMINI_API_KEY").unwrap_or_else(|_| "GEMINI_API_KAY".to_string());
+        
+        let groq_cloud_api_key = env::var("GROQ_CLOUD_API_KEY").unwrap_or_else(|_| "GROQ_CLOUD_API_KEY".to_string());
 
 
         Ok(Self {
@@ -74,6 +80,8 @@ impl Config {
             smtp_pass,
             mail_from_address,
             mail_from_name,
+            gemini_api_key,
+            groq_cloud_api_key
         })
     }
 }

@@ -10,8 +10,6 @@ import i18n from "./../i18n"
 const app = createApp(App);
 
 app.config.globalProperties.$apiUrl = import.meta.env.VITE_STATIC_URL;
-
-app.use(router);
 app.use(createPinia());
 
 const authStore = useAuthStore();
@@ -19,6 +17,7 @@ const authStore = useAuthStore();
 // load current user BEFORE mounting
 await authStore.loadUser();
 console.log(authStore.user)
+app.use(router);
 
 app.use(i18n);
 app.mount("#app");

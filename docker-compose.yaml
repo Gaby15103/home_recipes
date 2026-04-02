@@ -33,6 +33,14 @@
       - ./docker/ollama/entrypoint.sh:/entrypoint.sh
     entrypoint: [ "/bin/bash", "/entrypoint.sh" ]
 
+  translator:
+    image: libretranslate/libretranslate:latest
+    container_name: translator
+    ports:
+      - "5000:5000"
+    environment:
+      - LT_LOAD_ONLY=en,fr
+
 volumes:
   postgresDb:
   ollama_data:
