@@ -193,132 +193,132 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="storedOcr" class="min-h-screen bg-background text-foreground antialiased font-sans">
-    <nav class="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-      <div class="max-w-[1400px] mx-auto h-14 px-6 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <Button variant="outline" size="sm" @click="router.back()"
-                  class="h-8 px-3 text-xs font-bold uppercase tracking-wider">
-            <ChevronLeft class="w-3.5 h-3.5 mr-1"/>
-            Back
+  <div v-if="storedOcr" class="min-h-screen bg-background text-foreground antialiased font-sans pb-20 md:pb-0">
+    <nav class="sticky top-0 z-50 border-b bg-background/95 backdrop-blur shadow-sm">
+      <div class="max-w-[1400px] mx-auto h-14 md:h-16 px-4 md:px-6 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 md:gap-4 overflow-x-auto no-scrollbar py-1">
+          <Button variant="ghost" size="icon" @click="router.back()" class="shrink-0 h-9 w-9 md:hidden">
+            <ChevronLeft class="w-5 h-5"/>
           </Button>
-          <div class="flex bg-muted p-1 rounded-md">
+          <Button variant="outline" size="sm" @click="router.back()"
+                  class="hidden md:flex h-8 px-3 text-xs font-bold uppercase tracking-wider shrink-0">
+            <ChevronLeft class="w-3.5 h-3.5 mr-1"/> Back
+          </Button>
+
+          <div class="flex bg-muted p-1 rounded-lg shrink-0">
             <button v-for="mode in ['split', 'editor', 'preview']" :key="mode" @click="viewMode = mode"
-                    :class="[viewMode === mode ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground']"
-                    class="px-4 py-1 text-[10px] font-bold uppercase rounded-sm transition-all">
-              {{ mode }}
-            </button>
+                    :class="[viewMode === mode ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground']"
+                    class="px-3 md:px-4 py-1 text-[9px] md:text-[10px] font-black uppercase rounded-md transition-all">
+              <span class="hidden md:inline">{{ mode }}</span>
+              <span class="md:hidden">{{ mode[0] }}</span> </button>
           </div>
         </div>
-        <div class="flex items-center gap-3">
-          <div class="flex bg-muted p-1 rounded-md mr-2">
+
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="flex bg-muted p-1 rounded-lg">
             <button v-for="l in available_languages" :key="l.code" @click="currentEditLang = l.code"
                     :class="[currentEditLang === l.code ? 'bg-primary text-primary-foreground' : 'text-muted-foreground']"
-                    class="w-9 h-6 text-[10px] font-bold uppercase rounded-sm">
+                    class="px-2 md:w-9 h-6 text-[9px] md:text-[10px] font-black uppercase rounded-md">
               {{ l.code }}
             </button>
           </div>
           <Button size="sm" @click="submit"
-                  class="h-8 font-bold text-xs uppercase px-8 tracking-widest bg-primary hover:bg-primary/90">
-            Confirm & Save
+                  class="h-9 md:h-8 font-black text-[10px] md:text-xs uppercase px-4 md:px-8 tracking-widest bg-primary shadow-lg shadow-primary/20">
+            Confirm
           </Button>
         </div>
       </div>
     </nav>
 
-    <main class="max-w-[1400px] mx-auto p-8 lg:p-12">
-      <div v-if="viewMode === 'preview'" class="max-w-4xl mx-auto border rounded-3xl p-10 bg-card shadow-2xl">
+    <main class="max-w-[1400px] mx-auto p-4 md:p-8 lg:p-12">
+      <div v-if="viewMode === 'preview'" class="max-w-4xl mx-auto border rounded-2xl md:rounded-[3rem] p-4 md:p-10 bg-card shadow-2xl">
         <RecipeDisplay :recipe="previewRecipe" :multiplier="1"/>
       </div>
 
-      <div v-else class="flex flex-col lg:flex-row gap-16 items-start">
-        <div :class="[viewMode === 'split' ? 'lg:w-[65%]' : 'w-full']" class="space-y-12">
+      <div v-else class="flex flex-col lg:flex-row gap-8 md:gap-16 items-start">
+        <div :class="[viewMode === 'split' ? 'lg:w-[60%] xl:w-[65%]' : 'w-full']" class="space-y-10 md:space-y-16 w-full">
 
-          <div class="space-y-8">
+          <div class="space-y-6 md:space-y-10">
             <div class="space-y-2">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-1">Recipe
-                Title</label>
-              <input v-model="recipe.translations.find(t => t.language_code === currentEditLang)!.title"
-                     class="w-full text-6xl font-black bg-transparent border-none outline-none p-0 focus:ring-0 placeholder:text-muted/30"
-                     placeholder="The Grand Recipe..."/>
+              <label class="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 px-1 italic">
+                Recipe Title
+              </label>
+              <textarea v-model="recipe.translations.find(t => t.language_code === currentEditLang)!.title"
+                        rows="2"
+                        class="w-full text-3xl md:text-6xl lg:text-7xl font-black bg-transparent border-none outline-none p-0 focus:ring-0 placeholder:text-muted/20 leading-tight resize-none"
+                        placeholder="The Grand Recipe..."></textarea>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 p-8 bg-muted/20 rounded-3xl border border-border/50">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 p-5 md:p-10 bg-card border shadow-xl rounded-2xl md:rounded-[2.5rem]">
 
-              <div class="md:col-span-4 space-y-3">
-                <label
-                    class="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 text-muted-foreground">
-                  <ImageIcon class="w-3.5 h-3.5"/>
-                  Main Image
+              <div class="md:col-span-5 lg:col-span-4 space-y-3">
+                <label class="text-[9px] font-black uppercase tracking-widest flex items-center gap-2 text-muted-foreground/60">
+                  <ImageIcon class="w-3.5 h-3.5"/> Cover Image
                 </label>
-                <div
-                    class="relative group aspect-video md:aspect-square bg-background border-2 border-dashed rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-all hover:border-primary/50">
+                <div class="relative group aspect-square bg-muted/30 border-2 border-dashed rounded-2xl md:rounded-[2rem] flex flex-col items-center justify-center overflow-hidden transition-all hover:border-primary/50">
                   <img v-if="mainImagePreview" :src="mainImagePreview" class="object-cover w-full h-full"/>
-                  <div v-else class="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Upload class="w-8 h-8 opacity-20"/>
-                    <span class="text-[10px] font-medium uppercase tracking-tighter">Upload Photo</span>
+                  <div v-else class="flex flex-col items-center gap-3 text-muted-foreground/40 text-center p-4">
+                    <Upload class="w-10 h-10 stroke-[1.5]"/>
+                    <span class="text-[9px] font-black uppercase tracking-widest">Upload Photo</span>
                   </div>
-                  <input type="file" accept="image/*" @change="onMainImageChange"
-                         class="absolute inset-0 opacity-0 cursor-pointer z-10"/>
+                  <input type="file" accept="image/*" @change="onMainImageChange" class="absolute inset-0 opacity-0 cursor-pointer z-10"/>
                 </div>
               </div>
 
-              <div class="md:col-span-8 grid grid-cols-2 gap-6">
-                <div class="col-span-2 space-y-2">
-                  <label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Servings</label>
-                  <div class="relative">
-                    <Users class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/>
-                    <Input type="number" v-model.number="recipe.servings"
-                           class="pl-10 h-12 bg-background rounded-xl border-none shadow-sm"/>
+              <div class="md:col-span-7 lg:col-span-8 flex flex-col justify-center gap-6 md:gap-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                  <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Servings</label>
+                    <div class="relative group">
+                      <Users class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors"/>
+                      <Input type="number" v-model.number="recipe.servings" class="pl-11 h-12 md:h-14 bg-background rounded-xl md:rounded-2xl border-none shadow-sm text-lg font-bold"/>
+                    </div>
                   </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Prep
-                    (min)</label>
-                  <div class="relative">
-                    <Timer class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/>
-                    <Input type="number" v-model.number="recipe.prep_time_minutes"
-                           class="pl-10 h-12 bg-background rounded-xl border-none shadow-sm"/>
+                  <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Prep Time (min)</label>
+                    <div class="relative group">
+                      <Timer class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors"/>
+                      <Input type="number" v-model.number="recipe.prep_time_minutes" class="pl-11 h-12 md:h-14 bg-background rounded-xl md:rounded-2xl border-none shadow-sm text-lg font-bold"/>
+                    </div>
                   </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Cook
-                    (min)</label>
-                  <div class="relative">
-                    <Timer class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/>
-                    <Input type="number" v-model.number="recipe.cook_time_minutes"
-                           class="pl-10 h-12 bg-background rounded-xl border-none shadow-sm"/>
+                  <div class="sm:col-span-2 space-y-2">
+                    <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Cook Time (min)</label>
+                    <div class="relative group">
+                      <Timer class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40 group-focus-within:text-primary transition-colors"/>
+                      <Input type="number" v-model.number="recipe.cook_time_minutes" class="pl-11 h-12 md:h-14 bg-background rounded-xl md:rounded-2xl border-none shadow-sm text-lg font-bold"/>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <IngredientsEditor
-              v-model="recipe.ingredient_groups"
-              :current-lang="currentEditLang"
-              :original-ocr-groups="storedOcr.ingredient_groups"
-              :units="units"
-          />
+          <div class="space-y-12 md:space-y-20">
+            <IngredientsEditor
+                v-model="recipe.ingredient_groups"
+                :current-lang="currentEditLang"
+                :original-ocr-groups="storedOcr.ingredient_groups"
+                :units="units"
+            />
 
-          <StepsEditor
-              v-model="recipe.step_groups"
-              :current-lang="currentEditLang"
-              :original-ocr-groups="storedOcr.step_groups"
-          />
+            <StepsEditor
+                v-model="recipe.step_groups"
+                :current-lang="currentEditLang"
+                :original-ocr-groups="storedOcr.step_groups"
+            />
+          </div>
         </div>
 
-        <aside v-if="viewMode === 'split'" class="lg:w-[35%] sticky top-24 space-y-6">
-          <div class="rounded-2xl border bg-card shadow-xl flex flex-col max-h-[calc(100vh-10rem)] overflow-hidden">
-            <div class="p-5 border-b bg-muted/30 flex items-center justify-between">
+        <aside v-if="viewMode === 'split'" class="w-full lg:w-[35%] lg:sticky lg:top-24 space-y-6 shrink-0">
+          <div class="rounded-2xl border bg-card/50 backdrop-blur shadow-xl flex flex-col max-h-[400px] lg:max-h-[calc(100vh-10rem)] overflow-hidden">
+            <div class="p-4 border-b bg-muted/40 flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <ScrollText class="w-4 h-4 text-primary"/>
-                <span class="font-bold text-[11px] uppercase tracking-[0.2em]">OCR Trace</span>
+                <span class="font-black text-[10px] uppercase tracking-[0.2em]">Original OCR Source</span>
               </div>
-              <Badge variant="secondary" class="text-[9px] font-mono tracking-tighter">RAW_V1</Badge>
+              <Badge variant="outline" class="text-[9px] font-mono tracking-tighter opacity-50 px-2 py-0">V1</Badge>
             </div>
-            <div
-                class="overflow-y-auto p-6 text-[12px] font-mono leading-relaxed text-muted-foreground/80 whitespace-pre-wrap select-all selection:bg-primary selection:text-primary-foreground">
+            <div class="overflow-y-auto p-5 text-[11px] font-mono leading-loose text-muted-foreground/70 whitespace-pre-wrap select-all selection:bg-primary selection:text-primary-foreground italic">
               {{ storedOcr.raw_text }}
             </div>
           </div>
@@ -329,11 +329,13 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-input::placeholder {
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+textarea::placeholder {
   transition: opacity 0.2s;
 }
-
-input:focus::placeholder {
-  opacity: 0.5;
+textarea:focus::placeholder {
+  opacity: 0.1;
 }
 </style>

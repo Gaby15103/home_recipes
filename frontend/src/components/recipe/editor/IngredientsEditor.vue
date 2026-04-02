@@ -1,147 +1,152 @@
 ﻿<script setup lang="ts">
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import type { IngredientGroupCreate, IngredientCreate } from "@/models/RecipeCreate.ts";
-import IngredientUnitSelect from "@/components/recipe/forms/IngredientUnitSelect.vue";
-import { useI18n } from "vue-i18n";
-import type { Language } from "@/models/Language.ts";
-
-const { t } = useI18n()
+import {ref} from "vue"
+import {Button} from "@/components/ui/button"
+import {Input} from "@/components/ui/input"
+import {Check, Edit3, GripVertical, Plus, StickyNote, Trash2, X} from "lucide-vue-next"
+import IngredientUnitSelect from "@/components/recipe/forms/IngredientUnitSelect.vue"
+import type {IngredientGroupCreate} from "@/models/RecipeCreate.ts"
+import type {Unit} from "@/models/Recipe.ts"
 
 const props = defineProps<{
   modelValue: IngredientGroupCreate[],
   currentLang: string,
-  availableLanguages: Language[]
+  units: Unit[]
 }>()
 
-const emit = defineEmits(["update:modelValue"])
+const emit = defineEmits(['update:modelValue'])
+const editingRow = ref<string | null>(null)
 
-function getIngTrans(ingredient: IngredientCreate, langCode: string) {
-  let trans = ingredient.translations.find(t => t.language_code === langCode);
-  if (!trans) {
-    trans = { language_code: langCode, data: "" };
-    ingredient.translations.push(trans);
+function getTrans(obj: any, lang: string): any {
+  // 1. Force initialize translations if it's missing or null
+  if (!obj || !Array.isArray(obj.translations)) {
+    obj.translations = [];
   }
+
+  let trans = obj.translations.find((t: any) => t.language_code === lang);
+
+  if (!trans) {
+    // 2. Create the correct shape based on whether it's a Group or an Ingredient
+    const isGroup = 'ingredients' in obj;
+
+    if (isGroup) {
+      trans = { language_code: lang, title: "" };
+    } else {
+      trans = { language_code: lang, data: "", note: "" };
+    }
+
+    obj.translations.push(trans);
+  }
+
   return trans;
 }
-// We need to store the translations for ALL languages locally
-// because your model only supports one at a time for the final payload.
-// Alternatively, we ensure the currentLang is always synced.
 
-function addGroup() {
-  const newGroup = {
-    // FIXED: Must be an array [] so that .find() works later
-    translations: [
-      { language_code: props.currentLang, title: "" }
-    ] as any,
+const addGroup = () => {
+  emit('update:modelValue', [...props.modelValue, {
+    translations: [{ language_code: props.currentLang, title: "" }],
     position: props.modelValue.length,
-    ingredients: [],
-  };
-
-  emit("update:modelValue", [...props.modelValue, newGroup]);
+    ingredients: []
+  }]);
 }
 
-function addIngredient(group: IngredientGroupCreate) {
+const addIngredient = (group: IngredientGroupCreate) => {
   group.ingredients.push({
-    // Initialize with an empty array so we can store multiple languages
-    translations: [],
+    translations: [{ language_code: props.currentLang, data: "", note: "" }],
     quantity: 0,
-    unit_id: "",
-    note: [],
+    unit_id: props.units[0]?.id || '',
     position: group.ingredients.length
   });
-  emit("update:modelValue", [...props.modelValue]);
-}
-function getGroupTrans(group: IngredientGroupCreate, langCode: string) {
-  let trans = group.translations.find(t => t.language_code === langCode);
-  if (!trans) {
-    trans = { language_code: langCode, title: "" };
-    group.translations.push(trans);
-  }
-  return trans;
-}
-
-// Logic to handle the note_translations (which IS an array in your model)
-function getNote(ing: IngredientCreate, lang: string) {
-  if (!ing.note) ing.note = [];
-  let note = ing.note.find(n => n.language_code === lang);
-  if (!note) {
-    note = { language_code: lang, note: "" };
-    ing.note.push(note);
-  }
-  return note;
-}
-
-// CRITICAL: This ensures that when the user types,
-// the object's language_code matches the active tab.
-function syncLang(obj: any) {
-  if (obj.translations) {
-    obj.translations.language_code = props.currentLang;
-  }
 }
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-between items-center">
-      <div class="flex flex-col">
-        <h2 class="text-xl font-semibold">{{ t('Admin.ingredients.title') }}</h2>
-        <span class="text-xs text-primary font-bold uppercase">{{ currentLang }}</span>
-      </div>
-      <Button type="button" size="sm" @click="addGroup">{{ t('Admin.ingredients.addGroup') }}</Button>
-    </div>
+  <div class="space-y-6 md:space-y-8">
+    <div v-for="(group, gIdx) in modelValue" :key="gIdx"
+         class="relative group/card border rounded-xl md:rounded-2xl p-4 md:p-6 bg-card shadow-sm transition-all hover:shadow-md">
 
-    <div v-for="(group, gIdx) in modelValue" :key="gIdx" class="border rounded p-4 space-y-4">
-      <div class="flex gap-4 items-end">
-        <div class="flex-1">
-          <Label class="text-xs">{{ t('Admin.ingredients.groupTitle') }}</Label>
-          <Input
-              v-model="getGroupTrans(group,currentLang).title"
-              @input="syncLang(group)"
-              :placeholder="`Title in ${currentLang}`"
-          />
-        </div>
-        <Button type="button" variant="destructive" size="sm" @click="modelValue.splice(gIdx, 1); emit('update:modelValue', [...modelValue])">
-          ✕
-        </Button>
+      <Button variant="ghost" size="icon" @click="modelValue.splice(gIdx, 1)"
+              class="absolute -top-2 -right-2 h-7 w-7 md:h-8 md:w-8 rounded-full bg-destructive text-white hover:bg-destructive/90 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 transition-opacity shadow-lg z-10">
+        <X class="w-3.5 h-3.5" />
+      </Button>
+
+      <div class="flex items-center gap-3 mb-4 md:mb-6">
+        <Input v-model="getTrans(group, currentLang).title"
+               class="flex-1 md:w-auto font-black uppercase text-[9px] md:text-[10px] tracking-[0.2em] h-8 px-4 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-primary"
+               placeholder="GROUP NAME" />
+        <div class="hidden md:block h-px flex-1 bg-gradient-to-r from-border to-transparent" />
       </div>
 
-      <div v-for="(ing, iIdx) in group.ingredients" :key="iIdx" class="grid grid-cols-12 gap-2 p-2 border rounded bg-muted/20">
+      <div class="space-y-3 md:space-y-4">
+        <div v-for="(ing, iIdx) in group.ingredients" :key="iIdx"
+             class="group/row flex flex-col p-3 md:p-4 rounded-xl border border-transparent transition-all"
+             :class="[editingRow === `${gIdx}-${iIdx}` ? 'bg-muted/50 border-border shadow-inner' : 'hover:bg-muted/30 border-muted/20 md:border-transparent']">
 
-        <div class="col-span-2">
-          <Label class="text-xs">{{ t('Admin.ingredients.quantity') }}</Label>
-          <Input type="number" v-model.number="ing.quantity" />
-        </div>
+          <div class="flex items-start gap-2 md:gap-4">
+            <button class="mt-2 text-muted-foreground/30 hover:text-foreground shrink-0 hidden md:block">
+              <GripVertical class="w-4 h-4" />
+            </button>
 
-        <div class="col-span-3">
-          <Label class="text-xs">{{ t('Admin.ingredients.unit') }}</Label>
-          <IngredientUnitSelect v-model="ing.unit_id" />
-        </div>
+            <div v-if="editingRow !== `${gIdx}-${iIdx}`" class="flex-1 flex items-start justify-between gap-2">
+              <div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-4 flex-1 min-w-0">
+                <div class="min-w-[60px] md:min-w-[80px] font-mono text-xs md:text-sm shrink-0">
+                  <span class="font-bold text-foreground">{{ ing.quantity || '0' }}</span>
+                  <span class="ml-1 text-[9px] md:text-[10px] text-muted-foreground uppercase font-bold">
+                    {{ units.find(u => u.id == ing.unit_id)?.symbol || '' }}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold truncate">{{ getTrans(ing, currentLang).data || 'Ingredient' }}</p>
+                  <p v-if="getTrans(ing, currentLang).note" class="text-[10px] md:text-[11px] text-muted-foreground italic flex items-center gap-1 mt-0.5">
+                    <StickyNote class="w-3 h-3 opacity-50 shrink-0" /> {{ getTrans(ing, currentLang).note }}
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <Button variant="ghost" size="icon" @click="editingRow = `${gIdx}-${iIdx}`" class="h-8 w-8 hover:bg-background"><Edit3 class="w-3.5 h-3.5" /></Button>
+                <Button variant="ghost" size="icon" @click="group.ingredients.splice(iIdx, 1)" class="h-8 w-8 hover:text-destructive"><Trash2 class="w-3.5 h-3.5" /></Button>
+              </div>
+            </div>
 
-        <div class="col-span-5">
-          <Label class="text-xs">{{ t('Admin.ingredients.name') }}</Label>
-          <Input
-              v-model="getIngTrans(ing, currentLang).data"
-              @input="syncLang(ing)"
-              :placeholder="`Name in ${currentLang}`"
-          />
-        </div>
-        <div class="col-span-1"/>
-        <div class="col-span-1 ms-auto flex items-end">
-          <Button type="button" variant="destructive" size="sm" class=" w-full" @click="group.ingredients.splice(iIdx, 1); emit('update:modelValue', [...modelValue])">✕</Button>
-        </div>
+            <div v-else class="flex-1 space-y-4">
+              <div class="grid grid-cols-2 md:flex md:flex-wrap items-end gap-3">
+                <div class="space-y-1.5">
+                  <label class="text-[8px] font-black uppercase tracking-tighter text-muted-foreground ml-1">Qty</label>
+                  <Input v-model.number="ing.quantity" type="number" class="h-10 bg-background font-bold text-center" />
+                </div>
+                <div class="space-y-1.5">
+                  <label class="text-[8px] font-black uppercase tracking-tighter text-muted-foreground ml-1">Unit</label>
+                  <IngredientUnitSelect v-model="ing.unit_id" class="h-10 bg-background w-full" />
+                </div>
+                <div class="col-span-2 md:flex-1 space-y-1.5">
+                  <label class="text-[8px] font-black uppercase tracking-tighter text-muted-foreground ml-1">Ingredient Name</label>
+                  <Input v-model="getTrans(ing, currentLang).data" class="h-10 bg-background font-bold text-sm" placeholder="Butter, Sugar..." />
+                </div>
+              </div>
 
-        <div class="col-span-12">
-          <Label class="text-xs">{{ t('Admin.ingredients.note') }} ({{ currentLang }})</Label>
-          <Textarea v-model="getNote(ing, currentLang).note" rows="1" />
+              <div class="relative space-y-1.5">
+                <label class="text-[8px] font-black uppercase tracking-tighter text-muted-foreground ml-1">Note / Action</label>
+                <div class="relative">
+                  <StickyNote class="absolute left-3 top-3 w-4 h-4 text-muted-foreground opacity-40" />
+                  <Input v-model="getTrans(ing, currentLang).note" class="h-10 pl-9 bg-background/80 text-xs italic" placeholder="e.g. melted" />
+                </div>
+              </div>
+
+              <div class="flex justify-end pt-1">
+                <Button @click="editingRow = null" size="sm" class="h-8 md:h-9 px-4 md:px-6 font-bold text-[10px] uppercase tracking-widest shadow-md">
+                  <Check class="w-3.5 h-3.5 mr-2" /> Done
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <Button type="button" variant="outline" class="w-full border-dashed" @click="addIngredient(group)">
-        + {{ t('Admin.ingredients.addIngredient') }}
+      <Button variant="outline" class="w-full mt-4 md:mt-6 border-dashed h-10 md:h-12 rounded-xl text-xs text-muted-foreground" @click="addIngredient(group)">
+        <Plus class="w-3.5 h-3.5 mr-2" /> New Ingredient
       </Button>
     </div>
+
+    <Button variant="secondary" class="w-full h-14 md:h-20 border-2 border-dashed bg-transparent hover:bg-muted/40 rounded-xl md:rounded-2xl transition-all" @click="addGroup">
+      <Plus class="w-4 h-4 mr-2 opacity-50" /> <span class="font-bold text-[9px] md:text-[11px] uppercase tracking-[0.2em]">Add Ingredient Group</span>
+    </Button>
   </div>
 </template>

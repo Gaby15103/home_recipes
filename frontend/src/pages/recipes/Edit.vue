@@ -25,6 +25,7 @@ import {getRecipeByIdEditor, updateRecipe} from "@/api/recipe.ts"
 import {getAllLanguage} from "@/api/Language.ts"
 import {ROUTES} from "@/router/routes.ts"
 import type { Tag as RecipeTag, InputTag } from "@/models/Tag.ts";
+import {getUnits} from "@/api/unit.ts";
 
 const { t } = useI18n()
 const apiUrl = import.meta.env.VITE_STATIC_URL
@@ -34,6 +35,7 @@ const router = useRouter()
 const recipe = ref<RecipeEditor | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+const units = ref<any[]>([])
 
 // Language state
 const currentLang = ref("")
@@ -44,9 +46,10 @@ const available_languages = ref<Language[]>([])
 onMounted(async () => {
   loading.value = true
   try {
-    const [langs, data] = await Promise.all([
+    const [langs, data,fetchedUnits] = await Promise.all([
       getAllLanguage(),
-      getRecipeByIdEditor(route.params.id as string, true)
+      getRecipeByIdEditor(route.params.id as string, true),
+      getUnits()
     ])
     const transformedTags: InputTag[] = (data.tags as RecipeTag[]).map((tag): InputTag => {
       return {
@@ -60,6 +63,7 @@ onMounted(async () => {
       tags: transformedTags
     }
     available_languages.value = langs
+    units.value = fetchedUnits
 
     // Set initial tab to primary language or first available
     currentLang.value = langs.find(l => l.is_default)?.code || langs[0]?.code
@@ -129,173 +133,188 @@ async function submit() {
 </script>
 
 <template>
-  <div class="max-w-[1600px] mx-auto p-6 flex flex-col lg:flex-row gap-6 items-start justify-center">
+  <div class="max-w-[1800px] mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-6 md:gap-10 items-start justify-center relative">
 
-    <div v-if="recipe" class="max-w-4xl min-w-[60%] mx-auto p-6 space-y-6">
-      <div class="flex justify-between items-center">
-        <h1 class="text-3xl font-bold">{{ t('Admin.recipe.editTitle') }}</h1>
+    <div v-if="loading" class="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-xl p-4">
+      <div class="flex flex-col items-center gap-6 p-8 md:p-12 bg-card border shadow-2xl rounded-[2rem] w-full max-w-sm text-center">
+        <Loader2 class="h-12 w-12 animate-spin text-primary/40" />
+        <p class="font-black text-xl tracking-tighter">Fetching Recipe...</p>
+      </div>
+    </div>
+
+    <div v-if="recipe" v-show="!error"
+         :class="['flex-1 w-full space-y-6 md:space-y-12 transition-all duration-700', loading ? 'blur-2xl scale-95 opacity-0' : 'opacity-100']">
+
+      <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 md:gap-6 border-b pb-6 md:pb-8 px-1">
+        <div class="space-y-1 flex-1">
+          <p class="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em] text-primary/60">Editor Mode</p>
+          <h1 class="text-3xl md:text-6xl font-black tracking-tighter leading-tight break-words">
+            {{ t('Admin.recipe.editTitle') }}
+          </h1>
+        </div>
+
+        <div class="flex flex-col gap-2 w-full md:w-auto shrink-0">
+          <Label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-1">Primary Language</Label>
+          <Select v-model="recipe.primary_language">
+            <SelectTrigger class="h-10 md:h-12 w-full md:w-[200px] font-bold bg-card border-none shadow-sm rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="lang in available_languages" :key="lang.code" :value="lang.code" class="font-bold">
+                {{ lang.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <JsonImporter v-model="recipe"/>
+      <JsonImporter v-model="recipe" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{{ t('Admin.recipe.basicInfo') }}</CardTitle>
-        </CardHeader>
+      <div class="grid grid-cols-1 gap-6 md:gap-10">
+        <Card class="border-none shadow-xl bg-card/40 backdrop-blur-sm rounded-[1.5rem] md:rounded-[2rem] overflow-hidden">
+          <CardHeader class="bg-muted/30 py-4 md:py-6 px-6 md:px-10 border-b border-white/5">
+            <CardTitle class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+              {{ t('Admin.recipe.basicInfo') }}
+            </CardTitle>
+          </CardHeader>
 
-        <CardContent class="space-y-6">
-          <div v-if="available_languages.length > 0">
-            <div class="flex border-b mb-4">
-              <button
-                  v-for="lang in available_languages"
-                  :key="lang.code"
-                  @click="currentLang = lang.code"
-                  type="button"
-                  class="px-4 py-2 text-sm font-medium transition-colors border-b-2"
-                  :class="currentLang === lang.code ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'"
-              >
+          <CardContent class="p-5 md:p-12 space-y-8 md:space-y-10">
+            <div class="flex flex-nowrap md:flex-wrap gap-2 p-1 bg-muted/50 rounded-xl md:rounded-2xl w-full md:w-fit border overflow-x-auto no-scrollbar">
+              <button v-for="lang in available_languages" :key="lang.code"
+                      @click="currentLang = lang.code"
+                      :class="[currentLang === lang.code ? 'bg-background shadow-sm text-primary scale-[1.02] md:scale-105' : 'text-muted-foreground hover:text-foreground']"
+                      class="whitespace-nowrap px-4 md:px-8 py-2 md:py-2.5 text-[10px] md:text-[11px] font-black uppercase rounded-lg md:rounded-xl transition-all duration-300">
                 {{ lang.name }}
               </button>
             </div>
 
             <div v-for="lang in available_languages" :key="lang.code">
-              <div v-if="currentLang === lang.code" class="space-y-4">
-                <div class="space-y-2">
-                  <Label :for="'title-' + lang.code">
-                    {{ t('Admin.recipe.fields.title') }} ({{ lang.code.toUpperCase() }})
-                  </Label>
-                  <Input
-                      :id="'title-' + lang.code"
-                      v-model="getTranslation(lang.code).title"
-                      :placeholder="t('Admin.recipe.placeholders.title')"
-                  />
+              <div v-if="currentLang === lang.code" class="grid grid-cols-1 gap-6 md:gap-8 animate-in fade-in slide-in-from-bottom-2 duration-400">
+                <div class="space-y-3">
+                  <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">{{ t('Admin.recipe.fields.title') }}</label>
+                  <Input v-model="getTranslation(lang.code).title"
+                         class="h-12 md:h-20 text-lg md:text-3xl font-black rounded-xl md:rounded-2xl bg-background/50 px-4 md:px-8"
+                         :placeholder="t('Admin.recipe.placeholders.title')" />
                 </div>
-
-                <div class="space-y-2">
-                  <Label :for="'description-' + lang.code">
-                    {{ t('Admin.recipe.fields.description') }} ({{ lang.code.toUpperCase() }})
-                  </Label>
-                  <Textarea
-                      :id="'description-' + lang.code"
-                      v-model="getTranslation(lang.code).description"
-                      :placeholder="t('Admin.recipe.placeholders.description')"
-                  />
+                <div class="space-y-3">
+                  <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">{{ t('Admin.recipe.fields.description') }}</label>
+                  <Textarea v-model="getTranslation(lang.code).description"
+                            class="min-h-[120px] md:min-h-[180px] text-sm md:text-lg rounded-xl md:rounded-2xl bg-background/50 border-none p-5 md:p-8"
+                            :placeholder="t('Admin.recipe.placeholders.description')" />
                 </div>
               </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator class="opacity-50" />
 
-          <div class="space-y-2">
-            <Label>{{ t('Admin.recipe.fields.image') }}</Label>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input type="file" accept="image/*" @change="onMainImageChange"/>
-              <div class="ml-auto flex items-center gap-2">
-                <Label>{{ t('Admin.recipe.fields.private') }}</Label>
-                <Switch v-model:checked="recipe.is_private"/>
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 md:gap-12">
+              <div class="space-y-3">
+                <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Recipe Cover</label>
+                <div class="relative group aspect-video md:aspect-[21/9] xl:aspect-video rounded-xl md:rounded-[2rem] border-2 border-dashed flex items-center justify-center overflow-hidden transition-all bg-muted/30 hover:bg-muted/50 cursor-pointer">
+                  <img v-if="mainImagePreview" :src="mainImagePreview" class="object-cover w-full h-full" />
+                  <div v-else class="flex flex-col items-center gap-2 text-muted-foreground opacity-40">
+                    <ImageIcon class="w-8 h-8 md:w-12 md:h-12" />
+                    <span class="text-[9px] md:text-[11px] font-black uppercase tracking-widest">Change Photo</span>
+                  </div>
+                  <input type="file" accept="image/*" @change="onMainImageChange" class="absolute inset-0 opacity-0 cursor-pointer" />
+                </div>
+              </div>
+              <div class="flex flex-col justify-center gap-4 md:gap-6 px-6 md:px-10 py-6 md:py-10 bg-primary/[0.03] border border-primary/5 rounded-xl md:rounded-[2rem]">
+                <div class="flex items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <Label class="text-base md:text-xl font-black tracking-tight">Private Recipe</Label>
+                    <p class="text-[10px] md:text-sm text-muted-foreground max-w-[240px]">Visible only to admins and author.</p>
+                  </div>
+                  <Switch v-model:checked="recipe.is_private" class="scale-110 md:scale-150 shrink-0" />
+                </div>
               </div>
             </div>
-            <img v-if="mainImagePreview" :src="mainImagePreview" class="h-40 rounded border object-cover mt-2" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader><CardTitle>{{ t('Admin.recipe.details') }}</CardTitle></CardHeader>
-        <CardContent class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="space-y-2">
-            <Label>{{ t('Admin.recipe.fields.servings') }}</Label>
-            <Input type="number" min="1" v-model.number="recipe.servings"/>
-          </div>
-          <div class="space-y-2">
-            <Label>{{ t('Admin.recipe.fields.prepTime') }}</Label>
-            <Input type="number" min="0" v-model.number="recipe.prep_time_minutes"/>
-          </div>
-          <div class="space-y-2">
-            <Label>{{ t('Admin.recipe.fields.cookTime') }}</Label>
-            <Input type="number" min="0" v-model.number="recipe.cook_time_minutes"/>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>{{ t('Admin.recipe.tags') }}</CardTitle></CardHeader>
-        <CardContent><TagsMultiSelect v-model:model-value="recipe.tags"/></CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>{{ t('Admin.recipe.recipeSection') }}</CardTitle></CardHeader>
-        <CardContent class="space-y-8">
-          <IngredientsEditor
-              v-model="recipe.ingredient_groups"
-              :available-languages="available_languages"
-              :current-lang="currentLang"
-          />
-          <Separator />
-          <StepsEditor
-              v-model="recipe.step_groups"
-              :available-languages="available_languages"
-              :current-lang="currentLang"
-          />
-        </CardContent>
-      </Card>
-    </div>
-
-    <aside v-if="recipe" class="sticky top-6 hidden xl:flex flex-col gap-4 w-60">
-      <div class="bg-card border rounded-xl p-4 shadow-md space-y-4">
-        <div class="space-y-2">
-          <Label class="text-[10px] font-bold text-muted-foreground uppercase px-1">
-            {{ t('Admin.recipe.fields.primaryLanguage') }}
-          </Label>
-          <Select v-model="(recipe as any).primary_language">
-            <SelectTrigger class="w-full bg-background">
-              <SelectValue :placeholder="t('Admin.recipe.placeholders.selectLanguage')" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem v-for="lang in available_languages" :key="lang.code" :value="lang.code">
-                  {{ lang.name }}
-                </SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8">
+          <Card v-for="metric in ['servings', 'prep_time_minutes', 'cook_time_minutes']" :key="metric" class="border-none shadow-lg bg-card/40 rounded-xl md:rounded-[2rem]">
+            <CardContent class="p-6 md:p-10 space-y-2 md:space-y-4">
+              <Label class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground block text-center italic">
+                {{ metric.replace(/_/g, ' ') }}
+              </Label>
+              <Input type="number" v-model.number="recipe[metric]" class="h-12 md:h-20 text-center text-2xl md:text-4xl font-black rounded-lg md:rounded-2xl bg-background/50 border-none shadow-inner" />
+            </CardContent>
+          </Card>
         </div>
 
-        <Separator />
+        <Card class="border-none shadow-xl bg-card/40 rounded-xl md:rounded-[2rem]">
+          <CardHeader class="py-4 px-10 border-b border-white/5">
+            <CardTitle class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Categorization</CardTitle>
+          </CardHeader>
+          <CardContent class="p-8">
+            <TagsMultiSelect v-model:model-value="recipe.tags"/>
+          </CardContent>
+        </Card>
 
-        <div class="space-y-2">
-          <Label class="text-[10px] font-bold text-muted-foreground uppercase px-1">
-            {{ t('Admin.recipe.fields.switchLanguage') }}
-          </Label>
-          <div class="flex flex-col gap-1">
-            <button
-                v-for="lang in available_languages"
-                :key="lang.code"
-                @click="currentLang = lang.code"
-                type="button"
-                class="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-all border"
-                :class="currentLang === lang.code
-                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                  : 'hover:bg-muted text-muted-foreground border-transparent'"
-            >
-              <span>{{ lang.name }}</span>
-              <span class="text-[10px] uppercase opacity-70">{{ lang.code }}</span>
+        <Card class="border-none shadow-2xl bg-card/60 rounded-[1.5rem] md:rounded-[3rem] overflow-hidden">
+          <CardHeader class="bg-muted/30 py-5 md:py-8 px-6 md:px-12">
+            <CardTitle class="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] text-primary">Recipe Documentation</CardTitle>
+          </CardHeader>
+          <CardContent class="p-5 md:p-16 space-y-12 md:space-y-20">
+            <IngredientsEditor
+                v-model="recipe.ingredient_groups"
+                :available-languages="available_languages"
+                :current-lang="currentLang"
+                :units="units"
+            />
+            <Separator class="opacity-30" />
+            <StepsEditor
+                v-model="recipe.step_groups"
+                :available-languages="available_languages"
+                :current-lang="currentLang"
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+
+    <aside v-if="recipe" class="w-full lg:w-72 xl:w-80 shrink-0 lg:sticky lg:top-10">
+      <div class="bg-card/80 backdrop-blur-md border rounded-[1.5rem] md:rounded-[2.5rem] p-5 md:p-8 shadow-2xl space-y-6 md:space-y-8 border-white/10">
+
+        <div class="space-y-4">
+          <Label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-2">Editor Context</Label>
+          <div class="flex flex-col gap-2">
+            <button v-for="lang in available_languages" :key="lang.code"
+                    @click="currentLang = lang.code"
+                    class="flex items-center justify-between px-4 py-3 md:py-4 text-[11px] font-black rounded-xl md:rounded-2xl transition-all border border-transparent shadow-sm"
+                    :class="currentLang === lang.code
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted/40 text-muted-foreground hover:bg-muted'">
+              <span class="truncate max-w-[100px] md:max-w-[140px]">{{ lang.name }}</span>
+              <span class="text-[8px] md:text-[9px] opacity-40 uppercase">{{ lang.code }}</span>
             </button>
           </div>
         </div>
 
-        <Separator />
+        <Separator class="opacity-50" />
 
-        <div class="pt-2">
-          <Button :disabled="submitting" @click="submit" class="w-full shadow-lg h-11">
-            {{ t('Admin.common.save') }}
+        <div class="space-y-3">
+          <Button :disabled="submitting" @click="submit" class="w-full h-12 md:h-16 rounded-xl md:rounded-[1.5rem] shadow-xl text-[11px] md:text-sm font-black uppercase tracking-[0.2em]">
+            <Loader2 v-if="submitting" class="w-4 h-4 mr-2 animate-spin" />
+            {{ submitting ? 'Updating...' : t('Admin.common.save') }}
+          </Button>
+
+          <Button variant="ghost" @click="router.back()" class="w-full text-[10px] font-black uppercase tracking-widest opacity-50 hover:opacity-100">
+            Cancel Changes
           </Button>
         </div>
       </div>
+
+      <div v-if="error" class="mt-4 bg-destructive/10 border border-destructive/20 rounded-xl p-4">
+        <p class="text-[11px] text-destructive font-bold text-center">{{ error }}</p>
+      </div>
     </aside>
 
-    <div v-else-if="loading" class="p-10 text-center">Loading recipe...</div>
-    <div v-else-if="error" class="p-10 text-center text-destructive">{{ error }}</div>
   </div>
 </template>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
