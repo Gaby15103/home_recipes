@@ -4,7 +4,8 @@ WORKDIR /app
 RUN apk add --no-cache \
     pkgconfig openssl-dev openssl-libs-static \
     musl-dev gcc g++ cmake make tesseract-ocr-dev \
-    clang-dev perl curl libc++-dev libc++-static llvm-libunwind-dev
+    clang-dev perl curl libc++-dev libc++-static llvm-libunwind-dev \
+    imagemagick-dev ghostscript-dev
 
 # --- Stage 2: Planner ---
 FROM chef AS planner
@@ -15,6 +16,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder 
 RUN rustup default stable && rustup update
 ENV RUSTC_BOOTSTRAP=1
+ENV PKG_CONFIG_PATH=/usr/lib/pkgconfig:/usr/local/lib/pkgconfig
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 
 COPY --from=planner /app/recipe.json recipe.json
@@ -38,16 +40,18 @@ WORKDIR /app
 
 RUN apk add --no-cache \
     libssl3 ca-certificates libstdc++ libc++ libunwind zlib \
-    tesseract-ocr tesseract-ocr-data-fra tesseract-ocr-data-eng \
-    gcompat 
+    tesseract-ocr tesseract-ocr-data-fra tesseract-ocr-data-eng\
+    gcompat imagemagick
 
 COPY --from=builder /app/app-binary /usr/local/bin/app
 COPY --from=builder /app/migration-binary /usr/local/bin/migration-tool
 
 # Copy assets and entrypoint
 COPY backend/assets ./assets
+COPY backend/resources ./resources
 COPY docker/backend/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN chmod -R 777 /app/resources
 
 EXPOSE 8088
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

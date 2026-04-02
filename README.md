@@ -27,7 +27,7 @@ docker compose -f docker-compose.dev.yaml up --build
 ```
 - Prod: 
 ```bash 
-docker compose -f docker-compose.prod.yaml up -d
+docker compose -f docker-compose.prod.yaml up -d --build
 ```
 ### Frontend
 - Dev: `vite --mode dev`

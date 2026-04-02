@@ -123,3 +123,7 @@ __pycache__/
 # If using TypeScript incremental builds
 *.tsbuildinfo
 /backend/Cargo.lock
+
+
+env/*.env
+.env
