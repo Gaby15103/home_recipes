@@ -28,7 +28,6 @@ pub struct StepGroupTranslationInput {
 pub struct EditStepGroupTranslationInput {
     pub id: Option<Uuid>,
     pub language_code: String,
-    #[validate(length(min = 1, max = 100))]
     pub title: String,
 }
 

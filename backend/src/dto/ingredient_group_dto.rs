@@ -31,7 +31,6 @@ pub struct IngredientGroupTranslationInput {
 pub struct EditIngredientGroupTranslationInput {
     pub id: Option<Uuid>,
     pub language_code: String,
-    #[validate(length(min = 1, max = 100))]
     pub title: String,
 }
 

@@ -16,9 +16,7 @@ pub struct IngredientTranslationInput {
 #[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
 pub struct EditIngredientTranslationInput {
     pub id: Option<Uuid>,
-    #[validate(length(min = 2, max = 5))]
     pub language_code: String,
-    #[validate(length(min = 1, max = 50))]
     pub data: String,
     pub note: Option<String>,
 }
