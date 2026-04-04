@@ -38,7 +38,8 @@ pub async fn recipe_from_regions(
         regions,
         source_lang,
         &state.db,
-        &state.dict_db
+        &state.dict_db,
+        &state.config
     ).await?;
 
     Ok(HttpResponse::Ok().json(suggestions))

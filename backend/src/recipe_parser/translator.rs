@@ -1,7 +1,7 @@
 use serde_json::json;
 use crate::errors::Error;
 
-pub async fn translate_text(text: &str, from: &str, to: &str) -> Result<String, Error> {
+pub async fn translate_text(text: &str, from: &str, to: &str, url: &str) -> Result<String, Error> {
     if text.trim().is_empty() || from == to {
         return Ok(text.to_string());
     }

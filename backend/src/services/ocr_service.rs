@@ -16,6 +16,7 @@ use sqlx::SqlitePool;
 use std::fs;
 use std::path::Path;
 use uuid::Uuid;
+use crate::config::Config;
 
 pub async fn recipe_from_files(
     images: Vec<TempFile>,
@@ -191,11 +192,13 @@ pub async fn recipe_from_regions(
     lang: String,
     db: &DatabaseConnection,
     sqlite_pool: &SqlitePool,
+    config: &Config
 ) -> Result<OcrResultResponse, Error> {
     let units = unit_repository::get_all_admin(db).await?;
     let context = ParserContext {
         sqlite_pool,
         known_units: units,
+        config: config.clone()
     };
 
     // Just pass the raw images and regions into the parser

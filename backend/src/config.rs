@@ -19,6 +19,8 @@ pub struct Config {
 
     pub gemini_api_key: String,
     pub groq_cloud_api_key: String,
+
+    pub translator_url: String,
 }
 
 #[derive(Debug, Error)]
@@ -67,6 +69,9 @@ impl Config {
         
         let groq_cloud_api_key = env::var("GROQ_CLOUD_API_KEY").unwrap_or_else(|_| "GROQ_CLOUD_API_KEY".to_string());
 
+        let translator_url = env::var("TRANSLATOR_URL")
+            .unwrap_or_else(|_| "http://libretranslate:5000".to_string());
+
 
         Ok(Self {
             database_url,
@@ -81,7 +86,8 @@ impl Config {
             mail_from_address,
             mail_from_name,
             gemini_api_key,
-            groq_cloud_api_key
+            groq_cloud_api_key,
+            translator_url,
         })
     }
 }

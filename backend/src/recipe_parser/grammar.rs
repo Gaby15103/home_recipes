@@ -4,12 +4,14 @@ use crate::dto::recipe_ocr::{OcrResultResponse, ParsedIngredientLine, OcrStep, O
 use sqlx::SqlitePool;
 use crate::errors::Error;
 use regex::Regex;
+use crate::config::Config;
 
 pub async fn assemble_recipe(
     classified_lines: Vec<ClassifiedLine>,
     pool: &SqlitePool,
     raw_text: String,
     source_lang: String,
+    config: &Config
 ) -> Result<OcrResultResponse, Error> {
     let mut ingredient_groups = Vec::new();
     let mut step_groups = Vec::new();
@@ -42,17 +44,17 @@ pub async fn assemble_recipe(
         match line.line_type {
             LineType::Title => {
                 if title_en.is_empty() && title_fr.is_empty() {
-                    title_en = if source_lang == "fr" { translator::translate_text(text, "fr", "en").await? } else { text.to_string() };
-                    title_fr = if source_lang == "en" { translator::translate_text(text, "en", "fr").await? } else { text.to_string() };
+                    title_en = if source_lang == "fr" { translator::translate_text(text, "fr", "en", &*config.translator_url).await? } else { text.to_string() };
+                    title_fr = if source_lang == "en" { translator::translate_text(text, "en", "fr", &*config.translator_url).await? } else { text.to_string() };
                 }
             }
 
             LineType::Header => {
-                flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang).await?;
-                flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang).await?;
+                flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang,config).await?;
+                flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang,config).await?;
 
-                let h_en = if source_lang == "fr" { translator::translate_text(text, "fr", "en").await? } else { text.to_string() };
-                let h_fr = if source_lang == "en" { translator::translate_text(text, "en", "fr").await? } else { text.to_string() };
+                let h_en = if source_lang == "fr" { translator::translate_text(text, "fr", "en", &*config.translator_url).await? } else { text.to_string() };
+                let h_fr = if source_lang == "en" { translator::translate_text(text, "en", "fr", &*config.translator_url).await? } else { text.to_string() };
 
                 if is_step_header(text) {
                     if !current_step_group.steps.is_empty() { step_groups.push(current_step_group.clone()); }
@@ -65,7 +67,7 @@ pub async fn assemble_recipe(
 
             LineType::Ingredient => {
                 if (starts_with_quantity(text) || starts_with_vulgar_fraction(text)) && !ing_buffer.is_empty() {
-                    flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang).await?;
+                    flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang,config).await?;
                 }
                 if ing_buffer.is_empty() { last_ing_index = line.index; }
                 ing_buffer.push(text.to_string());
@@ -73,7 +75,7 @@ pub async fn assemble_recipe(
 
             LineType::Instruction => {
                 if starts_with_step_indicator(text) && !step_buffer.is_empty() {
-                    flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang).await?;
+                    flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang,config).await?;
                 }
                 if step_buffer.is_empty() { last_step_index = line.index; }
                 step_buffer.push(text.to_string());
@@ -83,8 +85,8 @@ pub async fn assemble_recipe(
         }
     }
 
-    flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang).await?;
-    flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang).await?;
+    flush_ing_buffer(&mut ing_buffer, &mut current_ing_group, last_ing_index, pool, &source_lang,config).await?;
+    flush_step_buffer(&mut step_buffer, &mut current_step_group, last_step_index, &source_lang,config).await?;
 
     if !current_ing_group.ingredients.is_empty() { ingredient_groups.push(current_ing_group); }
     if !current_step_group.steps.is_empty() { step_groups.push(current_step_group); }
@@ -107,6 +109,7 @@ async fn flush_ing_buffer(
     _index: usize,
     pool: &SqlitePool,
     source_lang: &str,
+    config: &Config
 ) -> Result<(), Error> {
     if buffer.is_empty() { return Ok(()); }
 
@@ -119,7 +122,7 @@ async fn flush_ing_buffer(
         if segment.is_empty() { continue; }
 
         let analysis_text = if source_lang == "en" {
-            translator::translate_text(segment, "en", "fr").await?
+            translator::translate_text(segment, "en", "fr", &*config.translator_url).await?
         } else {
             segment.to_string()
         };
@@ -128,7 +131,7 @@ async fn flush_ing_buffer(
             dictionary::resolve_line(&analysis_text, pool).await?;
 
         let final_disp_en = if source_lang == "fr" {
-            translator::translate_text(&disp_fr, "fr", "en").await?
+            translator::translate_text(&disp_fr, "fr", "en", &*config.translator_url).await?
         } else {
             disp_en
         };
@@ -154,7 +157,8 @@ async fn flush_step_buffer(
     buffer: &mut Vec<String>,
     group: &mut OcrStepGroup,
     _index: usize,
-    source_lang: &str
+    source_lang: &str,
+    config: &Config
 ) -> Result<(), Error> {
     if buffer.is_empty() { return Ok(()); }
 
@@ -179,8 +183,8 @@ async fn flush_step_buffer(
     for text in step_texts {
         if text.is_empty() { continue; }
 
-        let text_en = if source_lang == "fr" { translator::translate_text(&text, "fr", "en").await? } else { text.clone() };
-        let text_fr = if source_lang == "en" { translator::translate_text(&text, "en", "fr").await? } else { text.clone() };
+        let text_en = if source_lang == "fr" { translator::translate_text(&text, "fr", "en", &*config.translator_url).await? } else { text.clone() };
+        let text_fr = if source_lang == "en" { translator::translate_text(&text, "en", "fr", &*config.translator_url).await? } else { text.clone() };
 
         group.steps.push(OcrStep {
             position: group.steps.len() as i32,

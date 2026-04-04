@@ -6,6 +6,7 @@ use crate::errors::Error;
 use crate::dto::recipe_dto::CreateRecipeInput;
 use crate::dto::unit_dto::UnitDto;
 use sqlx::SqlitePool;
+use crate::config::Config;
 use crate::dto::ingredient_dto::IngredientInput;
 use crate::dto::recipe_ocr::{ConfirmIngredient, OcrConfirmInput, OcrCorrectionWrapper, OcrResultResponse};
 use crate::dto::upload_dto::RegionDto;
@@ -46,6 +47,7 @@ mod translator;
 pub struct ParserContext<'a> {
     pub sqlite_pool: &'a SqlitePool,
     pub known_units: Vec<UnitDto>,
+    pub config: Config
 }
 
 pub async fn run_pipeline(
@@ -66,7 +68,7 @@ pub async fn run_pipeline(
     // 3. Grammar & Dictionary: The "Brain" phase
     // We pass the classified_lines here to be assembled into the final DTO
     let dict_start = Instant::now();
-    let ocr_result = grammar::assemble_recipe(classified_lines, ctx.sqlite_pool, document.raw_text, document.detected_lang).await?;
+    let ocr_result = grammar::assemble_recipe(classified_lines, ctx.sqlite_pool, document.raw_text, document.detected_lang, &ctx.config).await?;
     let dict_duration = dict_start.elapsed();
 
     // --- 🛠️ Feedback Output ---
@@ -148,7 +150,8 @@ pub async fn run_region_pipeline(
         classified_lines,
         ctx.sqlite_pool,
         raw_text_acc,
-        lang.to_string()
+        lang.to_string(),
+        &ctx.config
     ).await?;
 
     Ok(ocr_result)
