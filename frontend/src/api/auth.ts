@@ -12,7 +12,7 @@ export function login(email: string, password: string) {
 export function registerUser(
     username: string, email: string, password: string, first_name: string, last_name: string
 ) {
-    const payload: RegisterRequest = { user: { username, email, password, first_name, last_name } };
+    const payload: RegisterRequest = { username, email, password, first_name, last_name };
     return api(AuthRoutes.register(), { method: "POST", data: payload });
 }
 export function confirmEmail(token: string) {

@@ -137,7 +137,7 @@ pub async fn confirm_email(
     
     Ok(HttpResponse::Ok().json(json!({
         "success": true,
-        "message": "Email confirmed successfully! Please log in."
+        "message": "Email confirmed successfully! Please login."
     })))
 }
 pub async fn forgot_password(

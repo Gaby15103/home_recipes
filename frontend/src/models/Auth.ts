@@ -14,23 +14,19 @@ export interface LoginResponse {
 
 
 export interface RegisterRequest {
-    user: {
-        email: string;
-        password: string;
-        username: string;
-        first_name: string;
-        last_name: string;
-    };
+    email: string;
+    password: string;
+    username: string;
+    first_name: string;
+    last_name: string;
 }
 
 export interface EditUser {
-    user: {
-        username: string;
-        email: string;
-        password: string | null;
-        first_name: string;
-        last_name: string;
-        avatar_url: string;
-        preferences: UserPreferences;
-    }
+    username: string;
+    email: string;
+    password: string | null;
+    first_name: string;
+    last_name: string;
+    avatar_url: string;
+    preferences: UserPreferences;
 }
