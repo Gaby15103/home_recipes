@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {onMounted, onUnmounted, reactive, ref} from 'vue';
 import {Button} from "@/components/ui/button";
-import {Redo2, RotateCcw, Undo2, X, ZoomIn, ZoomOut} from "lucide-vue-next";
+import {Redo2, RotateCcw, Undo2, X, ZoomIn, ZoomOut, Languages} from "lucide-vue-next";
 
 const props = defineProps<{
   images: string[];
@@ -15,7 +15,8 @@ const canvasRefs = ref<HTMLCanvasElement[]>([]);
 const imageRefs = ref<HTMLImageElement[]>([]);
 const scrollContainer = ref<HTMLElement | null>(null);
 
-const sourceLang = ref(props.defaultLang || 'fr');
+// Defaulting to 'fr' as requested
+const sourceLang = ref('fr');
 const currentType = ref('title');
 const zoomLevel = ref(1);
 
@@ -64,8 +65,6 @@ const getPointerPos = (e: PointerEvent, idx: number) => {
   const canvas = canvasRefs.value[idx];
   if (!canvas) return { x: 0, y: 0 };
   const rect = canvas.getBoundingClientRect();
-
-  // Account for CSS scaling/zoom
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
 
@@ -76,7 +75,6 @@ const getPointerPos = (e: PointerEvent, idx: number) => {
 };
 
 const handlePointerDown = (e: PointerEvent, imgIdx: number) => {
-  // Only handle primary button or touch
   if (e.button !== 0 && e.pointerType === 'mouse') return;
 
   const pos = getPointerPos(e, imgIdx);
@@ -106,8 +104,6 @@ const handlePointerDown = (e: PointerEvent, imgIdx: number) => {
       image_index: imgIdx
     });
   }
-
-  // Lock pointer to capture movement outside canvas
   (e.target as HTMLElement).setPointerCapture(e.pointerId);
 };
 
@@ -128,7 +124,6 @@ const handleGlobalPointerMove = (e: PointerEvent) => {
     r.y = pos.y - dragStart.y;
   }
 
-  // Auto-scroll logic
   if (scrollContainer.value) {
     const threshold = 50;
     const scrollSpeed = 10;
@@ -142,7 +137,6 @@ const handleGlobalPointerMove = (e: PointerEvent) => {
 const handleGlobalPointerUp = () => {
   if (selectedIdx.value !== null) {
     const r = regions[selectedIdx.value];
-    // Remove if tiny (accidental click)
     if (r && r.w < 10 && r.h < 10) regions.splice(selectedIdx.value, 1);
   }
   isDrawing.value = false;
@@ -209,32 +203,49 @@ const finish = () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-zinc-950 select-none overflow-hidden touch-none">
+  <div class="flex flex-col h-full bg-zinc-950 select-none overflow-hidden touch-none text-zinc-100">
     <div class="z-50 flex flex-col md:flex-row items-center justify-between p-3 gap-4 border-b border-zinc-800 bg-zinc-900 shrink-0">
 
-      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar w-full md:w-auto">
-        <button v-for="t in ['title', 'ingredients', 'steps']" :key="t"
-                @click="currentType = t"
-                :class="['px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all border flex items-center gap-2 shrink-0',
-                currentType === t ? 'bg-white text-black border-white' : 'text-zinc-400 bg-zinc-800 border-zinc-700']">
-          <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: colors[t] }"></div>
-          {{ t }}
-        </button>
+      <div class="flex items-center gap-4 w-full md:w-auto">
+        <div class="flex items-center gap-1 bg-zinc-800 p-1 rounded-xl border border-zinc-700">
+          <button @click="sourceLang = 'fr'"
+                  :class="['px-3 py-1.5 text-[10px] font-black uppercase transition-all rounded-lg',
+                  sourceLang === 'fr' ? 'bg-zinc-100 text-black' : 'text-zinc-500 hover:text-zinc-300']">
+            FR
+          </button>
+          <button @click="sourceLang = 'en'"
+                  :class="['px-3 py-1.5 text-[10px] font-black uppercase transition-all rounded-lg',
+                  sourceLang === 'en' ? 'bg-zinc-100 text-black' : 'text-zinc-500 hover:text-zinc-300']">
+            EN
+          </button>
+        </div>
+
+        <div class="h-6 w-[1px] bg-zinc-700 hidden md:block"></div>
+
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <button v-for="t in ['title', 'ingredients', 'steps']" :key="t"
+                  @click="currentType = t"
+                  :class="['px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all border flex items-center gap-2 shrink-0',
+                  currentType === t ? 'bg-white text-black border-white' : 'text-zinc-400 bg-zinc-800 border-zinc-700']">
+            <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: colors[t] }"></div>
+            {{ t }}
+          </button>
+        </div>
       </div>
 
       <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-        <div class="flex items-center gap-1 bg-zinc-800 p-1 rounded-xl">
-          <Button variant="ghost" size="icon" class="h-8 w-8" @click="zoomLevel = Math.max(0.5, zoomLevel - 0.25)"><ZoomOut class="w-4 h-4" /></Button>
-          <span class="text-[10px] font-black w-10 text-center">{{ Math.round(zoomLevel * 100) }}%</span>
-          <Button variant="ghost" size="icon" class="h-8 w-8" @click="zoomLevel = Math.min(3, zoomLevel + 0.25)"><ZoomIn class="w-4 h-4" /></Button>
+        <div class="flex items-center gap-1 bg-zinc-800 p-1 rounded-xl border border-zinc-700">
+          <Button variant="ghost" size="icon" class="h-8 w-8 text-zinc-400" @click="zoomLevel = Math.max(0.5, zoomLevel - 0.25)"><ZoomOut class="w-4 h-4" /></Button>
+          <span class="text-[10px] font-black w-10 text-center text-zinc-300">{{ Math.round(zoomLevel * 100) }}%</span>
+          <Button variant="ghost" size="icon" class="h-8 w-8 text-zinc-400" @click="zoomLevel = Math.min(3, zoomLevel + 0.25)"><ZoomIn class="w-4 h-4" /></Button>
         </div>
 
         <div class="flex items-center gap-2">
-          <Button variant="outline" size="icon" @click="regions.length = 0" class="h-8 w-8 border-zinc-700 text-zinc-400"><RotateCcw class="w-4 h-4" /></Button>
-          <Button @click="finish" class="bg-blue-600 hover:bg-blue-700 h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl">
+          <Button variant="outline" size="icon" @click="regions.length = 0" class="h-8 w-8 border-zinc-700 bg-zinc-800 text-zinc-400 hover:text-white"><RotateCcw class="w-4 h-4" /></Button>
+          <Button @click="finish" class="bg-blue-600 hover:bg-blue-700 text-white h-9 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl">
             Confirm
           </Button>
-          <Button variant="ghost" size="icon" @click="emit('cancel')" class="h-9 w-9 text-zinc-500"><X /></Button>
+          <Button variant="ghost" size="icon" @click="emit('cancel')" class="h-9 w-9 text-zinc-500 hover:text-white"><X /></Button>
         </div>
       </div>
     </div>
@@ -266,8 +277,8 @@ const finish = () => {
     </div>
 
     <div class="p-4 border-t border-zinc-800 bg-zinc-900/50 backdrop-blur-md flex justify-center gap-10">
-      <button @click="undo" :disabled="history.length === 0" class="text-zinc-400 disabled:opacity-20"><Undo2 /></button>
-      <button @click="redo" :disabled="redoStack.length === 0" class="text-zinc-400 disabled:opacity-20"><Redo2 /></button>
+      <button @click="undo" :disabled="history.length === 0" class="text-zinc-400 hover:text-white disabled:opacity-20 transition-colors"><Undo2 /></button>
+      <button @click="redo" :disabled="redoStack.length === 0" class="text-zinc-400 hover:text-white disabled:opacity-20 transition-colors"><Redo2 /></button>
     </div>
   </div>
 </template>
