@@ -15,7 +15,7 @@ pub struct EditStepTranslationInput {
     pub language_code: String,
     pub instruction: String,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct StepInput {
     pub position: i32,
     pub image_url: Option<String>,
@@ -23,7 +23,7 @@ pub struct StepInput {
     pub translations: Vec<StepTranslationInput>,
     pub duration_minutes: Option<i32>,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EditStepInput {
     pub id: Option<Uuid>,
     pub position: i32,

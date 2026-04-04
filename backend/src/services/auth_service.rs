@@ -17,6 +17,7 @@ use sea_orm::prelude::DateTimeWithTimeZone;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, Set};
 use serde_json::json;
 use uuid::Uuid;
+use entity::users::Model;
 
 pub async fn register(
     db: &DatabaseConnection,
@@ -34,6 +35,7 @@ pub async fn register(
 
     Ok(HttpResponse::Created().finish())
 }
+
 pub async fn validate_session(
     db: &DatabaseConnection,
     token: &str,
@@ -99,7 +101,13 @@ async fn handle_two_factor(
     active.two_factor_token = Set(Some(token));
     active.two_factor_token_expires_at = Set(Some(DateTimeWithTimeZone::from(expires)));
 
-    active.update(db).await?;
+    active.update(db).await.map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to update 2FA token for login",
+        "operation": "handle_two_factor",
+        "user_id": user.id.to_string(),
+        "error": e.to_string(),
+        "stage": "token_update"
+    })))?;
 
     Ok(LoginResponseDto {
         two_factor_required: true,
@@ -108,10 +116,12 @@ async fn handle_two_factor(
         user: None,
     })
 }
+
 pub async fn logout(db: &DatabaseConnection, token: &str) -> Result<(), Error> {
-    let result = session_repository::delete_session_by_token(db, token).await?;
+    let _result = session_repository::delete_session_by_token(db, token).await?;
     Ok(())
 }
+
 pub async fn refresh_session(db: &DatabaseConnection, session_id: Uuid) -> Result<String, Error> {
     let token: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
@@ -124,37 +134,37 @@ pub async fn refresh_session(db: &DatabaseConnection, session_id: Uuid) -> Resul
     let result = session_repository::refresh_session(db, session_id, token, expires_at).await?;
     Ok(result)
 }
+
 pub async fn confirm_email(
     db: &DatabaseConnection,
     token: Uuid
 ) -> Result<(), Error> {
-    user_repository::confirm_email(db, token)
-        .await?;
-
+    user_repository::confirm_email(db, token).await?;
     Ok(())
 }
+
 pub async fn request_password_reset(
     db: &DatabaseConnection,
     email: &str,
 ) -> Result<(), Error> {
-
     let user = user_repository::find_by_email(db, email).await?;
 
     let token = Uuid::new_v4();
 
-    user_repository::create_reset_token(db,user.id, token).await?;
+    user_repository::create_reset_token(db, user.id, token).await?;
 
-    send_password_reset(user,&token)?;
+    send_password_reset(user, &token)?;
 
     Ok(())
 }
+
 pub async fn reset_password(
     db: &DatabaseConnection,
     data: ResetPasswordDto,
 ) -> Result<(), Error> {
     let reset_token = user_repository::find_reset_token_by_token(db, data.token)
         .await?
-        .ok_or(Error::BadRequest(serde_json::json!({"error": "Invalid token"})))?;
+        .ok_or(Error::BadRequest(json!({"error": "Invalid token"})))?;
 
     let new_hash = HASHER.hash(&data.new_password)?;
 
@@ -166,6 +176,7 @@ pub async fn reset_password(
 
     Ok(())
 }
+
 pub async fn get_or_create_2fa_secret(db: &DatabaseConnection, user: &UserResponseDto) -> Result<String, Error> {
     let new_secret = generate_new_secret();
     if user.two_factor_secret.is_none() {
@@ -183,7 +194,15 @@ pub async fn generate_qr_code(user: &UserResponseDto) -> Result<QrCodeResponse, 
         user.email, secret
     );
 
-    let code = QrCode::new(otp_auth_url.clone()).map_err(|_| Error::InternalServerError)?;
+    let code = QrCode::new(otp_auth_url.clone())
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to generate QR code",
+            "operation": "generate_qr_code",
+            "user_id": user.id.to_string(),
+            "error": e.to_string(),
+            "stage": "qr_generation"
+        })))?;
+
     let svg = code.render::<char>().min_dimensions(200, 200).build();
 
     Ok(QrCodeResponse { svg, url: otp_auth_url })
@@ -199,7 +218,7 @@ pub async fn verify_2fa_login(
 
     let secret = user.two_factor_secret.as_ref()
         .ok_or(Error::Unauthorized(json!({"error": "2FA not enabled"})))?;
-    
+
     let is_valid = if let Some(code) = payload.code {
         verify_totp(secret, &code)?
     } else if let Some(recovery) = payload.recovery_code {
@@ -211,9 +230,9 @@ pub async fn verify_2fa_login(
     if !is_valid {
         return Err(Error::Unauthorized(json!({"error": "Invalid code"})));
     }
-    
+
     user_repository::clear_2fa_token(db, user.id).await?;
-    
+
     let token: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(64)
@@ -241,11 +260,20 @@ pub async fn get_recovery_codes(db: &DatabaseConnection, user: &UserResponseDto)
         rand::thread_rng().sample_iter(&Alphanumeric).take(8).map(char::from).collect()
     }).collect();
 
-    let json_codes = serde_json::to_value(new_codes).map_err(|_| Error::InternalServerError)?;
+    let json_codes = serde_json::to_value(new_codes)
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to serialize recovery codes",
+            "operation": "get_recovery_codes",
+            "user_id": user.id.to_string(),
+            "error": e.to_string(),
+            "stage": "serialization"
+        })))?;
+
     user_repository::update_recovery_codes(db, user.id, json_codes.clone()).await?;
 
     Ok(json_codes)
 }
+
 pub async fn get_2fa_status(user: &UserResponseDto) -> Result<TwoFactorStatusResponse, Error> {
     let enabled = user.two_factor_secret.is_some();
     let requires_confirmation = enabled && user.two_factor_confirmed_at.is_none();
@@ -256,10 +284,10 @@ pub async fn get_2fa_status(user: &UserResponseDto) -> Result<TwoFactorStatusRes
     })
 }
 
-pub async fn enable_2fa(db: &DatabaseConnection, user_id: Uuid) -> Result<(), Error> {
+pub async fn enable_2fa(db: &DatabaseConnection, user_id: Uuid) -> Result<Model, Error> {
     user_repository::set_2fa_status(db, user_id, true).await
 }
 
-pub async fn disable_2fa_complete(db: &DatabaseConnection, user_id: Uuid) -> Result<(), Error> {
+pub async fn disable_2fa_complete(db: &DatabaseConnection, user_id: Uuid) -> Result<Model, Error> {
     user_repository::disable_2fa(db, user_id).await
 }

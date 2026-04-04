@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::Once;
 use image::{DynamicImage, GenericImageView, Luma};
 use magick_rust::{MagickWand, magick_wand_genesis, ColorspaceType};
+use serde_json::json;
 
 pub struct OcrLine {
     pub text: String,
@@ -14,7 +15,14 @@ pub struct OcrLine {
 static START: Once = Once::new();
 
 pub fn scan_single_image(path: &Path, lang: &str) -> Result<(Vec<OcrLine>, String), Error> {
-    let file_bytes = std::fs::read(path).map_err(|_| Error::InternalServerError)?;
+    let file_bytes = std::fs::read(path).map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to read image file",
+        "operation": "scan_single_image",
+        "file_path": path.to_string_lossy(),
+        "language": lang,
+        "error": e.to_string(),
+        "stage": "file_read"
+    })))?;
     let clean_png_bytes = preprocess_for_ocr(&file_bytes);
 
     // Pass 1: Try PSM 4 (Optimized for columns/recipes)
@@ -39,29 +47,83 @@ pub fn scan_image_segment(img: DynamicImage, lang: &str) -> Result<String, Error
 
     // 2. Init API (Same as your run_tesseract_engine)
     let mut api = TesseractAPI::new();
-    api.init("/usr/share/tessdata", lang).map_err(|_| Error::InternalServerError)?;
+    api.init("/usr/share/tessdata", lang).map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to initialize Tesseract API",
+        "operation": "scan_image_segment",
+        "language": lang,
+        "image_width": w,
+        "image_height": h,
+        "error": e.to_string(),
+        "stage": "tesseract_init"
+    })))?;
 
     // For single regions, PSM 7 (Single line) or PSM 6 (Block) is often better
-    api.set_variable("tessedit_pageseg_mode", "6").map_err(|_| Error::InternalServerError)?;
+    api.set_variable("tessedit_pageseg_mode", "6").map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to set Tesseract PSM variable",
+        "operation": "scan_image_segment",
+        "psm": "6",
+        "error": e.to_string(),
+        "stage": "tesseract_config"
+    })))?;
 
     api.set_image(&raw_data.into_raw(), w as i32, h as i32, 3, (w * 3) as i32)
-        .map_err(|_| Error::InternalServerError)?;
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to set image data for Tesseract",
+            "operation": "scan_image_segment",
+            "image_width": w,
+            "image_height": h,
+            "error": e.to_string(),
+            "stage": "image_setup"
+        })))?;
 
-    api.recognize().map_err(|_| Error::InternalServerError)?;
-    let text = api.get_utf8_text().map_err(|_| Error::InternalServerError)?;
+    api.recognize().map_err(|e| Error::InternalServerError(json!({
+        "message": "Tesseract OCR recognition failed",
+        "operation": "scan_image_segment",
+        "error": e.to_string(),
+        "stage": "recognition"
+    })))?;
+
+    let text = api.get_utf8_text().map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to extract text from Tesseract results",
+        "operation": "scan_image_segment",
+        "error": e.to_string(),
+        "stage": "text_extraction"
+    })))?;
 
     Ok(text.trim().to_string())
 }
 
 pub(crate) fn run_tesseract_engine(img_bytes: &[u8], lang: &str, psm: &str) -> Result<(Vec<OcrLine>, String), Error> {
     let mut api = TesseractAPI::new();
-    api.init("/usr/share/tessdata", lang).map_err(|_| Error::InternalServerError)?;
+    api.init("/usr/share/tessdata", lang).map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to initialize Tesseract API in run_tesseract_engine",
+        "operation": "run_tesseract_engine",
+        "language": lang,
+        "psm": psm,
+        "error": e.to_string(),
+        "stage": "tesseract_init"
+    })))?;
 
-    api.set_variable("tessedit_pageseg_mode", psm).map_err(|_| Error::InternalServerError)?;
-    api.set_variable("preserve_interword_spaces", "1").map_err(|_| Error::InternalServerError)?;
+    api.set_variable("tessedit_pageseg_mode", psm).map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to set PSM variable",
+        "operation": "run_tesseract_engine",
+        "psm": psm,
+        "error": e.to_string(),
+        "stage": "set_variable"
+    })))?;
+    api.set_variable("preserve_interword_spaces", "1").map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to set preserve_interword_spaces variable",
+        "operation": "run_tesseract_engine",
+        "error": e.to_string(),
+        "stage": "set_variable"
+    })))?;
 
     let img = image::load_from_memory(img_bytes)
-        .map_err(|e| Error::BadRequest(serde_json::json!({"error": e.to_string()})))?;
+        .map_err(|e| Error::BadRequest(json!({
+            "error": "Failed to decode image from memory",
+            "details": e.to_string(),
+            "size_bytes": img_bytes.len()
+        })))?;
 
     let mut gray_img = img.grayscale().to_luma8();
 
@@ -77,10 +139,30 @@ pub(crate) fn run_tesseract_engine(img_bytes: &[u8], lang: &str, psm: &str) -> R
     let final_rgb = DynamicImage::ImageLuma8(gray_img).to_rgb8();
 
     api.set_image(&final_rgb.into_raw(), w as i32, h as i32, 3, (w * 3) as i32)
-        .map_err(|_| Error::InternalServerError)?;
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to set image for Tesseract",
+            "operation": "run_tesseract_engine",
+            "image_width": w,
+            "image_height": h,
+            "error": e.to_string(),
+            "stage": "set_image"
+        })))?;
 
-    api.recognize().map_err(|_| Error::InternalServerError)?;
-    let full_text = api.get_utf8_text().map_err(|_| Error::InternalServerError)?;
+    api.recognize().map_err(|e| Error::InternalServerError(json!({
+        "message": "Tesseract recognition failed",
+        "operation": "run_tesseract_engine",
+        "psm": psm,
+        "language": lang,
+        "error": e.to_string(),
+        "stage": "recognize"
+    })))?;
+
+    let full_text = api.get_utf8_text().map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to extract text from Tesseract",
+        "operation": "run_tesseract_engine",
+        "error": e.to_string(),
+        "stage": "get_utf8_text"
+    })))?;
 
     let mut ocr_lines = Vec::new();
 

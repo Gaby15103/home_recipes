@@ -16,13 +16,11 @@ pub struct IngredientTranslationInput {
 #[derive(Debug, Validate, Deserialize, Serialize, Clone, ToSchema)]
 pub struct EditIngredientTranslationInput {
     pub id: Option<Uuid>,
-    #[validate(length(min = 2, max = 5))]
     pub language_code: String,
-    #[validate(length(min = 1, max = 50))]
     pub data: String,
     pub note: Option<String>,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct IngredientInput {
     #[validate(nested)]
     pub translations: Vec<IngredientTranslationInput>,
@@ -30,7 +28,7 @@ pub struct IngredientInput {
     pub unit_id: Uuid,
     pub position: i32,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EditIngredientInput {
     pub id: Option<Uuid>,
     pub ingredient_id: Option<Uuid>,

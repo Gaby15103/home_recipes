@@ -11,6 +11,7 @@ mod repositories;
 mod services;
 mod utils;
 mod recipe_parser;
+mod logging;
 
 use config::Config;
 
@@ -20,6 +21,11 @@ async fn main() -> std::io::Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         unsafe {
             std::env::set_var("RUST_LOG", "app=debug,actix_web=info");
+        }
+    }
+    if std::env::var("ERROR_LOG_DIR").is_err() {
+        unsafe {
+            std::env::set_var("ERROR_LOG_DIR", "./logs/errors");
         }
     }
     env_logger::init();

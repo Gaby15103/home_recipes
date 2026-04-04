@@ -71,12 +71,34 @@ pub async fn process_ocr_to_dto(
         }))
         .send()
         .await
-        .map_err(|_| Error::InternalServerError)?;
-    println!("{:#?}", response);
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to reach LLM service",
+            "operation": "process_ocr_to_dto",
+            "error": e.to_string(),
+            "stage": "api_request"
+        })))?;
 
-    let res_body: serde_json::Value = response.json().await.map_err(|_| Error::InternalServerError)?;
+    let res_body: serde_json::Value = response.json().await.map_err(|e| {
+        Error::InternalServerError(json!({
+            "message": "LLM returned invalid JSON structure",
+            "operation": "process_ocr_to_dto",
+            "error": e.to_string(),
+            "stage": "response_parsing"
+        }))
+    })?;
+
+    // 4. Parse Structured String into SimpleExtraction
     let structured_str = res_body["response"].as_str().unwrap_or("{}");
-    let raw: SimpleExtraction = serde_json::from_str(structured_str).map_err(|_| Error::InternalServerError)?;
+    let raw: SimpleExtraction = serde_json::from_str(structured_str).map_err(|e| {
+        Error::InternalServerError(json!({
+            "message": "LLM output failed SimpleExtraction validation",
+            "operation": "process_ocr_to_dto",
+            "error": e.to_string(),
+            "parser_type": "RecipeExtraction",
+            "input_sample": structured_str.chars().take(500).collect::<String>(),
+            "stage": "schema_mapping"
+        }))
+    })?;
 
     // 1. Map Main Translations
     let translations = vec![

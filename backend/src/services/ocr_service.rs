@@ -1,21 +1,21 @@
-use std::fs;
-use std::path::Path;
 use crate::dto::recipe_dto::{CreateRecipeInput, RecipeDto, RecipeViewDto};
 use crate::dto::recipe_ocr::{OcrConfirmInput, OcrCorrectionWrapper, OcrResultResponse}; // Returning the bridge DTO instead
+use crate::dto::upload_dto::RegionDto;
 use crate::errors::Error;
 use crate::recipe_parser;
 use crate::recipe_parser::{ParserContext, teach_lexicon};
 use crate::repositories::unit_repository;
 use crate::services::recipe_service;
+use crate::utils::schema::get_cleaned_gemini_schema;
 use actix_multipart::form::tempfile::TempFile;
+use base64::{Engine as _, engine::general_purpose};
 use sea_orm::DatabaseConnection;
 use serde_json::json;
-use sqlx::SqlitePool;
-use base64::{Engine as _, engine::general_purpose};
 use sha2::{Digest, Sha256};
+use sqlx::SqlitePool;
+use std::fs;
+use std::path::Path;
 use uuid::Uuid;
-use crate::dto::upload_dto::RegionDto;
-use crate::utils::schema::get_cleaned_gemini_schema;
 
 pub async fn recipe_from_files(
     images: Vec<TempFile>,
@@ -26,7 +26,14 @@ pub async fn recipe_from_files(
     let mut hasher = Sha256::new();
     let mut image_data = Vec::new();
     for img in &images {
-        let bytes = fs::read(img.file.path()).map_err(|_| Error::InternalServerError)?;
+        let bytes = fs::read(img.file.path())
+            .map_err(|e| Error::InternalServerError(json!({
+                "message": "Failed to read image file",
+                "operation": "recipe_from_files",
+                "file_path": img.file.path().to_string_lossy(),
+                "error": e.to_string(),
+                "stage": "file_read"
+            })))?;
         hasher.update(&bytes);
         image_data.push(bytes);
     }
@@ -36,8 +43,22 @@ pub async fn recipe_from_files(
 
     // 2. Try to Load from Cache (Keep as is)
     if cache_path.exists() {
-        let cached_json = fs::read_to_string(&cache_path).map_err(|_| Error::InternalServerError)?;
-        return Ok(serde_json::from_str(&cached_json)?);
+        let cached_json = fs::read_to_string(&cache_path)
+            .map_err(|e| Error::InternalServerError(json!({
+                "message": "Failed to read cache file",
+                "operation": "recipe_from_files",
+                "cache_path": cache_path.to_string_lossy(),
+                "error": e.to_string(),
+                "stage": "cache_read"
+            })))?;
+
+        return serde_json::from_str(&cached_json)
+            .map_err(|e| Error::InternalServerError(json!({
+                "message": "Failed to parse cached recipe JSON",
+                "operation": "recipe_from_files",
+                "error": e.to_string(),
+                "stage": "cache_deserialization"
+            })));
     }
 
     // 3. Prepare OpenRouter Payload
@@ -55,15 +76,14 @@ pub async fn recipe_from_files(
         }));
     }
 
-
     content_parts.push(json!({
-    "type": "text",
-    "text": "Extract recipe to JSON.
+        "type": "text",
+        "text": "Extract recipe to JSON.
              IMPORTANT RULES:
              1. 'amount' MUST be a NUMBER, not a string (e.g., 6, not '6').
              2. 'unit_id' MUST be the unit SYMBOL string (e.g., 'g').
              3. Omit null fields."
-}));
+    }));
 
     // 4. Call OpenRouter API
     let client = reqwest::Client::new();
@@ -77,7 +97,6 @@ pub async fn recipe_from_files(
     let mut attempts = 0;
 
     let json_text = loop {
-        // Pick a model based on the current attempt
         let current_model = models[attempts % models.len()];
 
         let res: serde_json::Value = client
@@ -86,14 +105,31 @@ pub async fn recipe_from_files(
             .header("HTTP-Referer", "http://localhost:5173")
             .header("X-Title", "HomeRecipes")
             .json(&json!({
-            "model": current_model, // Just one string here!
-            "messages": [{ "role": "user", "content": content_parts }],
-            "response_format": { "type": "json_object" },
-            "temperature": 0.1
-        }))
+                "model": current_model,
+                "messages": [{ "role": "user", "content": content_parts }],
+                "response_format": { "type": "json_object" },
+                "temperature": 0.1
+            }))
             .send()
-            .await.map_err(|_| Error::InternalServerError)?
-            .json().await.map_err(|_| Error::InternalServerError)?;
+            .await
+            .map_err(|e| Error::InternalServerError(json!({
+                "message": "Failed to send request to OpenRouter API",
+                "operation": "recipe_from_files",
+                "model": current_model,
+                "attempt": attempts,
+                "error": e.to_string(),
+                "stage": "api_request"
+            })))?
+            .json()
+            .await
+            .map_err(|e| Error::InternalServerError(json!({
+                "message": "Failed to parse OpenRouter API response",
+                "operation": "recipe_from_files",
+                "model": current_model,
+                "attempt": attempts,
+                "error": e.to_string(),
+                "stage": "api_response_parse"
+            })))?;
 
         println!("{:#?}", res);
 
@@ -108,25 +144,25 @@ pub async fn recipe_from_files(
         attempts += 1;
         if attempts >= models.len() {
             log::error!("All free models failed. Last response: {:?}", res);
-            return Err(Error::BadRequest("All providers failed to return content. Try again later.".into()));
+            return Err(Error::BadRequest(json!({
+                "error": "All providers failed to return content. Try again later."
+            })));
         }
 
         log::warn!("Model {} failed, trying {}...", current_model, models[attempts % models.len()]);
-        // Small sleep to avoid spamming
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     };
 
     // 6. Post-Process (Mapping symbols to UUIDs)
     let units = unit_repository::get_all_admin(db).await?;
-    let mut recipe_input: CreateRecipeInput = serde_json::from_str(&*json_text).map_err(|e| {
-        Error::BadRequest(format!("Schema mismatch: {}", e).into())
-    })?;
+    let mut recipe_input: CreateRecipeInput = serde_json::from_str(&*json_text)
+        .map_err(|e| Error::BadRequest(format!("Schema mismatch: {}", e).into()))?;
 
     for group in &mut recipe_input.ingredient_groups {
         for ing in &mut group.ingredients {
-            let matched_unit = units.iter().find(|u| {
-                u.symbol.to_lowercase() == ing.unit_id.to_string().to_lowercase()
-            });
+            let matched_unit = units
+                .iter()
+                .find(|u| u.symbol.to_lowercase() == ing.unit_id.to_string().to_lowercase());
 
             ing.unit_id = match matched_unit {
                 Some(u) => u.id,
@@ -137,7 +173,15 @@ pub async fn recipe_from_files(
 
     // 7. Save to Cache
     fs::create_dir_all(cache_dir).ok();
-    fs::write(cache_path, serde_json::to_string(&recipe_input)?).ok();
+    fs::write(&cache_path, serde_json::to_string(&recipe_input)
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to serialize recipe for cache",
+            "operation": "recipe_from_files",
+            "cache_path": cache_path.to_string_lossy(),
+            "error": e.to_string(),
+            "stage": "cache_serialization"
+        })))?)
+        .ok();
 
     Ok(recipe_input)
 }
@@ -149,7 +193,10 @@ pub async fn recipe_from_regions(
     sqlite_pool: &SqlitePool,
 ) -> Result<OcrResultResponse, Error> {
     let units = unit_repository::get_all_admin(db).await?;
-    let context = ParserContext { sqlite_pool, known_units: units };
+    let context = ParserContext {
+        sqlite_pool,
+        known_units: units,
+    };
 
     // Just pass the raw images and regions into the parser
     recipe_parser::run_region_pipeline(images, regions, &lang, context).await
