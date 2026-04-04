@@ -71,8 +71,6 @@ impl ResponseError for Error {
     fn error_response(&self) -> HttpResponse {
         let error_logger = ErrorLogger::from_env();
 
-        let error_logger = ErrorLogger::from_env();
-
         match self {
             Error::InternalServerError(context) => {
                 let error_log = ErrorLog::new(
