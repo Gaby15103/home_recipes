@@ -20,7 +20,7 @@ pub struct EditIngredientTranslationInput {
     pub data: String,
     pub note: Option<String>,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct IngredientInput {
     #[validate(nested)]
     pub translations: Vec<IngredientTranslationInput>,
@@ -28,7 +28,7 @@ pub struct IngredientInput {
     pub unit_id: Uuid,
     pub position: i32,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EditIngredientInput {
     pub id: Option<Uuid>,
     pub ingredient_id: Option<Uuid>,

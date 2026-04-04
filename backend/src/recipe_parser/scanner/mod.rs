@@ -5,6 +5,7 @@ use std::path::Path;
 use image::GenericImageView;
 use serde_derive::{Deserialize, Serialize};
 use regex::Regex;
+use serde_json::json;
 use crate::dto::upload_dto::RegionDto;
 
 pub mod tesseract;
@@ -49,13 +50,28 @@ pub fn scan_region(path: &std::path::Path, region: &RegionDto, lang: &str) -> Re
     // 1. Use the logic that you know works to get the file
     let file_bytes = std::fs::read(path).map_err(|e| {
         log::error!("Failed to read image file at {:?}: {}", path, e);
-        Error::InternalServerError
+        Error::InternalServerError(json!({
+            "message": "Failed to read image file in scan_region",
+            "operation": "scan_region",
+            "file_path": path.to_string_lossy(),
+            "language": lang,
+            "error": e.to_string(),
+            "stage": "file_read"
+        }))
     })?;
 
     // 2. Load the image from memory (more reliable than image::open)
     let img = image::load_from_memory(&file_bytes).map_err(|e| {
         log::error!("Failed to decode image from memory: {}", e);
-        Error::InternalServerError
+        Error::InternalServerError(json!({
+            "message": "Failed to decode image from memory",
+            "operation": "scan_region",
+            "file_path": path.to_string_lossy(),
+            "language": lang,
+            "file_size_bytes": file_bytes.len(),
+            "error": e.to_string(),
+            "stage": "image_decode"
+        }))
     })?;
 
     let (img_w, img_h) = img.dimensions();
@@ -67,13 +83,33 @@ pub fn scan_region(path: &std::path::Path, region: &RegionDto, lang: &str) -> Re
     let h = region.h.min(img_h - y);
 
     if w == 0 || h == 0 {
-        return Ok("".to_string());
+        return Err(Error::InternalServerError(json!({
+            "message": "Invalid crop region dimensions",
+            "operation": "scan_region",
+            "image_width": img_w,
+            "image_height": img_h,
+            "region_x": region.x,
+            "region_y": region.y,
+            "region_w": region.w,
+            "region_h": region.h,
+            "clamped_width": w,
+            "clamped_height": h,
+            "stage": "region_validation"
+        })));
     }
 
     // 4. Crop and convert back to bytes for your preprocessor
     let cropped = img.crop_imm(x, y, w, h);
     let mut buf = std::io::Cursor::new(Vec::new());
-    cropped.write_to(&mut buf, image::ImageFormat::Png).map_err(|_| Error::InternalServerError)?;
+
+    cropped.write_to(&mut buf, image::ImageFormat::Png).map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to write cropped image to PNG",
+        "operation": "scan_region",
+        "crop_width": w,
+        "crop_height": h,
+        "error": e.to_string(),
+        "stage": "crop_write"
+    })))?;
 
     // 5. Use your proven preprocessing and engine
     let clean_png_bytes = tesseract::preprocess_for_ocr(&buf.into_inner());

@@ -5,14 +5,14 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct IngredientGroupInput {
     pub translations: Vec<IngredientGroupTranslationInput>,
     pub position: i32,
     #[validate(nested)]
     pub ingredients: Vec<IngredientInput>,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EditIngredientGroupInput {
     pub id: Option<Uuid>,
     pub translations: Vec<EditIngredientGroupTranslationInput>,

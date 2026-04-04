@@ -16,6 +16,7 @@ use crate::utils::file_upload::move_file_to_recipes;
 use sea_orm::DatabaseConnection;
 use std::fs;
 use std::ops::Deref;
+use serde_json::json;
 use uuid::Uuid;
 
 pub async fn get_all(
@@ -195,7 +196,14 @@ pub async fn update(
     let result = get_by_id(db, recipe_id, lang_code, false).await?;
     match result {
         RecipeResponse::View(recipe_view) => Ok(recipe_view),
-        RecipeResponse::Editor(_) => Err(Error::InternalServerError),
+        RecipeResponse::Editor(_) => Err(Error::InternalServerError(json!({
+            "message": "Unexpected response type after recipe update",
+            "operation": "update",
+            "recipe_id": recipe_id.to_string(),
+            "expected": "RecipeResponse::View",
+            "received": "RecipeResponse::Editor",
+            "stage": "response_validation"
+        }))),
     }
 }
 

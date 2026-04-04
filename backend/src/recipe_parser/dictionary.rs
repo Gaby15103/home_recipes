@@ -2,6 +2,7 @@ use sqlx::{Row, SqlitePool};
 use crate::dto::recipe_ocr::OcrMatchMetadata;
 use crate::errors::Error;
 use regex::Regex;
+use serde_json::json;
 
 /// Checks if a word is a functional "noise" word that should never trigger a DB search[cite: 2, 3].
 fn is_stop_word(word: &str) -> bool {
@@ -136,7 +137,15 @@ async fn lookup_lexicon(text: &str, pool: &SqlitePool) -> Result<Option<OcrMatch
         .bind(&clean_query)
         .fetch_optional(pool)
         .await
-        .map_err(|_| Error::InternalServerError)?;
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Database query failed in lookup_lexicon",
+            "operation": "lookup_lexicon",
+            "search_term": &clean_query,
+            "prefix_query": &prefix_query,
+            "original_text": text,
+            "error": e.to_string(),
+            "stage": "database_query"
+        })))?;
 
     if let Some(r) = row {
         let rank: f64 = r.get("rank");

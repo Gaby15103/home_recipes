@@ -21,13 +21,22 @@ impl TryFrom<RegisterRequestDto> for NewUser {
     type Error = Error;
 
     fn try_from(dto: RegisterRequestDto) -> Result<Self, Self::Error> {
+        let password_hash = HASHER.hash(&dto.password)
+            .map_err(|e| Error::InternalServerError(json!({
+                "message": "Failed to hash password during user registration",
+                "operation": "password_hashing",
+                "username": &dto.username,
+                "email": &dto.email,
+                "error": e.to_string(),
+                "stage": "user_creation"
+            })))?;
+
         Ok(Self {
             email: dto.email,
             username: dto.username,
             first_name: dto.first_name,
             last_name: dto.last_name,
-            password_hash: HASHER.hash(&dto.password)
-                .map_err(|e| Error::InternalServerError)?,
+            password_hash,
             avatar_url: "/assets/users/default.png".to_string(),
             preferences: json!({"language":"fr","theme":"Dark"}),
         })

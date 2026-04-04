@@ -19,9 +19,24 @@ pub async fn translate_text(text: &str, from: &str, to: &str) -> Result<String, 
         }))
         .send()
         .await
-        .map_err(|_| Error::InternalServerError)?;
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Translation service request failed",
+            "operation": "translate_text",
+            "source_lang": from,
+            "target_lang": to,
+            "text_length": text.len(),
+            "error": e.to_string(),
+            "stage": "http_request"
+        })))?;
 
-    let body: serde_json::Value = res.json().await.map_err(|_| Error::InternalServerError)?;
+    let body: serde_json::Value = res.json().await.map_err(|e| Error::InternalServerError(json!({
+        "message": "Failed to parse translation response",
+        "operation": "translate_text",
+        "source_lang": from,
+        "target_lang": to,
+        "error": e.to_string(),
+        "stage": "response_parsing"
+    })))?;
 
     Ok(body["translatedText"]
         .as_str()

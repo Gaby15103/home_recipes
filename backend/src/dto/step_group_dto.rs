@@ -3,14 +3,14 @@ use serde_derive::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct StepGroupInput {
     pub position: i32,
     pub translations: Vec<StepGroupTranslationInput>,
     #[validate(nested)]
     pub steps: Vec<StepInput>,
 }
-#[derive(Debug, Validate, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, Validate, Deserialize, Serialize, ToSchema, Clone)]
 pub struct EditStepGroupInput {
     pub id: Option<Uuid>,
     pub position: i32,
