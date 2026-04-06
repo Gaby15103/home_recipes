@@ -66,7 +66,7 @@ impl Config {
             env::var("MAIL_FROM_NAME").unwrap_or_else(|_| "HomeRecipes".to_string());
 
         let gemini_api_key = env::var("GEMINI_API_KEY").unwrap_or_else(|_| "GEMINI_API_KAY".to_string());
-        
+
         let groq_cloud_api_key = env::var("GROQ_CLOUD_API_KEY").unwrap_or_else(|_| "GROQ_CLOUD_API_KEY".to_string());
 
         let translator_url = env::var("TRANSLATOR_URL")

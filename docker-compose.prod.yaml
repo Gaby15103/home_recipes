@@ -22,6 +22,29 @@ services:
     depends_on:
       - postgres
       - redis
+      - mailserver
+
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    container_name: mailserver
+    hostname: mail
+    domainname: gaby15103.org
+    ports:
+      - "25:25"    # SMTP (Inbound/Relay)
+      - "587:587"  # Submission (STARTTLS - What your backend uses)
+      - "993:993"  # IMAP (If you want to check mail in an app)
+    volumes:
+      - maildata:/var/mail/
+      - mailstate:/var/mail-state/
+      - mailconfig:/tmp/docker-mailserver/
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - ENABLE_SPAMASSASSIN=1
+      - ENABLE_CLAMAV=0 # Disabled to save RAM (ClamAV is heavy)
+      - ENABLE_FAIL2BAN=1
+      - SSL_TYPE=letsencrypt
+      - SPOOF_PROTECTION=1
+    restart: always
 
   frontend:
     build:
@@ -85,3 +108,6 @@ services:
 volumes:
   postgresDb:
   ollama_data:
+  maildata:
+  mailstate:
+  mailconfig:
