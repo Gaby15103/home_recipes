@@ -60,64 +60,80 @@ const submit = handleSubmit(async (values) => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-sm space-y-6 p-6 rounded-lg border bg-card shadow">
-      <h2 class="text-2xl font-semibold text-center">
-        {{ t('auth.login.title') }}
-      </h2>
+  <div class="min-h-screen flex items-center justify-center bg-background p-4">
+    <div class="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg transition-all">
+      <div class="flex flex-col space-y-2 text-center mb-8">
+        <h2 class="text-2xl font-bold tracking-tight">
+          {{ t('auth.login.title') }}
+        </h2>
+        <p class="text-sm text-muted-foreground">
+          {{ t('auth.login.subtitle') }}
+        </p>
+      </div>
 
       <Alert
           variant="destructive"
           v-if="error"
-          class="whitespace-normal break-words !line-clamp-none"
+          class="mb-6 animate-in fade-in zoom-in duration-200"
       >
         <AlertTitle class="whitespace-normal break-words !line-clamp-none">
           {{ error }}
         </AlertTitle>
       </Alert>
 
+      <form id="login-form" @submit="submit" class="space-y-4">
+        <vee-field name="email" v-slot="{ field, errors }">
+          <div class="space-y-1">
+            <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+              {{ t('auth.login.email') }}
+            </FieldLabel>
+            <Input
+                v-bind="field"
+                type="email"
+                placeholder="name@example.com"
+                autocomplete="email"
+                :class="{ 'border-destructive': errors.length }"
+                required
+            />
+            <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+          </div>
+        </vee-field>
 
+        <vee-field name="password" v-slot="{ field, errors }">
+          <div class="space-y-1">
+            <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+              {{ t('auth.login.password') }}
+            </FieldLabel>
+            <Input
+                v-bind="field"
+                type="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                :class="{ 'border-destructive': errors.length }"
+                required
+            />
+            <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+          </div>
+        </vee-field>
 
-      <form id="login-form" @submit="submit" class="flex flex-col space-y-3">
-        <FieldGroup>
-          <vee-field v-slot="{ field, errors }" name="email">
-            <Field :data-invalid="!!errors.email">
-              <FieldLabel>{{ t('auth.login.email') }}</FieldLabel>
-              <Input
-                  v-bind="field"
-                  type="email"
-                  placeholder="email@example.com"
-                  autocomplete="email"
-                  required
-              />
-              <FieldError v-if="errors.email" :errors="errors"/>
-            </Field>
-          </vee-field>
-
-          <vee-field v-slot="{ field, errors }" name="password">
-            <Field :data-invalid="!!errors.length">
-              <FieldLabel>{{ t('auth.login.password') }}</FieldLabel>
-              <Input
-                  v-bind="field"
-                  type="password"
-                  placeholder="password"
-                  autocomplete="current-password"
-                  required
-              />
-              <FieldError v-if="errors.length" :errors="errors"/>
-            </Field>
-          </vee-field>
-
-          <Button type="submit" form="login-form" class="w-full mt-4">
-            {{ t('auth.login.submit') }}
-          </Button>
-        </FieldGroup>
-
+        <Button form="login-form" type="submit" class="w-full h-11 font-semibold transition-all hover:bg-primary/90 mt-2">
+          {{ t('auth.login.submit') }}
+        </Button>
       </form>
 
-      <p class="text-sm text-center text-muted-foreground">
-        {{ t('auth.login.noAccount') }}
-        <RouterLink class="underline" to="/register">
+      <div class="relative mt-8">
+        <div class="absolute inset-0 flex items-center">
+          <span class="w-full border-t"></span>
+        </div>
+        <div class="relative flex justify-center text-xs uppercase">
+          <span class="bg-card px-2 text-muted-foreground">
+            {{ t('auth.login.noAccount') }}
+          </span>
+        </div>
+      </div>
+
+      <p class="mt-4 text-center text-sm">
+        <RouterLink :to="ROUTES.REGISTER" class="font-medium text-primary hover:underline underline-offset-4">
           {{ t('auth.login.register') }}
         </RouterLink>
       </p>
