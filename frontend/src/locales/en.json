@@ -16,12 +16,13 @@
   },
   "auth": {
     "login": {
-      "title": "Login",
-      "email": "Email",
+      "title": "Welcome back",
+      "subtitle": "Enter your credentials to access your account",
+      "email": "Email Address",
       "password": "Password",
-      "submit": "Login",
-      "noAccount": "No account?",
-      "register": "Register",
+      "submit": "Sign In",
+      "noAccount": "Don't have an account?",
+      "register": "Create one here",
       "error": {
         "failed": "Login failed",
         "missing2fa": "2FA required but token not returned by the server."
@@ -29,8 +30,10 @@
     },
     "register": {
       "title": "Create account",
+      "subtitle": "Enter your information below to create your account",
       "username": "Username",
-      "email": "Email",
+      "email": "Email Address",
+      "confirmEmail": "Confirm Email Address",
       "firstName": "First name",
       "lastName": "Last name",
       "password": "Password",
@@ -38,7 +41,8 @@
       "already": "Already registered?",
       "login": "Login",
       "error": {
-        "failed": "Registration failed"
+        "failed": "Registration failed",
+        "emailMismatch": "The emails provided do not match."
       }
     },
     "confirmEmail": {

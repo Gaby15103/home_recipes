@@ -3,13 +3,15 @@ import {ref} from "vue"
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
 import {Alert, AlertTitle} from "@/components/ui/alert"
-import {Field, FieldError, FieldGroup, FieldLabel} from "@/components/ui/field"
-import {useForm, Field as VeeField} from "vee-validate"
+import {FieldError, FieldLabel} from "@/components/ui/field"
+import {Field as VeeField, useForm} from "vee-validate"
 import {toTypedSchema} from "@vee-validate/zod"
 import {registerSchema} from "@/validators/auth.ts"
 import {registerUser} from "@/api/auth.ts"
 import {useRouter} from "vue-router"
-import { useI18n } from "vue-i18n"
+import {useI18n} from "vue-i18n"
+import {ROUTES} from "@/router/routes.ts";
+
 const { t } = useI18n()
 const router = useRouter()
 const error = ref("")
@@ -19,6 +21,7 @@ const {handleSubmit} = useForm({
   initialValues: {
     username: "",
     email: "",
+    email_confirmation: "",
     password: "",
     first_name: "",
     last_name: "",
@@ -43,114 +46,139 @@ const submit = handleSubmit(async (values) => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-sm rounded-lg border bg-card p-5 shadow">
-      <h2 class="mb-4 text-center text-xl font-semibold">
-        {{ t('auth.register.title') }}
-      </h2>
+  <div class="min-h-screen flex items-center justify-center bg-background p-4">
+    <div class="w-full max-w-md rounded-xl border bg-card p-8 shadow-lg transition-all">
+      <div class="flex flex-col space-y-2 text-center mb-8">
+        <h2 class="text-2xl font-bold tracking-tight">
+          {{ t('auth.register.title') }}
+        </h2>
+        <p class="text-sm text-muted-foreground">
+          {{ t('auth.register.subtitle') || 'Enter your details below to create your account' }}
+        </p>
+      </div>
 
       <Alert
           variant="destructive"
           v-if="error"
-          class="whitespace-normal break-words !line-clamp-none"
+          class="mb-6 animate-in fade-in zoom-in duration-200"
       >
-        <AlertTitle class="whitespace-normal break-words !line-clamp-none">
-          {{ error }}
-        </AlertTitle>
+        <AlertTitle>{{ error }}</AlertTitle>
       </Alert>
 
-      <form id="register-form" @submit="submit" class="space-y-2">
-        <FieldGroup>
-          <vee-field name="username" v-slot="{ field, errors }">
-            <Field :data-invalid="!!errors.length">
-              <FieldLabel class="text-sm">{{ t('auth.register.username') }}</FieldLabel>
-              <Input
-                  v-bind="field"
-                  type="text"
-                  placeholder="Username"
-                  autocomplete="username"
-                  required
-              />
-              <FieldError v-if="errors.length" :errors="errors"/>
-            </Field>
-          </vee-field>
-
-          <!-- Email -->
-          <vee-field name="email" v-slot="{ field, errors }">
-            <Field :data-invalid="!!errors.email">
-              <FieldLabel class="text-sm">{{ t('auth.confirmEmail.title') }}</FieldLabel>
-              <Input
-                  v-bind="field"
-                  type="email"
-                  placeholder="Email"
-                  autocomplete="email"
-                  required
-              />
-              <FieldError v-if="errors.email" :errors="errors"/>
-            </Field>
-          </vee-field>
-
-          <!-- Names row -->
-          <div class="grid grid-cols-2 gap-3">
-            <vee-field name="first_name" v-slot="{ field, errors }">
-              <Field :data-invalid="!!errors.length">
-                <FieldLabel class="text-sm">
-                  {{ t('auth.register.firstName') }}
-                </FieldLabel>
-                <Input
-                    v-bind="field"
-                    type="text"
-                    placeholder="First name"
-                    autocomplete="first_name"
-                    required
-                />
-                <FieldError v-if="errors.length" :errors="errors"/>
-              </Field>
-            </vee-field>
-
-            <vee-field name="last_name" v-slot="{ field, errors }">
-              <Field :data-invalid="!!errors.length">
-                <FieldLabel class="text-sm">
-                  {{ t('auth.register.lastName') }}
-                </FieldLabel>
-                <Input
-                    v-bind="field"
-                    type="text"
-                    placeholder="Last name"
-                    autocomplete="last_name"
-                    required
-                />
-                <FieldError v-if="errors.length" :errors="errors"/>
-              </Field>
-            </vee-field>
-          </div>
-
-          <!-- Password -->
-          <vee-field name="password" v-slot="{ field, errors }">
-            <Field :data-invalid="!!errors.length">
-              <FieldLabel class="text-sm">
-                {{ t('auth.register.password') }}
+      <form id="register-form" @submit="submit" class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <vee-field name="first_name" v-slot="{ field, errors }">
+            <div class="space-y-1">
+              <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+                {{ t('auth.register.firstName') }}
               </FieldLabel>
               <Input
                   v-bind="field"
-                  type="password"
-                  placeholder="Password"
-                  autocomplete="current-password"
-                  required
+                  autocomplete="given-name"
+                  placeholder="Jean"
+                  :class="{ 'border-destructive': errors.length }"
               />
-              <FieldError v-if="errors.length" :errors="errors"/>
-            </Field>
+              <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+            </div>
           </vee-field>
 
-          <Button form="register-form" type="submit" class="mt-3 w-full">
-            {{ t('auth.register.submit') }}
-          </Button>
-        </FieldGroup>
+          <vee-field name="last_name" v-slot="{ field, errors }">
+            <div class="space-y-1">
+              <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+                {{ t('auth.register.lastName') }}
+              </FieldLabel>
+              <Input
+                  v-bind="field"
+                  autocomplete="family-name"
+                  placeholder="Dupont"
+                  :class="{ 'border-destructive': errors.length }"
+              />
+              <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+            </div>
+          </vee-field>
+        </div>
+
+        <vee-field name="username" v-slot="{ field, errors }">
+          <div class="space-y-1">
+            <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+              {{ t('auth.register.username') }}
+            </FieldLabel>
+            <Input
+                v-bind="field"
+                autocomplete="username"
+                placeholder="gaby15103"
+                :class="{ 'border-destructive': errors.length }"
+            />
+            <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+          </div>
+        </vee-field>
+
+        <vee-field name="email" v-slot="{ field, errors }">
+          <div class="space-y-1">
+            <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+              {{ t('auth.register.email') }}
+            </FieldLabel>
+            <Input
+                v-bind="field"
+                type="email"
+                autocomplete="email"
+                placeholder="name@example.com"
+                :class="{ 'border-destructive': errors.length }"
+            />
+            <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+          </div>
+        </vee-field>
+
+        <vee-field name="email_confirmation" v-slot="{ field, errors }">
+          <div class="space-y-1">
+            <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+              {{ t('auth.register.confirmEmail') }}
+            </FieldLabel>
+            <Input
+                v-bind="field"
+                type="email"
+                autocomplete="email"
+                placeholder="Confirm your email"
+                :class="{ 'border-destructive': errors.length }"
+            />
+            <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+          </div>
+        </vee-field>
+
+        <vee-field name="password" v-slot="{ field, errors }">
+          <div class="space-y-1">
+            <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+              {{ t('auth.register.password') }}
+            </FieldLabel>
+            <Input
+                v-bind="field"
+                type="password"
+                autocomplete="new-password"
+                placeholder="••••••••"
+                :class="{ 'border-destructive': errors.length }"
+            />
+            <FieldError v-if="errors.length" :errors="errors" class="text-[10px]"/>
+          </div>
+        </vee-field>
+
+        <Button form="register-form" type="submit" class="w-full h-11 font-semibold transition-all hover:bg-primary/90">
+          {{ t('auth.register.submit') }}
+        </Button>
       </form>
 
-      <p class="mt-3 text-center text-xs text-muted-foreground">
-        {{ t('auth.register.already') }}
-        <RouterLink to="/login" class="underline">
+      <div class="relative mt-8">
+        <div class="absolute inset-0 flex items-center">
+          <span class="w-full border-t"></span>
+        </div>
+        <div class="relative flex justify-center text-xs uppercase">
+          <span class="bg-card px-2 text-muted-foreground">
+            {{ t('auth.register.already') }}
+          </span>
+        </div>
+      </div>
+
+      <p class="mt-4 text-center text-sm">
+        <RouterLink :to="ROUTES.LOGIN" class="font-medium text-primary hover:underline underline-offset-4">
           {{ t('auth.register.login') }}
         </RouterLink>
       </p>

@@ -16,12 +16,13 @@
   },
   "auth": {
     "login": {
-      "title": "Connexion",
-      "email": "Courriel",
+      "title": "Bon retour",
+      "subtitle": "Entrez vos identifiants pour accéder à votre compte",
+      "email": "Adresse courriel",
       "password": "Mot de passe",
       "submit": "Se connecter",
-      "noAccount": "Pas de compte ?",
-      "register": "S'inscrire",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "register": "Créez-en un ici",
       "error": {
         "failed": "Échec de la connexion",
         "missing2fa": "2FA requis mais aucun jeton retourné par le serveur."
