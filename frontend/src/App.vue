@@ -2,6 +2,7 @@
 import { RouterView, useRoute } from "vue-router"
 import PublicLayout from "@/layouts/PublicLayout.vue"
 import AdminLayout from "@/layouts/AdminLayout.vue"
+import Footer from "@/components/navigation/Footer.vue";
 
 const route = useRoute()
 </script>
