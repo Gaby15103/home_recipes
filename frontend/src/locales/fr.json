@@ -14,6 +14,21 @@
     "dark": "Sombre",
     "system": "Système"
   },
+  "footer": {
+    "description": "Numériser et préserver les traditions culinaires familiales pour les générations à venir.",
+    "navigation": "Navigation",
+    "home": "Accueil",
+    "allRecipes": "Toutes les recettes",
+    "legal": "Légal & Support",
+    "privacy": "Confidentialité",
+    "terms": "Conditions d'utilisation",
+    "contact": "Contactez-nous",
+    "system": "Système",
+    "statusOk": "Système en ligne",
+    "statusError": "Système hors ligne",
+    "rights": "Tous droits réservés.",
+    "madeInCanada": "Fait au Canada"
+  },
   "auth": {
     "login": {
       "title": "Bon retour",
