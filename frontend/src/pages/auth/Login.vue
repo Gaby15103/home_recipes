@@ -101,9 +101,17 @@ const submit = handleSubmit(async (values) => {
 
         <vee-field name="password" v-slot="{ field, errors }">
           <div class="space-y-1">
-            <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
-              {{ t('auth.login.password') }}
-            </FieldLabel>
+            <div class="flex items-center justify-between">
+              <FieldLabel class="text-xs font-semibold uppercase text-muted-foreground/70">
+                {{ t('auth.login.password') }}
+              </FieldLabel>
+              <RouterLink
+                  :to="ROUTES.FORGOT_PASSWORD"
+                  class="text-xs font-medium text-primary hover:underline underline-offset-4"
+              >
+                {{ t('auth.login.forgotPassword') }}
+              </RouterLink>
+            </div>
             <Input
                 v-bind="field"
                 type="password"

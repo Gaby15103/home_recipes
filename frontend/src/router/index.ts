@@ -26,6 +26,8 @@ import Appearance from "@/pages/settings/Appearance.vue";
 import TwoFactorChallenge from "@/pages/auth/TwoFactorChallenge.vue";
 import ConfirmEmail from "@/pages/auth/ConfirmEmail.vue";
 import OcrRecipeEditor from "@/pages/recipes/OcrRecipeEditor.vue";
+import ForgotPassword from "@/pages/auth/ForgotPassword.vue";
+import ResetPassword from "@/pages/auth/ResetPassword.vue";
 
 const routes = [
 
@@ -33,6 +35,8 @@ const routes = [
     {path: ROUTES.LOGIN, component: Login},
     {path: ROUTES.TWO_FACTOR, component: TwoFactorChallenge},
     {path: ROUTES.REGISTER, component: Register},
+    {path: ROUTES.FORGOT_PASSWORD, component: ForgotPassword},
+    {path: ROUTES.RESET_PASSWORD, component: ResetPassword},
     {path: ROUTES.EMAIL_CONFIRMATION, component: ConfirmEmail },
     {path: ROUTES.RECIPES, component: Index},
     {path: "/recipe/:id", component: Show},

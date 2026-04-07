@@ -29,6 +29,23 @@ export function logout() {
     return api(AuthRoutes.logout(), { method: "POST" });
 }
 
+export function forgotPassword(email: string) {
+    return api<{ message: string }>(AuthRoutes.forgotPassword(), {
+        method: "POST",
+        data: { email }
+    });
+}
+
+export function resetPassword(token: string, newPassword: string) {
+    return api<{ message: string }>(AuthRoutes.resetPassword(), {
+        method: "POST",
+        data: {
+            token,
+            new_password: newPassword
+        }
+    });
+}
+
 // -------- USER --------
 export function getCurrentUser() {
     return api<User>(UserRoutes.me(), { method: "GET" });

@@ -3,6 +3,8 @@
     HOME: "/",
     LOGIN: "/login",
     REGISTER: "/register",
+    FORGOT_PASSWORD: "/forgot_password",
+    RESET_PASSWORD: "/reset-password",
     EMAIL_CONFIRMATION: "/verify",
     RECIPES: "/recipes",
     RECIPE: (id: string ) => `/recipe/${id}`,

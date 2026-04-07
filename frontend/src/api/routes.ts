@@ -5,6 +5,8 @@ export const AuthRoutes = {
     register: () => `${API_ROOT}/auth/register`,
     confirmEmail: () => `${API_ROOT}/auth/confirm_email`,
     logout: () => `${API_ROOT}/auth/logout`,
+    forgotPassword: () => `${API_ROOT}/auth/forgot_password`,
+    resetPassword: () => `${API_ROOT}/auth/reset_password`,
 };
 
 export const UserRoutes = {

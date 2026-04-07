@@ -23,9 +23,36 @@
       "submit": "Se connecter",
       "noAccount": "Vous n'avez pas de compte ?",
       "register": "Créez-en un ici",
+      "forgotPassword": "Mot de passe oublié ?",
       "error": {
         "failed": "Échec de la connexion",
         "missing2fa": "2FA requis mais aucun jeton retourné par le serveur."
+      }
+    },
+    "reset": {
+      "title": "Réinitialiser le mot de passe",
+      "subtitle": "Choisissez un mot de passe robuste que vous n'avez pas utilisé auparavant.",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "submit": "Mettre à jour le mot de passe",
+      "success": "Mot de passe mis à jour ! Redirection vers la connexion...",
+      "error": {
+        "failed": "La réinitialisation a échoué. Le lien est peut-être expiré.",
+        "invalidToken": "Le jeton est invalide ou manquant.",
+        "missingToken": "Aucun jeton de réinitialisation trouvé dans l'URL."
+      }
+    },
+    "recovery": {
+      "title": "Mot de passe oublié ?",
+      "subtitle": "Pas de soucis, nous vous enverrons les instructions de réinitialisation.",
+      "successSubtitle": "Instructions envoyées !",
+      "email": "Adresse courriel",
+      "submit": "Envoyer le lien",
+      "checkEmail": "Nous avons envoyé un lien de récupération à votre courriel. Veuillez vérifier votre boîte de réception.",
+      "resend": "Vous n'avez rien reçu ? Réessayer",
+      "backToLogin": "Retour à la connexion",
+      "error": {
+        "failed": "Impossible de traiter la demande. Veuillez réessayer plus tard."
       }
     },
     "register": {

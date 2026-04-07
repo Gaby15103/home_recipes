@@ -23,9 +23,36 @@
       "submit": "Sign In",
       "noAccount": "Don't have an account?",
       "register": "Create one here",
+      "forgotPassword": "Forgot password?",
       "error": {
         "failed": "Login failed",
         "missing2fa": "2FA required but token not returned by the server."
+      }
+    },
+    "reset": {
+      "title": "Reset password",
+      "subtitle": "Choose a strong password you haven't used before.",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "submit": "Update password",
+      "success": "Password updated! Redirecting to login...",
+      "error": {
+        "failed": "Reset failed. The link may have expired.",
+        "invalidToken": "Token is invalid or missing.",
+        "missingToken": "No reset token found in URL."
+      }
+    },
+    "recovery": {
+      "title": "Forgot password?",
+      "subtitle": "No worries, we'll send you reset instructions.",
+      "successSubtitle": "Instructions sent!",
+      "email": "Email Address",
+      "submit": "Send Reset Link",
+      "checkEmail": "We've sent a recovery link to your email. Please check your inbox (and spam folder).",
+      "resend": "Didn't get the email? Try again",
+      "backToLogin": "Back to login",
+      "error": {
+        "failed": "Could not process request. Please try again later."
       }
     },
     "register": {
