@@ -1,5 +1,6 @@
 ﻿export interface UserPreferences {
-    [key: string]: any;
+    language: 'en' | 'fr';
+    theme: 'light' | 'dark' | 'system';
 }
 
 export interface User {
@@ -19,4 +20,12 @@ export interface User {
 export interface Role {
     name: string;
     description: string;
+}
+export interface ProfileDto {
+    id: string;
+    username: string;
+    first_name: string;
+    last_name: string;
+    avatar_url: string | File | null;
+    preferences: UserPreferences;
 }

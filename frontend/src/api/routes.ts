@@ -12,7 +12,8 @@ export const AuthRoutes = {
 export const UserRoutes = {
     me: () => `${API_ROOT}/user/me`,
     updateMe: () => `${API_ROOT}/user/me`,
-    getById: (id: strting) => `${API_ROOT}/user/${id}`,
+    getById: (id: string) => `${API_ROOT}/user/${id}`,
+    update: (id: string) => `${API_ROOT}/user/profile/${id}`,
 };
 
 export const TagRoutes = {

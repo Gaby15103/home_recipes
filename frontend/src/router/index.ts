@@ -32,6 +32,7 @@ import UserSettingsView from "@/pages/users/UserSettingsView.vue";
 import  ManageMyRecipe from "@/pages/users/Manage.vue"
 import Security from "@/pages/users/Security.vue";
 import UserProfile from "@/pages/users/Profile.vue";
+import ProfileEdit from "@/pages/users/ProfileEdit.vue";
 
 const routes = [
 
@@ -50,6 +51,7 @@ const routes = [
         redirect: ROUTES.USER.SETTINGS,
         children: [
             {path: "/user/profile/:id", component: UserProfile},
+            {path: ROUTES.USER.PROFILE_EDIT, component: ProfileEdit },
             {path: ROUTES.USER.MY_RECIPES, component: ManageMyRecipe },
             {path: ROUTES.USER.SETTINGS, component: UserSettingsView },
             {path: ROUTES.USER.SECURITY, component: Security },

@@ -12,7 +12,7 @@ use crate::repositories::{
     ingredient_group_repository, recipe_repository, recipe_translation_repository,
     recipe_version_repository, step_group_repository, tag_repository,
 };
-use crate::utils::file_upload::move_file_to_recipes;
+use crate::utils::file_upload::move_file_from_tmp;
 use sea_orm::DatabaseConnection;
 use std::fs;
 use std::ops::Deref;
@@ -133,12 +133,12 @@ pub async fn create(
 
     fs::create_dir_all(target_dir)?;
 
-    new_recipe.image_url = move_file_to_recipes(&new_recipe.image_url, target_dir)?;
+    new_recipe.image_url = move_file_from_tmp(&new_recipe.image_url, target_dir)?;
 
     for group in &mut new_recipe.step_groups {
         for step in &mut group.steps {
             if let Some(temp_path) = &step.image_url {
-                step.image_url = Some(move_file_to_recipes(temp_path, target_dir)?);
+                step.image_url = Some(move_file_from_tmp(temp_path, target_dir)?);
             }
         }
     }

@@ -1,6 +1,7 @@
+use std::fs;
 use crate::dto::recipe_dto::RecipeViewDto;
 use crate::dto::session_dto::SessionResponseDto;
-use crate::dto::user_dto::{UpdatePasswordDto, UpdateUserDto, UserResponseDto};
+use crate::dto::user_dto::{UpdatePasswordDto, ProfileDto, UserResponseDto};
 use crate::errors::Error;
 use crate::repositories::{recipe_repository, recipe_translation_repository, role_repository, session_repository, user_repository};
 use crate::utils::HASHER;
@@ -9,6 +10,7 @@ use sea_orm::{ActiveModelTrait, DatabaseConnection};
 use serde_json::json;
 use std::ops::Deref;
 use uuid::Uuid;
+use crate::utils::file_upload::move_file_from_tmp;
 
 pub async fn get_active_sessions(
     db: &DatabaseConnection,
@@ -54,8 +56,18 @@ pub async fn revoke_session(
 pub async fn update_user(
     db: &DatabaseConnection,
     user_id: Uuid,
-    data: UpdateUserDto,
+    mut data: ProfileDto,
 ) -> Result<users::Model, Error> {
+    let user = user_repository::find_by_id(db, user_id).await?;
+    
+    if data.avatar_url != user.avatar_url {
+        let target_dir = "assets/users";
+
+        fs::create_dir_all(target_dir)?;
+
+        data.avatar_url = move_file_from_tmp(&data.avatar_url, target_dir)?;
+    }
+    
     user_repository::update_user_profile(db, user_id, data).await
 }
 

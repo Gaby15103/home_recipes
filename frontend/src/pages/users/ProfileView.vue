@@ -48,7 +48,7 @@ defineProps<{
 
         <div v-if="isOwnProfile" class="pb-2">
           <Button as-child variant="outline" class="rounded-xl border-2 hover:bg-primary hover:text-white transition-all">
-            <RouterLink :to="ROUTES.USER.PROFILE">
+            <RouterLink :to="ROUTES.USER.PROFILE_EDIT">
               <Pencil class="mr-2 h-4 w-4" /> {{ t('profile.public.edit_profile') }}
             </RouterLink>
           </Button>

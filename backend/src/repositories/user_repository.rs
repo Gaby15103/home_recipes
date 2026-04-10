@@ -1,5 +1,5 @@
 use crate::domain::user::NewUser;
-use crate::dto::user_dto::UpdateUserDto;
+use crate::dto::user_dto::ProfileDto;
 use crate::errors::Error;
 use chrono::{Duration, Utc};
 use entity::{email_verification_tokens, password_reset_tokens, roles, user_roles, users};
@@ -208,59 +208,29 @@ pub async fn reset_password(
 pub async fn update_user_profile(
     db: &DatabaseConnection,
     user_id: Uuid,
-    data: UpdateUserDto,
-) -> Result<entity::users::Model, Error> {
+    data: ProfileDto,
+) -> Result<Model, Error> {
     let user = users::Entity::find_by_id(user_id)
         .one(db)
         .await
-        .map_err(|e| Error::InternalServerError(json!({
-            "message": "Failed to fetch user for profile update",
-            "operation": "update_user_profile",
-            "entity": "users",
-            "user_id": user_id.to_string(),
-            "error": e.to_string(),
-            "stage": "fetch"
-        })))?
-        .ok_or_else(|| Error::InternalServerError(json!({
-            "message": "User not found for profile update",
-            "operation": "update_user_profile",
-            "entity": "users",
-            "user_id": user_id.to_string(),
-            "stage": "validation"
-        })))?;
+        .map_err(|e| Error::InternalServerError(json!({ "error": e.to_string() })))?
+        .ok_or_else(|| Error::NotFound(json!({ "message": "User not found" })))?;
 
     let mut active_user: users::ActiveModel = user.into();
 
-    if let Some(first_name) = data.first_name {
-        active_user.first_name = Set(first_name);
-    }
-    if let Some(last_name) = data.last_name {
-        active_user.last_name = Set(last_name);
-    }
-    if let Some(avatar) = data.avatar_url {
-        active_user.avatar_url = Set(avatar);
-    }
-    if let Some(prefs) = data.preferences {
-        active_user.preferences = Set(serde_json::to_value(prefs)
-            .map_err(|e| Error::InternalServerError(json!({
-                "message": "Failed to serialize user preferences",
-                "operation": "update_user_profile",
-                "entity": "users",
-                "user_id": user_id.to_string(),
-                "error": e.to_string(),
-                "stage": "serialization"
-            })))?);
-    }
+    active_user.username = Set(data.username);
+    active_user.first_name = Set(data.first_name);
+    active_user.last_name = Set(data.last_name);
+    active_user.avatar_url = Set(data.avatar_url);
 
-    active_user.update(db).await
-        .map_err(|e| Error::InternalServerError(json!({
-            "message": "Failed to update user profile",
-            "operation": "update_user_profile",
-            "entity": "users",
-            "user_id": user_id.to_string(),
-            "error": e.to_string(),
-            "stage": "update"
-        })))
+    active_user.preferences = Set(serde_json::to_value(data.preferences)
+        .map_err(|e| Error::InternalServerError(json!({ "error": e.to_string() })))?);
+
+    let updated_user = active_user.update(db).await.map_err(|e| {
+        Error::InternalServerError(json!({ "message": "Save failed", "error": e.to_string() }))
+    })?;
+
+    Ok(updated_user)
 }
 
 pub async fn confirm_email(db: &DatabaseConnection, token: Uuid) -> Result<(), Error> {
