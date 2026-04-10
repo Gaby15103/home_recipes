@@ -83,3 +83,6 @@ export const OcrRoutes = {
     process_regions: () => `${API_ROOT}/ocr/process_regions`,
     create: () => `${API_ROOT}/ocr/confirm`,
 }
+export const SystemRoutes = {
+    health: () => `${API_ROOT}/health`,
+}

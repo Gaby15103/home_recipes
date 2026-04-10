@@ -14,6 +14,21 @@
     "dark": "Dark",
     "system": "System"
   },
+  "footer": {
+    "description": "Digitizing and preserving family culinary traditions for generations to come.",
+    "navigation": "Navigation",
+    "home": "Home",
+    "allRecipes": "All Recipes",
+    "legal": "Legal & Support",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact Us",
+    "system": "System",
+    "rights": "All rights reserved.",
+    "madeInCanada": "Made in Canada",
+    "statusOk": "System Online",
+    "statusError": "System Offline"
+  },
   "auth": {
     "login": {
       "title": "Welcome back",
