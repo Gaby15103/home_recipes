@@ -141,6 +141,17 @@ pub async fn find_by_id(db: &DatabaseConnection, id: Uuid) -> Result<recipes::Mo
         })))
 }
 
+pub async fn find_by_author(
+    db: &DatabaseConnection,
+    author_id: Uuid
+) -> Result<Vec<recipes::Model>, Error> {
+    recipes::Entity::find()
+        .filter(recipes::Column::AuthorId.eq(author_id))
+        .all(db)
+        .await
+        .map_err(Error::from)
+}
+
 pub async fn create(
     db: &DatabaseConnection,
     new_recipe: CreateRecipeInput,

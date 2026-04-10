@@ -12,6 +12,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/user")
             .route("/me", web::get().to(get_me))
+            .route("/{id}", web::get().to(get_by_id))
             .route("/profile", web::put().to(update_profile))
             .route("/password", web::put().to(change_password))
             .route("/sessions", web::get().to(get_sessions)),
@@ -22,6 +23,17 @@ pub async fn get_me(
     auth: AuthenticatedUser,
 ) -> Result<HttpResponse, crate::errors::Error> {
     Ok(HttpResponse::Ok().json(auth.user))
+}
+
+pub async fn get_by_id(
+    state: Data<AppState>,
+    path: Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let user_id = path.into_inner();
+
+    let user = user_service::get_by_id(&state.db, user_id).await?;
+
+    Ok(HttpResponse::Ok().json(user))
 }
 
 pub async fn get_sessions(

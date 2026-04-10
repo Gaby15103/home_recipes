@@ -5,6 +5,7 @@ use sea_orm::DatabaseConnection;
 use sea_orm::{ColumnTrait, DbErr};
 use sea_orm::{EntityTrait, QueryFilter};
 use uuid::Uuid;
+use entity::*;
 
 pub async fn find_all(db: &DatabaseConnection) -> Result<Vec<recipe_translations::Model>, Error> {
     recipe_translations::Entity::find()
@@ -20,7 +21,7 @@ pub async fn find_by_id(
     recipe_translations::Entity::find_by_id(id)
         .one(db)
         .await?
-        .ok_or(sea_orm::DbErr::RecordNotFound("Recipe not found".into()))
+        .ok_or(DbErr::RecordNotFound("Recipe not found".into()))
 }
 pub async fn find_translation(
     db: &DatabaseConnection,

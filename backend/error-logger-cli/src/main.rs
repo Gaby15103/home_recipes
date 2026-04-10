@@ -42,7 +42,8 @@ enum Commands {
         date: Option<String>,
 
         /// Show only the last N errors
-        #[arg(short, long)]
+        // Change short to 'n' to avoid conflict with 'log_dir' (-l)
+        #[arg(short = 'n', long)]
         limit: Option<usize>,
 
         /// Filter by error ID prefix

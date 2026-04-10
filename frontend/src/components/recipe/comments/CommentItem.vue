@@ -5,6 +5,8 @@ import CommentEditor from "./CommentEditor.vue"
 import MarkdownRenderer from "./MarkdownRenderer.vue"
 import { useI18n } from "vue-i18n"
 import {useAuthStore} from "@/stores/auth.ts";
+import NavLink from "@/components/navigation/NavLink.vue";
+import {ROUTES} from "@/router/routes.ts";
 const { t } = useI18n()
 const authStore = useAuthStore();
 const {
@@ -38,7 +40,9 @@ function onChildReplyPosted(parentId: string, reply: RecipeComment) {
     <!-- Comment Body -->
     <div class="p-3 border rounded-lg bg-gray-50 dark:bg-gray-900">
       <div class="flex justify-between items-center">
-        <p class="font-semibold">{{ comment.username }}</p>
+        <NavLink :to="ROUTES.USER.PROFILE(comment.user_id)">
+          <p class="font-semibold">{{ comment.username }}</p>
+        </NavLink>
         <p class="text-xs text-gray-500">{{ new Date(comment.created_at).toLocaleString() }}</p>
       </div>
 

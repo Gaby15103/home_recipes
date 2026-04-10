@@ -149,9 +149,20 @@ async function logout() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator/>
               <DropdownMenuItem as-child>
-                <RouterLink :to="ROUTES.HOME" class="cursor-pointer w-full flex items-center">
+                <RouterLink :to="ROUTES.USER.PROFILE(user.id)" class="cursor-pointer w-full flex items-center">
                   <User class="mr-2 h-4 w-4"/>
                   {{ t('Profile') }}
+                </RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem as-child>
+                <RouterLink :to="ROUTES.USER.SETTINGS" class="cursor-pointer w-full flex items-center">
+                  <User class="mr-2 h-4 w-4"/>
+                  {{ t('Settings') }}
+                </RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem as-child>
+                <RouterLink :to="ROUTES.USER.MY_RECIPES" class="cursor-pointer w-full flex items-center">
+                  <Utensils class="mr-2 h-4 w-4"/> {{ t('My Recipes') }}
                 </RouterLink>
               </DropdownMenuItem>
               <DropdownMenuItem v-if="authStore.hasRole('ADMIN') || authStore.hasRole('MODERATOR')" as-child>

@@ -99,6 +99,30 @@ pub async fn get_by_id(
         )))
     }
 }
+pub async fn get_by_author(
+    db: &DatabaseConnection,
+    author_id: Uuid,
+    lang: &str,
+) -> Result<Vec<RecipeViewDto>, Error> {
+    let recipes = recipe_repository::find_by_author(db, author_id).await?;
+
+    let mut dtos = Vec::new();
+    
+    for recipe in recipes {
+        let translation = recipe_translation_repository::find_translation(
+            db,
+            recipe.id,
+            lang,
+            recipe.original_language_code.deref(),
+        )
+            .await?;
+
+        let dto = RecipeViewDto::from((recipe, translation));
+        dtos.push(dto);
+    }
+
+    Ok(dtos)
+}
 
 pub async fn create(
     db: &DatabaseConnection,

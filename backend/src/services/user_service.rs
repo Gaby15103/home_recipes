@@ -2,9 +2,7 @@ use crate::dto::recipe_dto::RecipeViewDto;
 use crate::dto::session_dto::SessionResponseDto;
 use crate::dto::user_dto::{UpdatePasswordDto, UpdateUserDto, UserResponseDto};
 use crate::errors::Error;
-use crate::repositories::{
-    recipe_repository, recipe_translation_repository, session_repository, user_repository,
-};
+use crate::repositories::{recipe_repository, recipe_translation_repository, role_repository, session_repository, user_repository};
 use crate::utils::HASHER;
 use entity::users;
 use sea_orm::{ActiveModelTrait, DatabaseConnection};
@@ -23,6 +21,17 @@ pub async fn get_active_sessions(
         .into_iter()
         .map(|m| SessionResponseDto::from_model(m, current_session_id))
         .collect())
+}
+
+pub async fn get_by_id(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+) -> Result<UserResponseDto, Error> {
+    let user = user_repository::find_by_id(db, user_id).await?;
+    
+    let roles = role_repository::get_roles_for_user(db, user_id).await?;
+    
+    Ok(UserResponseDto::from((user, roles)))
 }
 
 pub async fn revoke_session(

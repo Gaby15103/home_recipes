@@ -42,7 +42,7 @@ pub fn list_errors(
     );
 
     for error in &errors {
-        printer::print_error_summary(error);
+        printer::print_error_detailed(error);
     }
 
     println!("\n📊 Showing {} errors", errors.len());

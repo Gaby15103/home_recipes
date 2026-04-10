@@ -93,6 +93,40 @@
       "or": "or you can"
     }
   },
+  "settings": {
+    "hub": {
+      "welcome": "Welcome back",
+      "member_since": "Member since",
+      "profile": {
+        "title": "Public Profile",
+        "desc": "Manage your name, bio, and how others see you.",
+        "success": "Profile updated successfully!"
+      },
+      "recipes": {
+        "title": "My Kitchen",
+        "desc": "Edit, delete, or organize your shared recipes."
+      },
+      "security": {
+        "title": "Account Security",
+        "desc": "Update your password and manage Two-Factor (2FA).",
+        "password_title": "Change Password",
+        "password_desc": "Ensure your account is using a long, random password to stay secure.",
+        "current_password": "Current Password",
+        "new_password": "New Password",
+        "confirm_password": "Confirm New Password",
+        "success": "Password updated successfully!"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "desc": "Switch between light and dark mode or change themes."
+      }
+    },
+    "actions": {
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "back": "Back to Settings"
+    }
+  },
   "Common": {
     "Search": "Search",
     "Loading": "Gathering recipes...",

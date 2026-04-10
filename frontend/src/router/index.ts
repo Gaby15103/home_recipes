@@ -28,6 +28,10 @@ import ConfirmEmail from "@/pages/auth/ConfirmEmail.vue";
 import OcrRecipeEditor from "@/pages/recipes/OcrRecipeEditor.vue";
 import ForgotPassword from "@/pages/auth/ForgotPassword.vue";
 import ResetPassword from "@/pages/auth/ResetPassword.vue";
+import UserSettingsView from "@/pages/users/UserSettingsView.vue";
+import  ManageMyRecipe from "@/pages/users/Manage.vue"
+import Security from "@/pages/users/Security.vue";
+import UserProfile from "@/pages/users/Profile.vue";
 
 const routes = [
 
@@ -40,6 +44,17 @@ const routes = [
     {path: ROUTES.EMAIL_CONFIRMATION, component: ConfirmEmail },
     {path: ROUTES.RECIPES, component: Index},
     {path: "/recipe/:id", component: Show},
+    {
+        path: ROUTES.USER.SETTINGS,
+        meta: { requiresAuth: true},
+        redirect: ROUTES.USER.SETTINGS,
+        children: [
+            {path: "/user/profile/:id", component: UserProfile},
+            {path: ROUTES.USER.MY_RECIPES, component: ManageMyRecipe },
+            {path: ROUTES.USER.SETTINGS, component: UserSettingsView },
+            {path: ROUTES.USER.SECURITY, component: Security },
+        ]
+    },
 
     {
         path: ROUTES.ADMIN.BASE,

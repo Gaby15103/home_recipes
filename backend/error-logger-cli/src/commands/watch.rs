@@ -2,8 +2,6 @@ use crate::parser;
 use crate::printer;
 use anyhow::Result;
 use std::path::Path;
-use std::time::Duration;
-use tokio::time::sleep;
 
 pub fn watch_logs(log_dir: &Path, interval: u64) -> Result<()> {
     let mut last_count = 0;

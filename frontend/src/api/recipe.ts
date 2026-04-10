@@ -61,7 +61,12 @@ export function getRecipeById(id: string, include_translations: boolean = false)
 
     return api<RecipeView>(`${path}?${queryString}`, { method: "GET" });
 }
-// Proposed change to fetch a LIST of the latest recipes
+
+export function getRecipesByAuthor(authorId: string) {
+    const path = RecipeRoutes.byAuthor(authorId);
+    return api<RecipeView[]>(path, { method: "GET" });
+}
+
 export function getRecentRecipes(nb: number = 4, include_translations: boolean = false) {
     const queryString = new URLSearchParams({
         nb: String(nb),

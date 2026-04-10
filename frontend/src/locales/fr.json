@@ -90,6 +90,40 @@
       "or": "ou vous pouvez"
     }
   },
+  "settings": {
+    "hub": {
+      "welcome": "Bon retour",
+      "member_since": "Membre depuis",
+      "profile": {
+        "title": "Profil Public",
+        "desc": "Gérez votre nom, votre bio et votre apparence.",
+        "success": "Profil mis à jour avec succès !"
+      },
+      "recipes": {
+        "title": "Ma Cuisine",
+        "desc": "Modifiez, supprimez ou organisez vos recettes."
+      },
+      "security": {
+        "title": "Sécurité du compte",
+        "desc": "Modifiez votre mot de passe et gérez la double authentification (2FA).",
+        "password_title": "Modifier le mot de passe",
+        "password_desc": "Assurez-vous d'utiliser un mot de passe long et aléatoire pour rester en sécurité.",
+        "current_password": "Mot de passe actuel",
+        "new_password": "Nouveau mot de passe",
+        "confirm_password": "Confirmer le mot de passe",
+        "success": "Mot de passe mis à jour !"
+      },
+      "appearance": {
+        "title": "Apparence",
+        "desc": "Basculez entre le mode clair et sombre ou changez de thème."
+      }
+    },
+    "actions": {
+      "save": "Enregistrer",
+      "saving": "Enregistrement...",
+      "back": "Retour aux réglages"
+    }
+  },
   "Common": {
     "Search": "Rechercher",
     "Loading": "Récupération des recettes...",

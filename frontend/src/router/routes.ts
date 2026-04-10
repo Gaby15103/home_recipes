@@ -9,6 +9,13 @@
     RECIPES: "/recipes",
     RECIPE: (id: string ) => `/recipe/${id}`,
 
+    USER: {
+        SETTINGS: "/user/settings",
+        MY_RECIPES: "/user/my_recipes",
+        PROFILE: (id: string) =>`/user/profile/${id}`,
+        SECURITY:"/user/security",
+    },
+
     // Admin
     ADMIN: {
         BASE: "/admin",

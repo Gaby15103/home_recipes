@@ -12,6 +12,7 @@ export const AuthRoutes = {
 export const UserRoutes = {
     me: () => `${API_ROOT}/user/me`,
     updateMe: () => `${API_ROOT}/user/me`,
+    getById: (id: strting) => `${API_ROOT}/user/${id}`,
 };
 
 export const TagRoutes = {
@@ -26,6 +27,8 @@ export const RecipeRoutes = {
     byPage: () => `${API_ROOT}/recipes/by_page`,
     get: (id: string) => `${API_ROOT}/recipes/${id}`,
     get_last: () => `${API_ROOT}/recipes/last`,
+    byAuthor: (id: string) => `${API_ROOT}/recipes/author/${id}`,
+
     create: () => `${API_ROOT}/recipes`,
     update: (id: string) => `${API_ROOT}/recipes/${id}`,
     delete: (id: string) => `${API_ROOT}/recipes/${id}`,

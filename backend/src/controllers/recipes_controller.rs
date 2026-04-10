@@ -25,6 +25,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route("/favorites", web::get().to(get_favorites))
             .route("/comment/{id}", web::delete().to(delete_comment))
             .route("/comment/{id}", web::put().to(edit_comment))
+            .route("/author/{id}", web::get().to(get_by_author))
             .route("/{id}", web::get().to(get))
             .route("/{id}", web::put().to(update))
             .route("/{id}", web::delete().to(delete))
@@ -157,6 +158,23 @@ pub async fn get_by_page(
         page,
         per_page,
     }))
+}
+pub async fn get_by_author(
+    state: Data<AppState>,
+    req: HttpRequest,
+    path: Path<Uuid>,
+) -> Result<HttpResponse, Error> {
+    let author_id = path.into_inner();
+    let lang_code = extract_language(&req);
+
+    // This calls a service function you'll need to ensure exists in recipe_service
+    let recipes = recipe_service::get_by_author(
+        &state.db,
+        author_id,
+        lang_code.deref()
+    ).await?;
+
+    Ok(HttpResponse::Ok().json(recipes))
 }
 pub async fn create(
     state: Data<AppState>,
