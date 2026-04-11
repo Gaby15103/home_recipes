@@ -11,7 +11,11 @@ import {Separator} from '@/components/ui/separator'
 import {Card, CardContent} from '@/components/ui/card'
 import {Camera, Save, User as UserIcon} from 'lucide-vue-next'
 import type {ProfileDto, User} from "@/models/User.ts"
+import { getCurrentInstance } from 'vue'
 
+
+const instance = getCurrentInstance()
+const apiUrl = instance?.appContext.config.globalProperties.$apiUrl
 const authStore = useAuthStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 const previewUrl = ref<string | null>(null)
@@ -28,6 +32,7 @@ const form = ref<ProfileDto>({
 onMounted(() => {
   if (authStore.user) {
     Object.assign(form.value, authStore.user)
+    previewUrl.value = apiUrl + form.value.avatar_url;
   }
 })
 
