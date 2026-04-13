@@ -1,76 +1,90 @@
-﻿import {defineStore} from "pinia";
-import {getCurrentUser, login, logout} from "@/api/auth";
-import type {User} from "@/models/User";
-import {useRouter} from "vue-router";
-import {ROUTES} from "@/router/routes.ts";
+﻿import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import { getCurrentUser, login as apiLogin, logout as apiLogout } from "@/api/auth";
+import type { User } from "@/models/User";
+import { useRouter } from "vue-router";
+import { ROUTES } from "@/router/routes.ts";
+import { setLanguage } from "@/utils/setLanguage.ts";
 
-const router = useRouter()
+import { useColorMode } from "@vueuse/core";
+import i18n from "../../i18n.ts";
 
-export const useAuthStore = defineStore("auth", {
-    state: () => ({
-        user: null as User | null,
-        loading: false,
-        twoFactorPending: false,
-        twoFactorToken: null as string | null,
-    }),
+export const useAuthStore = defineStore("auth", () => {
+    // --- Setup Logic ---
+    const router = useRouter();
+    const mode = useColorMode();
 
-    getters: {
-        isAuthenticated: (state) => !!state.user,
-        hasRole: (state) => (role: string) =>
-            state.user?.roles?.some(r => r.name === role) ?? false,
-    },
+    // --- State ---
+    const user = ref<User | null>(null);
+    const loading = ref(false);
+    const twoFactorPending = ref(false);
+    const twoFactorToken = ref<string | null>(null);
 
-    actions: {
-        async loadUser(): Promise<User | null> {
-            this.loading = true;
-            try {
-                this.user = await getCurrentUser();
-            } catch {
-                this.user = null;
-            } finally {
-                this.loading = false;
+    // --- Getters ---
+    const isAuthenticated = computed(() => !!user.value);
+    const hasRole = computed(() => (role: string) =>
+        user.value?.roles?.some(r => r.name === role) ?? false
+    );
+
+    // --- Actions ---
+    async function loadUser(): Promise<User | null> {
+        loading.value = true;
+        try {
+            user.value = await getCurrentUser();
+        } catch {
+            user.value = null;
+        } finally {
+            loading.value = false;
+        }
+        return user.value;
+    }
+
+    async function login(email: string, password: string) {
+        loading.value = true;
+        try {
+            const res = await apiLogin(email, password);
+            if (res.user) {
+                user.value = res.user;
+
+                // Sync Preferences
+                const prefs = res.user.preferences;
+                if (prefs) {
+                    // Update Language
+                    if (i18n.global.availableLocales.includes(prefs.language as any)) {
+                        setLanguage(prefs.language);
+                    }
+                    // Update Theme
+                    mode.value = prefs.theme as any;
+                }
             }
-            return this.user;
-        },
+        } finally {
+            loading.value = false;
+        }
+    }
 
-        async login(email: string, password: string) {
-            this.loading = true;
-            try {
-                const res = await login(email, password);
-                if (res.user)
-                    this.user = res.user;
-            } finally {
-                this.loading = false;
-            }
-        },
+    async function logout() {
+        loading.value = true;
+        try {
+            await apiLogout();
+            await router.push(ROUTES.HOME);
+        } finally {
+            user.value = null;
+            loading.value = false;
+        }
+    }
 
-        async logout() {
-            this.loading = true;
-            try {
-                await logout();
-                await router.push(ROUTES.HOME);
-            } finally {
-                this.user = null;
-                this.loading = false;
-            }
-        },
+    function setUser(newUser: User) {
+        user.value = newUser;
+    }
 
-        setUser(user: User) {
-            this.user = user;
-        },
+    function clearUser() {
+        user.value = null;
+    }
 
-        clearUser() {
-            this.user = null;
-        },
-
-        setPendingTwoFactor(token: string) {
-            this.twoFactorPending = true
-            this.twoFactorToken = token
-        },
-
-        clearTwoFactor() {
-            this.twoFactorPending = false
-            this.twoFactorToken = null
-        },
-    },
+    // --- Return everything the app needs ---
+    return {
+        user, loading, twoFactorPending, twoFactorToken,
+        isAuthenticated, hasRole,
+        loadUser, login, logout, setUser, clearUser
+    };
 });

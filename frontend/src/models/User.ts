@@ -1,6 +1,8 @@
-﻿export interface UserPreferences {
+﻿import type {BasicColorMode} from "@vueuse/core";
+
+export interface UserPreferences {
     language: 'en' | 'fr';
-    theme: 'light' | 'dark' | 'system';
+    theme: BasicColorMode;
 }
 
 export interface User {
