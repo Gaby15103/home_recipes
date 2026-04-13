@@ -1,0 +1,1 @@
+import {default as Utensils } from "@/components/icon/Utensils.vue";

@@ -38,7 +38,7 @@ export const RecipeRoutes = {
     trackView: (id: string) => `${API_ROOT}/recipes/${id}/views`,
 
     favorite: (id: string) => `${API_ROOT}/recipes/${id}/favorite`,
-    favorites: () => `${API_ROOT}/recipes/favorites`,
+    favorites: (id: string) => `${API_ROOT}/recipes/favorites/${id}`,
 
     rate: (id: string) => `${API_ROOT}/recipes/${id}/rating`,
     unrate: (id: string) => `${API_ROOT}/recipes/${id}/rating`,

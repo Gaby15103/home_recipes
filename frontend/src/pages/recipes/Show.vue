@@ -81,7 +81,7 @@ async function loadMeta() {
   try {
     const [ratingRes, favsRes, commentsRes] = await Promise.all([
       getRating(recipe.value.id),
-      getFavorites(),
+      getFavorites(authStore.user.id),
       getComments(recipe.value.id)
     ]);
     comments.value = commentsRes;

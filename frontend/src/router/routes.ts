@@ -13,6 +13,7 @@
         SETTINGS: "/user/settings",
         MY_RECIPES: "/user/my_recipes",
         PROFILE: (id: string) =>`/user/profile/${id}`,
+        Favorite: (id: string) =>`/user/favorite/${id}`,
         PROFILE_EDIT: "/user/settings/profile",
         SECURITY:"/user/security",
     },

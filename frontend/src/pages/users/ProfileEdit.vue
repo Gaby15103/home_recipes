@@ -12,6 +12,10 @@ import {Card, CardContent} from '@/components/ui/card'
 import {Camera, Save, User as UserIcon} from 'lucide-vue-next'
 import type {ProfileDto, User} from "@/models/User.ts"
 import { getCurrentInstance } from 'vue'
+import {ROUTES} from "@/router/routes.ts";
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 
 const instance = getCurrentInstance()
@@ -49,13 +53,19 @@ const onFileSelected = (event: Event) => {
 
 async function handleSave() {
   toast.promise(updateProfile(form.value), {
-    loading: 'Synchronizing with server...',
+    loading: 'Saving changes...',
     success: (updatedUser: User) => {
       authStore.setUser(updatedUser)
-      previewUrl.value = null
-      return 'Profile updated!'
+
+      if (previewUrl.value && previewUrl.value.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl.value)
+      }
+
+      router.push(ROUTES.USER.PROFILE(updatedUser.id))
+
+      return 'Profile updated successfully!'
     },
-    error: (err: { message: any }) => err.message || 'Update failed',
+    error: (err) => err.message || 'Failed to update profile',
   })
 }
 </script>

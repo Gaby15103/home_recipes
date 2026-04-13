@@ -85,9 +85,12 @@ pub async fn change_password(
 
 pub async fn get_favorites(
     db: &DatabaseConnection,
-    user: UserResponseDto,
+    user_id: Uuid,
 ) -> Result<Vec<RecipeViewDto>, Error> {
-    let recipes = recipe_repository::get_favorites(db, user.id.clone()).await?;
+    let user = user_repository::find_by_id(db, user_id).await?;
+    let roles = role_repository::get_roles_for_user(db, user_id).await?;
+    let user = UserResponseDto::from((user,roles));
+    let recipes = recipe_repository::get_favorites(db, user_id).await?;
 
     let mut dtos = Vec::new();
 
