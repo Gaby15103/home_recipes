@@ -18,7 +18,7 @@ defineProps<{
 
 <template>
   <div class="animate-in fade-in duration-500">
-    <div class="w-full h-48 bg-gradient-to-r from-primary/10 via-secondary/20 to-primary/5 border-b"></div>
+    <div class="w-full h-48 bg-linear-to-r from-primary/10 via-secondary/20 to-primary/5 border-b"></div>
 
     <div class="container max-w-6xl -mt-20 pb-20 relative z-10">
       <div class="flex flex-col md:flex-row gap-8 items-end justify-between">
@@ -48,7 +48,7 @@ defineProps<{
 
         <div v-if="isOwnProfile" class="pb-2">
           <Button as-child variant="outline" class="rounded-xl border-2 hover:bg-primary hover:text-white transition-all">
-            <RouterLink :to="ROUTES.USER.PROFILE_EDIT">
+            <RouterLink :to="{ path: ROUTES.USER.SETTINGS, query: { section: 'account', from: 'profile' } }">
               <Pencil class="mr-2 h-4 w-4" /> {{ t('profile.public.edit_profile') }}
             </RouterLink>
           </Button>

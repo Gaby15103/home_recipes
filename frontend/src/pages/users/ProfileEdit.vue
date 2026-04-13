@@ -13,8 +13,9 @@ import {Camera, Save, User as UserIcon} from 'lucide-vue-next'
 import type {ProfileDto, User} from "@/models/User.ts"
 import { getCurrentInstance } from 'vue'
 import {ROUTES} from "@/router/routes.ts";
-import { useRouter } from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 
+const route = useRoute()
 const router = useRouter()
 
 
@@ -61,7 +62,9 @@ async function handleSave() {
         URL.revokeObjectURL(previewUrl.value)
       }
 
-      router.push(ROUTES.USER.PROFILE(updatedUser.id))
+      if (route.query.from === 'profile') {
+        router.push(ROUTES.USER.PROFILE(updatedUser.id))
+      }
 
       return 'Profile updated successfully!'
     },

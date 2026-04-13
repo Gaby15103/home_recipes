@@ -125,6 +125,7 @@
   "settings": {
     "hub": {
       "welcome": "Bon retour",
+      "desc": "Gérez vos préférences globales et votre expérience visuelle.",
       "member_since": "Membre depuis",
       "profile": {
         "title": "Profil public",
@@ -132,7 +133,7 @@
         "success": "Profil mis à jour avec succès !"
       },
       "actions": {
-        "save": "Enregistrer",
+        "save": "Enregistrer les modifications",
         "saving": "Enregistrement...",
         "back": "Retour aux paramètres"
       }
@@ -371,7 +372,10 @@
       "prep_max": "Temps prép. max",
       "cook_min": "Temps cuisson min",
       "cook_max": "Temps cuisson max",
-      "steps_min": "Étapes min,"
+      "steps_min": "Étapes min",
+      "steps_max": "Étapes max",
+      "date_from": "Du",
+      "date_to": "Au"
     }
   }
 }
