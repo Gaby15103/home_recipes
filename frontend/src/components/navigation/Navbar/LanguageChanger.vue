@@ -7,29 +7,56 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
-import { setLanguage } from "@/utils/setLanguage.ts";
-const { t, locale, availableLocales } = useI18n()
+import { setLanguage } from "@/utils/setLanguage.ts"
+import { useAuthStore } from '@/stores/auth'
+import { updateProfile } from '@/api/user'
+import { Languages } from 'lucide-vue-next'
 
-function changeLocale(newLocale: string) {
-  locale.value = newLocale
+const { locale, availableLocales } = useI18n()
+const authStore = useAuthStore()
+
+async function handleLanguageChange(newLocale: string) {
+  // 1. Update the UI locally (via your existing utility)
+  setLanguage(newLocale)
+
+  // 2. If user is logged in, persist the choice to the database
+  if (authStore.user) {
+    try {
+      const updatedUser = await updateProfile({
+        ...authStore.user,
+        preferences: {
+          ...authStore.user.preferences,
+          language: newLocale
+        }
+      })
+
+      // 3. Sync the store with the updated preferences from the backend
+      authStore.setUser(updatedUser)
+    } catch (err) {
+      console.error('Failed to save language preference:', err)
+    }
+  }
 }
 </script>
 
 <template>
   <DropdownMenu>
     <DropdownMenuTrigger as-child>
-      <Button variant="outline">
-        {{ locale.toUpperCase() }}
+      <Button variant="outline" class="gap-2 rounded-xl border-2 uppercase font-bold">
+        {{ locale }}
       </Button>
     </DropdownMenuTrigger>
 
-    <DropdownMenuContent align="end">
+    <DropdownMenuContent align="end" class="rounded-xl border-2">
       <DropdownMenuItem
           v-for="loc in availableLocales"
           :key="loc"
-          @click="setLanguage(loc)"
+          class="uppercase font-medium cursor-pointer"
+          @click="handleLanguageChange(loc)"
       >
-        {{ loc.toUpperCase() }}
+        <span :class="{ 'text-primary font-bold': locale === loc }">
+          {{ loc }}
+        </span>
       </DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>

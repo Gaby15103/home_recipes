@@ -2,7 +2,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-pub fn move_file_to_recipes(src_path: &str, target_dir: &str) -> Result<String, io::Error> {
+pub fn move_file_from_tmp(src_path: &str, target_dir: &str) -> Result<String, io::Error> {
     let sanitized_src = src_path.strip_prefix("/").unwrap_or(src_path);
     let path = Path::new(sanitized_src);
 

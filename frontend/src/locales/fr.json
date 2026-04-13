@@ -6,8 +6,9 @@
   "Register": "S'inscrire",
   "Logout": "Déconnexion",
   "Profile": "Profil",
+  "Favorite": "Favoris",
   "Admin Dashboard": "Tableau d'administration",
-  "Loading": "chargement...",
+  "Loading": "Chargement...",
   "theme": {
     "toggle": "Changer le thème",
     "light": "Clair",
@@ -24,10 +25,10 @@
     "terms": "Conditions d'utilisation",
     "contact": "Contactez-nous",
     "system": "Système",
-    "statusOk": "Système en ligne",
-    "statusError": "Système hors ligne",
     "rights": "Tous droits réservés.",
-    "madeInCanada": "Fait au Canada"
+    "madeInCanada": "Fait au Canada",
+    "statusOk": "Système en ligne",
+    "statusError": "Système hors ligne"
   },
   "auth": {
     "login": {
@@ -72,8 +73,10 @@
     },
     "register": {
       "title": "Créer un compte",
+      "subtitle": "Entrez vos informations ci-dessous pour créer votre compte",
       "username": "Nom d'utilisateur",
-      "email": "Courriel",
+      "email": "Adresse courriel",
+      "confirmEmail": "Confirmer l'adresse courriel",
       "firstName": "Prénom",
       "lastName": "Nom",
       "password": "Mot de passe",
@@ -81,12 +84,13 @@
       "already": "Déjà inscrit ?",
       "login": "Connexion",
       "error": {
-        "failed": "Échec de l'inscription"
+        "failed": "Échec de l'inscription",
+        "emailMismatch": "Les adresses courriel ne correspondent pas."
       }
     },
     "confirmEmail": {
       "title": "Confirmation du courriel",
-      "loading": "Confirmation du courriel en cours...",
+      "loading": "Confirmation de votre courriel, veuillez patienter...",
       "invalidLink": "Lien de confirmation invalide.",
       "error": "Une erreur est survenue lors de la confirmation du courriel.",
       "goLogin": "Aller à la connexion"
@@ -95,14 +99,27 @@
       "authCodeTitle": "Code d'authentification",
       "authCodeDescription": "Entrez le code fourni par votre application d'authentification.",
       "recoveryTitle": "Code de récupération",
-      "recoveryDescription": "Confirmez l'accès à votre compte avec un code de récupération.",
-      "toggleRecovery": "Se connecter avec un code de récupération",
-      "toggleAuth": "Se connecter avec un code d'authentification",
+      "recoveryDescription": "Veuillez confirmer l'accès à votre compte en entrant l'un de vos codes de secours.",
+      "toggleRecovery": "se connecter avec un code de secours",
+      "toggleAuth": "se connecter avec un code d'authentification",
       "continue": "Continuer",
-      "recoveryPlaceholder": "Entrer un code de récupération",
+      "recoveryPlaceholder": "Entrer le code de secours",
       "invalidCode": "Code d'authentification invalide",
       "missingToken": "Jeton 2FA manquant",
       "or": "ou vous pouvez"
+    }
+  },
+  "profile": {
+    "public": {
+      "member_since": "Membre depuis",
+      "edit_profile": "Modifier le profil",
+      "recipes_title": "Recettes publiées",
+      "no_recipes": "Ce chef n'a pas encore partagé ses secrets."
+    },
+    "favorites": {
+      "title_mine": "Mes coups de cœur",
+      "title_other": "Collection culinaire",
+      "search_placeholder": "Chercher dans les favoris..."
     }
   },
   "settings": {
@@ -110,33 +127,15 @@
       "welcome": "Bon retour",
       "member_since": "Membre depuis",
       "profile": {
-        "title": "Profil Public",
-        "desc": "Gérez votre nom, votre bio et votre apparence.",
+        "title": "Profil public",
+        "desc": "Gérez votre nom, votre avatar et votre apparence publique.",
         "success": "Profil mis à jour avec succès !"
       },
-      "recipes": {
-        "title": "Ma Cuisine",
-        "desc": "Modifiez, supprimez ou organisez vos recettes."
-      },
-      "security": {
-        "title": "Sécurité du compte",
-        "desc": "Modifiez votre mot de passe et gérez la double authentification (2FA).",
-        "password_title": "Modifier le mot de passe",
-        "password_desc": "Assurez-vous d'utiliser un mot de passe long et aléatoire pour rester en sécurité.",
-        "current_password": "Mot de passe actuel",
-        "new_password": "Nouveau mot de passe",
-        "confirm_password": "Confirmer le mot de passe",
-        "success": "Mot de passe mis à jour !"
-      },
-      "appearance": {
-        "title": "Apparence",
-        "desc": "Basculez entre le mode clair et sombre ou changez de thème."
+      "actions": {
+        "save": "Enregistrer",
+        "saving": "Enregistrement...",
+        "back": "Retour aux paramètres"
       }
-    },
-    "actions": {
-      "save": "Enregistrer",
-      "saving": "Enregistrement...",
-      "back": "Retour aux réglages"
     }
   },
   "Common": {
@@ -146,7 +145,7 @@
   },
   "Home": {
     "Title": "Recettes maison",
-    "Text": "Parcourez de délicieuses recettes maison et gérez votre propre livre de recettes.",
+    "Text": "Parcourez de délicieuses recettes maison et gérez votre propre livre de cuisine.",
     "WelcomeBack": "Bon retour",
     "ReadyToCook": "Prêt à cuisiner quelque chose de délicieux aujourd'hui ?",
     "CreateRecipe": "Créer une recette",
@@ -160,7 +159,7 @@
     "RecipePlaceholder": "Délicieuse recette n°{n}",
     "DifficultyEasy": "Facile",
     "BadgeNew": "Nouveau : La version 2.0 est en ligne !",
-    "FeaturesTitle": "Fonctionnalités de la plateforme",
+    "FeaturesTitle": "Fonctionnalités",
     "Feature1Title": "Communautaire",
     "Feature1Desc": "Rejoignez des milliers de cuisiniers partageant leurs secrets de famille.",
     "Feature2Title": "Adapter & Sauvegarder",
@@ -170,22 +169,22 @@
     "Settings": "Paramètres",
     "Appearance": "Apparence",
     "Language": "Langue",
-    "SearchPlaceholder": "Rechercher une recette, un ingrédient ou un tag..."
+    "SearchPlaceholder": "Chercher une recette, un ingrédient ou une étiquette..."
   },
   "RecipeList": {
-    "Title": "Toutes Les Recettes"
+    "Title": "Toutes les recettes"
   },
   "recipe": {
     "errors": {
       "fetch": "Impossible de charger la recette"
     },
     "meta": {
-      "time": "Temps de préparation",
+      "time": "Temps de prép. et cuisson",
       "complexity": "Complexité",
-      "dates": "Période de publication",
+      "dates": "Période",
       "tags_placeholder": "Sélectionner des étiquettes...",
       "minutes": " min",
-      "servings": " pers."
+      "servings": " portions"
     },
     "tags": "Étiquettes",
     "actions": {
@@ -217,7 +216,7 @@
       "placeholder": "Écrire un commentaire",
       "replyPlaceholder": "Répondre à {username}",
       "cancel": "Annuler",
-      "submit": "Publier",
+      "submit": "Commenter",
       "errors": {
         "postFailed": "Impossible de publier le commentaire"
       },
@@ -237,11 +236,11 @@
     }
   },
   "Ingredients": {
-    "no_match": "Aucun ingrédient trouvé",
     "search_placeholder": "Ajouter des ingrédients (Entrée)...",
     "suggestions": "Ingrédients courants",
-    "selected_count": "{count} ingredients selectionné",
-    "selected_title": "Ingredients selectionné"
+    "selected_count": "{count} ingrédients sélectionnés",
+    "selected_title": "Ingrédients sélectionnés",
+    "no_match": "Aucun ingrédient trouvé"
   },
   "Admin": {
     "common": {
@@ -254,7 +253,7 @@
       "loading": "Chargement..."
     },
     "unit": {
-      "placeholder": "unité"
+      "placeholder": "Unité"
     },
     "dashboard": {
       "stats": {
@@ -277,7 +276,7 @@
       "details": "Détails",
       "recipeSection": "Recette",
       "tags": "Étiquettes",
-      "loading": "Transformer image a une recette.",
+      "loading": "Conversion de l'image en recette.",
       "fields": {
         "title": "Titre",
         "description": "Description",
@@ -286,7 +285,7 @@
         "cookTime": "Temps de cuisson (min)",
         "image": "Image de la recette",
         "private": "Recette privée",
-        "primaryLanguage": "Langage Principale",
+        "primaryLanguage": "Langue principale",
         "switchLanguage": "Changer de langue"
       },
       "placeholders": {
@@ -296,7 +295,7 @@
       "list": {
         "title": "Toutes les recettes",
         "servings": "Portions",
-        "prep": "Préparation",
+        "prep": "Prép.",
         "cook": "Cuisson"
       },
       "view": {
@@ -313,13 +312,13 @@
       "title": "Ingrédients",
       "addGroup": "Ajouter un groupe",
       "groupTitle": "Titre du groupe",
-      "addIngredient": "Ajouter ingrédient",
+      "addIngredient": "Ajouter un ingrédient",
       "name": "Nom",
       "unit": "Unité",
       "quantity": "Quantité",
       "note": "Note (optionnel)",
       "remove": "Retirer",
-      "note_placeholder": "Ajoutez des informations supplémentaires pour cet ingrédient"
+      "note_placeholder": "Informations supplémentaires"
     },
     "steps": {
       "title": "Étapes",
@@ -346,36 +345,33 @@
       "noRecipes": "Aucune recette trouvée",
       "previous": "Précédent",
       "next": "Suivant",
-      "selected": "sélectionné(s)",
-      "copyId": "Copier l'identifiant",
+      "selected": "sélectionné",
+      "copyId": "Copier l'ID",
       "viewRecipe": "Voir la recette",
       "editRecipe": "Modifier la recette",
       "of": "sur",
-      "recipe_selected": "recette(s) selectionner."
+      "recipe_selected": "recette(s) sélectionnée(s)."
     },
     "tags": {
       "select": "Sélectionner des étiquettes...",
       "selected": "{count} étiquette sélectionnée | {count} étiquettes sélectionnées",
-      "search_or_create": "Rechercher ou créer une étiquette...",
+      "search_or_create": "Chercher ou créer une étiquette...",
       "none_found": "Aucune étiquette trouvée.",
       "suggestions": "Suggestions",
       "new_tag": "Nouvelle étiquette",
-      "create": "Créer « {name} »",
+      "create": "Créer \"{name}\"",
       "loading": "Chargement..."
     },
     "filters": {
-      "search": "Rechercher par nom ou description",
+      "search": "Nom ou description",
       "ingredient": "Ingrédient",
-      "reset": "Réinitialiser les filtres",
+      "reset": "Réinitialiser",
       "advanced": "Filtres avancés",
-      "prep_min": "Temps de préparation min",
-      "prep_max": "Temps de préparation max",
-      "cook_min": "Temps de cuisson min",
-      "cook_max": "Temps de cuisson max",
-      "steps_min": "Nombre d'étapes min",
-      "steps_max": "Nombre d'étapes max",
-      "date_from": "Date de début",
-      "date_to": "Date de fin"
+      "prep_min": "Temps prép. min",
+      "prep_max": "Temps prép. max",
+      "cook_min": "Temps cuisson min",
+      "cook_max": "Temps cuisson max",
+      "steps_min": "Étapes min,"
     }
   }
 }

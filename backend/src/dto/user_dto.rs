@@ -45,11 +45,13 @@ pub struct TwoFactorStatusResponse {
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
-pub struct UpdateUserDto {
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
-    pub avatar_url: Option<String>,
-    pub preferences: Option<UserPreferences>,
+pub struct ProfileDto {
+    pub id: Uuid,
+    pub username: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub avatar_url: String,
+    pub preferences: UserPreferences,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

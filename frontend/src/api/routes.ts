@@ -12,7 +12,8 @@ export const AuthRoutes = {
 export const UserRoutes = {
     me: () => `${API_ROOT}/user/me`,
     updateMe: () => `${API_ROOT}/user/me`,
-    getById: (id: strting) => `${API_ROOT}/user/${id}`,
+    getById: (id: string) => `${API_ROOT}/user/${id}`,
+    update: (id: string) => `${API_ROOT}/user/profile/${id}`,
 };
 
 export const TagRoutes = {
@@ -37,7 +38,7 @@ export const RecipeRoutes = {
     trackView: (id: string) => `${API_ROOT}/recipes/${id}/views`,
 
     favorite: (id: string) => `${API_ROOT}/recipes/${id}/favorite`,
-    favorites: () => `${API_ROOT}/recipes/favorites`,
+    favorites: (id: string) => `${API_ROOT}/recipes/favorites/${id}`,
 
     rate: (id: string) => `${API_ROOT}/recipes/${id}/rating`,
     unrate: (id: string) => `${API_ROOT}/recipes/${id}/rating`,

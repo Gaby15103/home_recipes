@@ -1,6 +1,6 @@
 use crate::app::state::AppState;
 use crate::domain::user::AuthenticatedUser;
-use crate::dto::user_dto::{UpdatePasswordDto, UpdateUserDto, UserResponseDto};
+use crate::dto::user_dto::{UpdatePasswordDto, ProfileDto, UserResponseDto};
 use crate::errors::Error;
 use crate::services::user_service;
 use actix_web::web::{Data, Json, Path};
@@ -13,7 +13,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         web::scope("/user")
             .route("/me", web::get().to(get_me))
             .route("/{id}", web::get().to(get_by_id))
-            .route("/profile", web::put().to(update_profile))
+            .route("/profile/{id}", web::put().to(update_profile))
             .route("/password", web::put().to(change_password))
             .route("/sessions", web::get().to(get_sessions)),
     );
@@ -74,9 +74,23 @@ pub async fn change_password(
 pub async fn update_profile(
     auth: AuthenticatedUser,
     state: Data<AppState>,
-    form: Json<UpdateUserDto>,
+    path: Path<Uuid>,
+    form: Json<ProfileDto>,
 ) -> Result<HttpResponse, crate::errors::Error> {
-    // Logic to update user names, avatar, etc.
-    let updated_user = user_service::update_user(&state.db, auth.user.id, form.into_inner()).await?;
+    let target_id = path.into_inner();
+
+    let is_admin = auth.user.roles.iter().any(|r| r.name == "Admin" || r.name == "SuperAdmin");
+
+    if auth.user.id != target_id && !is_admin {
+        return Err(Error::Forbidden(json!({
+            "message": "Access Denied: You can only update your own profile or require admin privileges."
+        })));
+    }
+
+    let _existing_user = user_service::get_by_id(&state.db, target_id).await?;
+
+    let profile = form.into_inner();
+    let updated_user = user_service::update_user(&state.db, target_id, profile).await?;
+
     Ok(HttpResponse::Ok().json(UserResponseDto::from((updated_user, auth.user.roles))))
 }

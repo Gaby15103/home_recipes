@@ -150,8 +150,8 @@ export function favoriteRecipe(id: string) {
     return api(RecipeRoutes.favorite(id), {method: "POST"});
 }
 
-export function getFavorites(): Promise<RecipeView[]> {
-    return api<RecipeView[]>(RecipeRoutes.favorites(), {method: "GET"});
+export function getFavorites(id: string): Promise<RecipeView[]> {
+    return api<RecipeView[]>(RecipeRoutes.favorites(id), {method: "GET"});
 }
 
 export function rateRecipe(id: string, rating: number) {

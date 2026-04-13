@@ -3,7 +3,7 @@ import {ref} from "vue"
 import {RouterLink} from "vue-router"
 import {storeToRefs} from "pinia"
 import {useI18n} from "vue-i18n"
-import {LayoutDashboard, LogOut, Menu, User} from "lucide-vue-next"
+import {LayoutDashboard, LogOut, Menu, User, Heart, LucideUserRoundCog} from "lucide-vue-next"
 
 import {useAuthStore} from "@/stores/auth.ts"
 import router from "@/router"
@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,} from "@/components/ui/sheet"
+import Utensils from "@/components/icon/Utensils.vue";
 
 // State
 const authStore = useAuthStore()
@@ -155,8 +156,14 @@ async function logout() {
                 </RouterLink>
               </DropdownMenuItem>
               <DropdownMenuItem as-child>
+                <RouterLink :to="ROUTES.USER.Favorite(user.id)" class="cursor-pointer w-full flex items-center">
+                  <Heart class="mr-2 h-4 w-4"/>
+                  {{ t('Favorite') }}
+                </RouterLink>
+              </DropdownMenuItem>
+              <DropdownMenuItem as-child>
                 <RouterLink :to="ROUTES.USER.SETTINGS" class="cursor-pointer w-full flex items-center">
-                  <User class="mr-2 h-4 w-4"/>
+                  <LucideUserRoundCog class="mr-2 h-4 w-4"/>
                   {{ t('Settings') }}
                 </RouterLink>
               </DropdownMenuItem>

@@ -22,7 +22,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .route("/last", web::get().to(get_last))
             .route("/by_page", web::get().to(get_by_page))
             .route("", web::post().to(create))
-            .route("/favorites", web::get().to(get_favorites))
+            .route("/favorites/{id}", web::get().to(get_favorites))
             .route("/comment/{id}", web::delete().to(delete_comment))
             .route("/comment/{id}", web::put().to(edit_comment))
             .route("/author/{id}", web::get().to(get_by_author))
@@ -191,14 +191,12 @@ pub async fn create(
 }
 pub async fn get_favorites(
     state: Data<AppState>,
-    auth: Option<AuthenticatedUser>,
+    path: Path<Uuid>,
 ) -> Result<HttpResponse, Error> {
-    if let Some(auth) = auth {
-        let favorites = user_service::get_favorites(&state.db, auth.user).await?;
-        return Ok(HttpResponse::Ok().json(favorites));
-    }
+    let user_id = path.into_inner();
+    let favorites = user_service::get_favorites(&state.db, user_id).await?;
 
-    Ok(HttpResponse::NoContent().finish())
+    Ok(HttpResponse::Ok().json(favorites))
 }
 pub async fn update(
     state: Data<AppState>,
