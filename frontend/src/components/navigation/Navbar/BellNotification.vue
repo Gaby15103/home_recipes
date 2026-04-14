@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref} from 'vue'
+import {ref, watch} from 'vue'
 import {useRouter} from 'vue-router'
+import {useWebSocket} from '@vueuse/core' // Refactored to use VueUse
 import {Bell, ExternalLink, Heart, Info, MessageSquare} from 'lucide-vue-next'
 import {Button} from '@/components/ui/button'
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover'
@@ -17,8 +18,8 @@ import {ROUTES} from "@/router/routes.ts"
 const router = useRouter()
 const notifications = ref<Notification[]>([])
 const unreadCount = ref(0)
-let socket: WebSocket | null = null
 
+// 1. Load initial data
 const fetchItems = async () => {
   try {
     const res = await getNotifications()
@@ -28,15 +29,43 @@ const fetchItems = async () => {
     console.error("Failed to load notifications", err)
   }
 }
+fetchItems()
+
+// 2. Setup VueUse WebSocket
+// This handles the connection, auto-reconnect, and heartbeat automatically.
+const { data } = useWebSocket(getNotificationWsUrl(), {
+  onConnected(ws) {
+    console.log('Connected!')
+  },
+  onDisconnected(ws, event) {
+    console.log('Disconnected!', event.code)
+  },
+  onError(ws, event) {
+    console.error('Error:', event)
+  },
+  onMessage(ws, event) {
+    console.log('Message:', event.data)
+  },
+})
+
+// 3. Reactively handle new messages
+watch(data, (newData) => {
+  if (newData) {
+    try {
+      const newNotif: Notification = JSON.parse(newData)
+      // Instant update for the red dot and list
+      notifications.value = [newNotif, ...notifications.value]
+      unreadCount.value++
+    } catch (e) {
+      // Ignore heartbeat pongs from server
+    }
+  }
+})
 
 const handleMarkAll = async () => {
-  try {
-    await markAllNotificationsAsRead()
-    notifications.value.forEach(n => n.is_read = true)
-    unreadCount.value = 0
-  } catch (err) {
-    console.error(err)
-  }
+  await markAllNotificationsAsRead()
+  notifications.value.forEach(n => n.is_read = true)
+  unreadCount.value = 0
 }
 
 const handleNotificationClick = async (n: Notification) => {
@@ -46,61 +75,22 @@ const handleNotificationClick = async (n: Notification) => {
     unreadCount.value = Math.max(0, unreadCount.value - 1)
   }
 
-  // General click redirection logic
   const isRecipeAction = [
     NotificationCategory.RecipeFavorite,
     NotificationCategory.RecipeComment
   ].includes(n.category as NotificationCategory)
-
-  if (isRecipeAction && n.target_id) {
-    await router.push(ROUTES.RECIPE(n.target_id))
-  } else if (n.actor_id) {
-    await router.push(ROUTES.USER.PROFILE(n.actor_id))
-  }
 }
 
-/**
- * Parses the message to replace placeholders like {actor}, {author}, or {acteur}
- * with an object indicating it should be a link.
- */
 const getFormattedMessageParts = (message: string) => {
-  // Regex to catch all variations of the actor placeholder
   const placeholderRegex = /({actor}|{author}|{acteur})/g
+  if (!placeholderRegex.test(message)) return [{ text: message, isLink: false }]
 
-  if (!placeholderRegex.test(message)) {
-    return [{ text: message, isLink: false }]
-  }
-
-  // Split and keep the matched groups
   const parts = message.split(placeholderRegex)
   return parts.map(part => ({
     text: part,
     isLink: placeholderRegex.test(part)
   }))
 }
-
-const connectWebSocket = () => {
-  socket = new WebSocket(getNotificationWsUrl())
-  socket.onmessage = (event) => {
-    try {
-      const newNotif: Notification = JSON.parse(event.data)
-      notifications.value.unshift(newNotif)
-      unreadCount.value++
-    } catch (e) {
-      console.error("WS Parse Error", e)
-    }
-  }
-  socket.onclose = () => setTimeout(connectWebSocket, 5000)
-}
-
-onMounted(() => {
-  fetchItems()
-  connectWebSocket()
-})
-
-onUnmounted(() => {
-  socket?.close()
-})
 
 const getIcon = (category: string) => {
   switch (category) {
@@ -117,7 +107,7 @@ const getIcon = (category: string) => {
       <Button variant="ghost" size="icon" class="relative">
         <Bell class="h-5 w-5" />
         <span v-if="unreadCount > 0"
-              class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white font-bold border-2 border-background">
+              class="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-white font-bold border-2 border-background animate-in zoom-in">
           {{ unreadCount }}
         </span>
       </Button>
@@ -132,7 +122,7 @@ const getIcon = (category: string) => {
         </button>
       </div>
 
-      <div class="max-h-[400px] overflow-y-auto">
+      <div class="max-h-100 overflow-y-auto">
         <div v-if="notifications.length === 0" class="p-8 text-center text-muted-foreground text-sm">
           No new updates.
         </div>

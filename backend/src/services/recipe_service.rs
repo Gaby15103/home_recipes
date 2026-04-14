@@ -245,7 +245,7 @@ use std::collections::HashMap;
 use actix_web::web::Data;
 use crate::app::state::AppState;
 
-pub async fn toogle_favorite(
+pub async fn toggle_favorite(
     state: &Data<AppState>,
     recipe_id: Uuid,
     user_id: Uuid,

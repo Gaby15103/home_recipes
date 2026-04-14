@@ -20,13 +20,16 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        // 1. MUST come before the general /api proxy to avoid being swallowed
+        '/notifications/ws': {
+          target: 'http://localhost:8088',
+          ws: true, // This is the magic switch for WebSockets
+          changeOrigin: true,
+          // Rewrite to match the /api scope in your Rust main.rs
+          rewrite: (path) => `/api${path}`
+        },
         '/api': {
           target: backendTarget,
-          changeOrigin: true,
-        },
-        '/notifications/ws': {
-          target: backendTarget.replace(/^http/, 'ws'),
-          ws: true,
           changeOrigin: true,
         },
       },

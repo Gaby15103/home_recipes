@@ -91,7 +91,7 @@ export const NotificationRoutes = {
     list: () => `${API_ROOT}/notifications`,
     markRead: (id: string) => `${API_ROOT}/notifications/${id}/read`,
     markAllRead: () => `${API_ROOT}/notifications/read-all`,
-    ws: () => `/notifications/ws`,
+    ws: () => `${API_ROOT}/notifications/ws`,
 
     createTemplate: () => `${API_ROOT}/notifications/templates`,
 };

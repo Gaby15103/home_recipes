@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { NotificationRoutes } from "./routes";
 import type {NotificationListResponse} from "@/models/Notification.ts";
-
+export const API_HOST = import.meta.env.VITE_API_HOST;
 /**
  * Fetch the user's notification inbox
  */
@@ -38,6 +38,7 @@ export function createNotificationTemplate(template: any) {
  */
 export const getNotificationWsUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    return `${protocol}//${host}${NotificationRoutes.ws()}`;
+    const return_type = `${protocol}//${API_HOST}${NotificationRoutes.ws()}`
+    console.log(return_type)
+    return return_type;
 };

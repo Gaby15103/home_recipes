@@ -129,21 +129,6 @@ pub async fn trigger(state: &AppState, trigger: NotificationTrigger) -> Result<(
 
     let ws_payload = serde_json::to_string(&response).unwrap_or_default();
 
-    // DEBUG START
-    println!("--- NOTIFICATION DEBUG ---");
-    println!("Recipient ID: {}", trigger.recipient_id);
-
-    let hub_clients = state.notification_hub.clients.read().await;
-    println!("Hub contains {} active user IDs", hub_clients.keys().count());
-
-    if hub_clients.contains_key(&trigger.recipient_id) {
-        println!("MATCH FOUND: Sending live notification to hub.");
-    } else {
-        println!("ERROR: Recipient ID {} is NOT connected to the hub.", trigger.recipient_id);
-        println!("Connected IDs are: {:?}", hub_clients.keys().collect::<Vec<_>>());
-    }
-    // DEBUG END
-
     state.notification_hub.broadcast_to_user(trigger.recipient_id, ws_payload).await;
 
     Ok(())
