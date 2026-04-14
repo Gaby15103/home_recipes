@@ -6,7 +6,7 @@ import {useI18n} from "vue-i18n"
 import {LayoutDashboard, LogOut, Menu, User, Heart, LucideUserRoundCog} from "lucide-vue-next"
 
 import {useAuthStore} from "@/stores/auth.ts"
-import router from "@/router"
+import { useRouter } from 'vue-router'
 import {ROUTES} from "@/router/routes.ts"
 
 import ModeToggle from "@/components/navigation/Navbar/ModeToggle.vue"
@@ -25,6 +25,7 @@ import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,} from "@/com
 import Utensils from "@/components/icon/Utensils.vue";
 
 // State
+const router = useRouter()
 const authStore = useAuthStore()
 const {user} = storeToRefs(authStore)
 const {t} = useI18n()

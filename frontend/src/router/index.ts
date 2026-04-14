@@ -48,7 +48,7 @@ const routes = [
     {path: "/recipe/:id", component: Show},
     {
         path: ROUTES.USER.SETTINGS,
-        meta: { requiresAuth: true},
+        meta: { requiresAuth: true },
         redirect: ROUTES.USER.SETTINGS,
         children: [
             {path: "/user/profile/:id", component: UserProfile},
@@ -225,23 +225,31 @@ const router = createRouter({
     },
 });
 
-router.beforeEach(async (to, from) => {
+router.beforeEach(async (to) => {
     const authStore = useAuthStore();
 
     if (to.meta.requiresAuth) {
+
         if (!authStore.user && !authStore.loading) {
             try {
                 await authStore.loadUser();
             } catch {
-                return ROUTES.LOGIN;
             }
         }
 
+        if (!authStore.user) {
+            return {
+                path: ROUTES.LOGIN,
+                query: { redirect: to.fullPath }
+            };
+        }
+
+        // 4. Check for Role Authorization
         if (to.meta.roles) {
             const allowed = (to.meta.roles as string[]).some(role =>
                 authStore.hasRole(role)
             );
-            if (!allowed) return from.path;
+            if (!allowed) return ROUTES.HOME;
         }
     }
 

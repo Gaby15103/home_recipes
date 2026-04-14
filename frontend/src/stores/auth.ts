@@ -80,10 +80,20 @@ export const useAuthStore = defineStore("auth", () => {
     function clearUser() {
         user.value = null;
     }
+    function  setPendingTwoFactor(token: string) {
+        twoFactorPending.value = true
+        twoFactorToken.value = token
+    }
+
+    function  clearTwoFactor() {
+        twoFactorPending.value = false
+        twoFactorToken.value = null
+    }
 
     // --- Return everything the app needs ---
     return {
-        user, loading, twoFactorPending, twoFactorToken,
+        user, loading, setPendingTwoFactor, clearTwoFactor,
+        twoFactorPending,twoFactorToken,
         isAuthenticated, hasRole,
         loadUser, login, logout, setUser, clearUser
     };

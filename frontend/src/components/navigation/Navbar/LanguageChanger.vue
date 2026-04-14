@@ -10,16 +10,14 @@ import {
 import { setLanguage } from "@/utils/setLanguage.ts"
 import { useAuthStore } from '@/stores/auth'
 import { updateProfile } from '@/api/user'
-import { Languages } from 'lucide-vue-next'
 
 const { locale, availableLocales } = useI18n()
 const authStore = useAuthStore()
 
 async function handleLanguageChange(newLocale: string) {
-  // 1. Update the UI locally (via your existing utility)
+
   setLanguage(newLocale)
 
-  // 2. If user is logged in, persist the choice to the database
   if (authStore.user) {
     try {
       const updatedUser = await updateProfile({
@@ -30,7 +28,6 @@ async function handleLanguageChange(newLocale: string) {
         }
       })
 
-      // 3. Sync the store with the updated preferences from the backend
       authStore.setUser(updatedUser)
     } catch (err) {
       console.error('Failed to save language preference:', err)
