@@ -8,10 +8,7 @@ use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::dto::recipe_version_dto::RecipeVersionDto;
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
-use crate::repositories::{
-    ingredient_group_repository, recipe_repository, recipe_translation_repository,
-    recipe_version_repository, step_group_repository, tag_repository,
-};
+use crate::repositories::{ingredient_group_repository, recipe_repository, recipe_translation_repository, recipe_version_repository, step_group_repository, tag_repository, user_repository};
 use crate::utils::file_upload::move_file_from_tmp;
 use sea_orm::DatabaseConnection;
 use std::fs;
@@ -242,12 +239,56 @@ pub async fn add_view(
     recipe_repository::add_view(db, recipe_id, user_id).await?;
     Ok(())
 }
+use crate::services::notification_service;
+use crate::dto::notification_dto::NotificationTrigger;
+use std::collections::HashMap;
+use actix_web::web::Data;
+use crate::app::state::AppState;
+
 pub async fn toogle_favorite(
-    db: &DatabaseConnection,
+    state: &Data<AppState>,
     recipe_id: Uuid,
     user_id: Uuid,
 ) -> Result<bool, Error> {
-    recipe_repository::toogle_favorite(db, recipe_id, user_id).await
+    let db = &state.db;
+
+    let is_now_favorited = recipe_repository::toogle_favorite(db, recipe_id, user_id).await?;
+
+    if is_now_favorited {
+        let recipe = recipe_repository::find_by_id(db, recipe_id).await?;
+
+        if let Some(author_id) = recipe.author_id {
+            if author_id != user_id {
+                let actor = user_repository::find_by_id(db, user_id).await?;
+                let recipient = user_repository::find_by_id(db, author_id).await?;
+
+                let lang = recipient.preferences["language"].as_str().unwrap_or("en");
+
+                let translation = recipe_translation_repository::find_translation(
+                    db,
+                    recipe_id,
+                    lang,
+                    "en"
+                ).await?;
+
+                let mut variables = HashMap::new();
+                variables.insert("actor".to_string(), actor.username);
+                variables.insert("recipe_title".to_string(), translation.title);
+
+                let trigger = NotificationTrigger {
+                    recipient_id: author_id,
+                    actor_id: Some(user_id),
+                    category: "recipe_favorite".to_string(),
+                    target_id: Some(recipe_id),
+                    variables,
+                };
+
+                notification_service::trigger(state, trigger).await?;
+            }
+        }
+    }
+
+    Ok(is_now_favorited)
 }
 pub async fn rate(
     db: &DatabaseConnection,

@@ -10,6 +10,7 @@ use crate::app::middleware::auth_middleware;
 use crate::config::Config;
 use crate::errors;
 use crate::openapi::ApiDoc;
+use crate::utils::notification_hub::NotificationHub;
 use super::state::AppState;
 use super::{routes, middleware};
 
@@ -39,6 +40,8 @@ pub async fn start(config: Config) -> std::io::Result<()> {
             .expect("Redis connection failed")
     );
 
+    let notification_hub = Arc::new(NotificationHub::new());
+
     let bind_address = config.bind_address.clone();
 
 
@@ -51,6 +54,7 @@ pub async fn start(config: Config) -> std::io::Result<()> {
             dict_db: dict_db.clone(),
             redis: redis.clone(),
             config: config.clone(),
+            notification_hub: notification_hub.clone(),
         });
 
         App::new()

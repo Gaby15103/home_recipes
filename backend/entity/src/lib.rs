@@ -10,6 +10,8 @@ pub mod ingredient_translations;
 pub mod ingredient_units;
 pub mod ingredients;
 pub mod languages;
+pub mod notification_templates;
+pub mod notifications;
 pub mod password_reset_tokens;
 pub mod recipe_analytics;
 pub mod recipe_comments;

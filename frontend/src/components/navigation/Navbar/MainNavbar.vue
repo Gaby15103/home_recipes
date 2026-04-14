@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,} from "@/components/ui/sheet"
 import Utensils from "@/components/icon/Utensils.vue";
+import BellNotification from "@/components/navigation/Navbar/BellNotification.vue";
 
 // State
 const router = useRouter()
@@ -132,6 +133,9 @@ async function logout() {
         <div class="hidden md:flex items-center gap-2">
           <LanguageChanger/>
           <ModeToggle/>
+          <div v-if="user">
+            <BellNotification/>
+          </div>
         </div>
 
         <div class="hidden md:block">

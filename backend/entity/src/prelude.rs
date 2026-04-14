@@ -8,6 +8,8 @@ pub use super::ingredient_translations::Entity as IngredientTranslations;
 pub use super::ingredient_units::Entity as IngredientUnits;
 pub use super::ingredients::Entity as Ingredients;
 pub use super::languages::Entity as Languages;
+pub use super::notification_templates::Entity as NotificationTemplates;
+pub use super::notifications::Entity as Notifications;
 pub use super::password_reset_tokens::Entity as PasswordResetTokens;
 pub use super::recipe_analytics::Entity as RecipeAnalytics;
 pub use super::recipe_comments::Entity as RecipeComments;

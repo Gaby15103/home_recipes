@@ -12,4 +12,6 @@ pub mod step_repository;
 pub mod language_repository;
 pub mod recipe_version_repository;
 pub mod unit_repository;
+pub mod notification_template_repository;
+pub mod notification_repository;
 

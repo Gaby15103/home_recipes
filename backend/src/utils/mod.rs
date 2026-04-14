@@ -7,5 +7,6 @@ pub mod unit;
 pub mod file_upload;
 pub mod llm_prompt;
 pub mod schema;
+pub mod notification_hub;
 
 pub use {self::hasher::*};
