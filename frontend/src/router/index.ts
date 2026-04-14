@@ -34,6 +34,7 @@ import Security from "@/pages/users/Security.vue";
 import UserProfile from "@/pages/users/Profile.vue";
 import ProfileEdit from "@/pages/users/ProfileEdit.vue";
 import Favorite from "@/pages/users/Favorite.vue";
+import NotificationSettings from "@/pages/users/NotificationSettings.vue";
 
 const routes = [
 
@@ -57,6 +58,7 @@ const routes = [
             {path: ROUTES.USER.MY_RECIPES, component: ManageMyRecipe },
             {path: ROUTES.USER.SETTINGS, component: UserSettingsView },
             {path: ROUTES.USER.SECURITY, component: Security },
+            {path: ROUTES.USER.NOTIFICATION, component: NotificationSettings },
         ]
     },
 

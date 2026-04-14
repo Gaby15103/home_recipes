@@ -10,6 +10,7 @@ import ModeToggle from "@/components/navigation/Navbar/ModeToggle.vue"
 import ProfileEdit from "@/pages/users/ProfileEdit.vue";
 import {useRoute} from "vue-router";
 import Security from "@/pages/users/Security.vue";
+import NotificationSettings from "@/pages/users/NotificationSettings.vue";
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -106,6 +107,9 @@ const sections = [
             </div>
             <div v-else-if="activeSection === 'security'" class="space-y-6">
               <Security/>
+            </div>
+            <div v-else-if="activeSection === 'notifications'" class="space-y-6">
+              <NotificationSettings/>
             </div>
 
             <div v-else class="flex flex-col items-center justify-center py-20 text-muted-foreground">
