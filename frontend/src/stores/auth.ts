@@ -1,13 +1,14 @@
 ﻿import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { getCurrentUser, login as apiLogin, logout as apiLogout } from "@/api/auth";
-import type { User } from "@/models/User";
+import {getCurrentUser, login as apiLogin, logout as apiLogout, updateCurrentUser} from "@/api/auth";
+import type {User, UserPreferences} from "@/models/User";
 import { useRouter } from "vue-router";
 import { ROUTES } from "@/router/routes.ts";
 import { setLanguage } from "@/utils/setLanguage.ts";
 
 import { useColorMode } from "@vueuse/core";
 import i18n from "../../i18n.ts";
+import {api} from "@/api";
 
 export const useAuthStore = defineStore("auth", () => {
     // --- Setup Logic ---
@@ -90,11 +91,28 @@ export const useAuthStore = defineStore("auth", () => {
         twoFactorToken.value = null
     }
 
+    async function updatePreference(preferences: UserPreferences) {
+        if (!user.value) return;
+        const oldPreferences = user.value.preferences
+        user.value.preferences = preferences;
+
+        try {
+            await updateCurrentUser(user.value);
+        } catch (error) {
+            // 4. Rollback on failure
+            if (user.value) {
+                user.value.preferences = oldPreferences;
+            }
+            console.error("Failed to sync preference", error);
+        }
+    }
+
     // --- Return everything the app needs ---
     return {
         user, loading, setPendingTwoFactor, clearTwoFactor,
         twoFactorPending,twoFactorToken,
         isAuthenticated, hasRole,
-        loadUser, login, logout, setUser, clearUser
+        loadUser, login, logout, setUser, clearUser,
+        updatePreference
     };
 });

@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Bell, MessageSquare, Heart, UserPlus, ShieldCheck, Mail } from 'lucide-vue-next'
 
-const settings = reactive({
-  comments: true,
-  favorites: true,
-  followers: false,
-  security_alerts: true,
-  newsletter: false
-})
+const authStore = useAuthStore()
+
+const prefs = computed(() => authStore.user?.preferences)
+
+const handleToggle = (key: string, value: boolean) => {
+  if (!prefs.value) return
+
+  const newPreferences = {
+    ...prefs.value,
+    [key]: value
+  }
+  authStore.updatePreference(newPreferences)
+}
 </script>
 
 <template>
@@ -38,7 +45,26 @@ const settings = reactive({
               <p class="text-[10px] text-muted-foreground leading-none">When someone replies to your recipes</p>
             </div>
           </div>
-          <Switch v-model:checked="settings.comments" />
+          <Switch
+              :defaultValue="prefs?.recipe_comment_enabled"
+              @update:model-value="(v: boolean) => handleToggle('recipe_comment_enabled', v)"
+          />
+        </div>
+
+        <div class="flex items-center justify-between p-3 px-4 rounded-xl bg-secondary/10 border border-transparent transition-all">
+          <div class="flex items-center gap-4">
+            <div class="p-2 bg-background rounded-lg shadow-xs">
+              <MessageSquare class="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div class="space-y-0.5">
+              <p class="text-sm font-bold">Comments reply</p>
+              <p class="text-[10px] text-muted-foreground leading-none">When someone replies to your recipes</p>
+            </div>
+          </div>
+          <Switch
+              :defaultValue="prefs?.comment_reply_enabled"
+              @update:model-value="(v: boolean) => handleToggle('recipe_comment_enabled', v)"
+          />
         </div>
 
         <div class="flex items-center justify-between p-3 px-4 rounded-xl bg-secondary/10 border border-transparent transition-all">
@@ -51,7 +77,10 @@ const settings = reactive({
               <p class="text-[10px] text-muted-foreground leading-none">When someone saves your recipe to favorites</p>
             </div>
           </div>
-          <Switch v-model:checked="settings.favorites" />
+          <Switch
+              :defaultValue="prefs?.recipe_favorite_enabled"
+              @update:model-value="(v: boolean) => handleToggle('recipe_favorite_enabled', v)"
+          />
         </div>
 
         <div class="flex items-center justify-between p-3 px-4 rounded-xl bg-secondary/10 border border-transparent transition-all">
@@ -64,7 +93,10 @@ const settings = reactive({
               <p class="text-[10px] text-muted-foreground leading-none">When someone follows your profile</p>
             </div>
           </div>
-          <Switch v-model:checked="settings.followers" />
+          <Switch
+              :checked="false"
+              disabled
+          />
         </div>
       </CardContent>
     </Card>
@@ -87,20 +119,7 @@ const settings = reactive({
               <p class="text-[10px] text-muted-foreground leading-none">Logins from new devices or password changes</p>
             </div>
           </div>
-          <Switch v-model:checked="settings.security_alerts" disabled />
-        </div>
-
-        <div class="flex items-center justify-between p-3 px-4 rounded-xl bg-secondary/10 border border-transparent transition-all">
-          <div class="flex items-center gap-4">
-            <div class="p-2 bg-background rounded-lg shadow-xs">
-              <Mail class="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div class="space-y-0.5">
-              <p class="text-sm font-bold">Newsletter</p>
-              <p class="text-[10px] text-muted-foreground leading-none">Weekly top recipes and platform updates</p>
-            </div>
-          </div>
-          <Switch v-model:checked="settings.newsletter" />
+          <Switch :checked="true" disabled />
         </div>
       </CardContent>
     </Card>

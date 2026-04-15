@@ -3,6 +3,9 @@
 export interface UserPreferences {
     language: 'en' | 'fr';
     theme: BasicColorMode;
+    recipe_favorite_enabled: boolean;
+    recipe_comment_enabled: boolean;
+    comment_reply_enabled: boolean;
 }
 
 export interface User {
