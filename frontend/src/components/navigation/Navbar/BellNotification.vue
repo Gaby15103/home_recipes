@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {ref, watch} from 'vue'
-import {useRouter} from 'vue-router'
 import {useWebSocket} from '@vueuse/core' // Refactored to use VueUse
 import {Bell, ExternalLink, Heart, Info, MessageSquare} from 'lucide-vue-next'
 import {Button} from '@/components/ui/button'
@@ -15,7 +14,6 @@ import {type Notification, NotificationCategory} from '@/models/Notification'
 import {formatDistanceToNow} from 'date-fns'
 import {ROUTES} from "@/router/routes.ts"
 
-const router = useRouter()
 const notifications = ref<Notification[]>([])
 const unreadCount = ref(0)
 
@@ -34,7 +32,7 @@ fetchItems()
 // 2. Setup VueUse WebSocket
 // This handles the connection, auto-reconnect, and heartbeat automatically.
 const { data } = useWebSocket(getNotificationWsUrl(), {
-  onConnected(ws) {
+  onConnected() {
     console.log('Connected!')
   },
   onDisconnected(ws, event) {
@@ -51,6 +49,7 @@ const { data } = useWebSocket(getNotificationWsUrl(), {
 // 3. Reactively handle new messages
 watch(data, (newData) => {
   if (newData) {
+    console.log(newData)
     try {
       const newNotif: Notification = JSON.parse(newData)
       // Instant update for the red dot and list
@@ -74,28 +73,51 @@ const handleNotificationClick = async (n: Notification) => {
     n.is_read = true
     unreadCount.value = Math.max(0, unreadCount.value - 1)
   }
-
-  const isRecipeAction = [
-    NotificationCategory.RecipeFavorite,
-    NotificationCategory.RecipeComment
-  ].includes(n.category as NotificationCategory)
 }
 
-const getFormattedMessageParts = (message: string) => {
-  const placeholderRegex = /({actor}|{author}|{acteur})/g
-  if (!placeholderRegex.test(message)) return [{ text: message, isLink: false }]
+const getFormattedMessageParts = (notification: Notification) => {
+  const { message, variables: vars } = notification
 
+  // 1. Identify all possible placeholders
+  const placeholderRegex = /({actor}|{acteur}|VAR_?A|{recipe_title}|{recette title}|{recipe title}|VAR_?R)/gi
+
+  if (!message || !placeholderRegex.test(message)) {
+    return [{ text: message, isLink: false, route: null }]
+  }
+
+  // 2. Split it (keeping the placeholders in the array)
   const parts = message.split(placeholderRegex)
-  return parts.map(part => ({
-    text: part,
-    isLink: placeholderRegex.test(part)
-  }))
+
+  return parts.map(part => {
+    // CRITICAL: Only process this if it's actually one of the placeholders
+    // We check if the part exists in our regex match
+    const isPlaceholder = part.match(placeholderRegex)
+
+    if (isPlaceholder) {
+      const isActor = /actor|acteur|VAR_?A/i.test(part)
+      const isRecipe = /recipe|recette|VAR_?R/i.test(part)
+
+      const lookupKey = isActor ? 'actor' : 'recipe_title'
+
+      return {
+        text: vars[lookupKey] || part, // Hydrate from Rust variables
+        isLink: true,
+        route: isActor
+            ? ROUTES.USER.PROFILE(notification.actor_id!)
+            : ROUTES.RECIPE(notification.target_id!)
+      }
+    }
+
+    // It's just normal text, return it as-is
+    return { text: part, isLink: false, route: null }
+  })
 }
 
 const getIcon = (category: string) => {
   switch (category) {
     case NotificationCategory.RecipeFavorite: return Heart
     case NotificationCategory.RecipeComment: return MessageSquare
+    case NotificationCategory.CommentReply: return MessageSquare
     default: return Info
   }
 }
@@ -139,15 +161,16 @@ const getIcon = (category: string) => {
               <p class="text-sm font-semibold leading-none mb-1 truncate">{{ n.title }}</p>
 
               <p class="text-xs text-muted-foreground leading-relaxed">
-                <template v-for="(part, idx) in getFormattedMessageParts(n.message)" :key="idx">
+                <template v-for="(part, idx) in getFormattedMessageParts(n)" :key="idx">
                   <router-link
-                      v-if="part.isLink && n.actor_id"
-                      :to="ROUTES.USER.PROFILE(n.actor_id)"
+                      v-if="part.isLink"
+                      :to="part.route"
                       @click.stop
                       class="font-bold text-primary hover:underline"
                   >
-                    {{ n.actor_name || 'Someone' }}
+                    {{ part.text }}
                   </router-link>
+
                   <span v-else>{{ part.text }}</span>
                 </template>
               </p>

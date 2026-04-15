@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
@@ -15,21 +16,23 @@ pub struct NotificationResponse {
     pub target_id: Option<Uuid>,
     pub is_read: bool,
     pub created_at: DateTime<Utc>,
+    pub variables: HashMap<String, String>,
 }
 
 impl NotificationResponse {
-    pub fn new(model: notifications::Model, actor_name: Option<String>) -> Self {
+    pub fn new(model: notifications::Model, actor_name: Option<String>, variables: HashMap<String, String>) -> Self {
         Self {
             id: model.id,
             user_id: model.user_id,
             actor_id: model.actor_id,
-            actor_name, // Injected from user lookup
+            actor_name,
             category: model.category,
             title: model.title,
             message: model.message,
             target_id: model.target_id,
             is_read: model.is_read,
             created_at: model.created_at.into(),
+            variables
         }
     }
 }

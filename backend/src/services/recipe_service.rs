@@ -1,19 +1,22 @@
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::recipe_dto::{
-    CreateRecipeInput, EditRecipeInput, RecipeEditorDto, RecipeFilter,
-    RecipeFilterByPage, RecipeResponse, RecipeViewDto,
+    CreateRecipeInput, EditRecipeInput, RecipeEditorDto, RecipeFilter, RecipeFilterByPage,
+    RecipeResponse, RecipeViewDto,
 };
 use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::dto::recipe_version_dto::RecipeVersionDto;
 use crate::dto::user_dto::UserResponseDto;
 use crate::errors::Error;
-use crate::repositories::{ingredient_group_repository, recipe_repository, recipe_translation_repository, recipe_version_repository, step_group_repository, tag_repository, user_repository};
+use crate::repositories::{
+    ingredient_group_repository, recipe_repository, recipe_translation_repository,
+    recipe_version_repository, step_group_repository, tag_repository, user_repository,
+};
 use crate::utils::file_upload::move_file_from_tmp;
 use sea_orm::DatabaseConnection;
+use serde_json::json;
 use std::fs;
 use std::ops::Deref;
-use serde_json::json;
 use uuid::Uuid;
 
 pub async fn get_all(
@@ -104,7 +107,7 @@ pub async fn get_by_author(
     let recipes = recipe_repository::find_by_author(db, author_id).await?;
 
     let mut dtos = Vec::new();
-    
+
     for recipe in recipes {
         let translation = recipe_translation_repository::find_translation(
             db,
@@ -112,7 +115,7 @@ pub async fn get_by_author(
             lang,
             recipe.original_language_code.deref(),
         )
-            .await?;
+        .await?;
 
         let dto = RecipeViewDto::from((recipe, translation));
         dtos.push(dto);
@@ -162,8 +165,8 @@ pub async fn get_last(
             lang_code,
             recipe.original_language_code.deref(),
         )
-            .await?;
-        
+        .await?;
+
         let dto = RecipeViewDto::from((recipe, translation));
         dtos.push(dto);
     }
@@ -239,11 +242,11 @@ pub async fn add_view(
     recipe_repository::add_view(db, recipe_id, user_id).await?;
     Ok(())
 }
-use crate::services::notification_service;
-use crate::dto::notification_dto::NotificationTrigger;
-use std::collections::HashMap;
-use actix_web::web::Data;
 use crate::app::state::AppState;
+use crate::dto::notification_dto::NotificationTrigger;
+use crate::services::notification_service;
+use actix_web::web::Data;
+use std::collections::HashMap;
 
 pub async fn toggle_favorite(
     state: &Data<AppState>,
@@ -264,12 +267,9 @@ pub async fn toggle_favorite(
 
                 let lang = recipient.preferences["language"].as_str().unwrap_or("en");
 
-                let translation = recipe_translation_repository::find_translation(
-                    db,
-                    recipe_id,
-                    lang,
-                    "en"
-                ).await?;
+                let translation =
+                    recipe_translation_repository::find_translation(db, recipe_id, lang, "en")
+                        .await?;
 
                 let mut variables = HashMap::new();
                 variables.insert("actor".to_string(), actor.username);
@@ -315,12 +315,82 @@ pub async fn get_comments(
     recipe_repository::get_comments(db, recipe_id).await
 }
 pub async fn add_comment(
-    db: &DatabaseConnection,
+    state: &Data<AppState>,
     new_comment: CreateCommentDto,
     recipe_id: Uuid,
     user_id: Uuid,
 ) -> Result<CommentDto, Error> {
-    recipe_repository::add_comment(db, new_comment, recipe_id, user_id).await
+    let db = &state.db;
+
+    // 1. Database insertion
+    let comment = recipe_repository::add_comment(db, new_comment, recipe_id, user_id).await?;
+
+    // 2. Prepare the preview (first 50 chars)
+    let comment_preview = if comment.content.chars().count() > 50 {
+        format!("{}...", comment.content.chars().take(50).collect::<String>())
+    } else {
+        comment.content.clone()
+    };
+
+    // 3. Logic: Notify Recipe Owner ONLY if it's a top-level comment
+    if comment.parent_id.is_none() {
+        let recipe = recipe_repository::find_by_id(db, recipe_id).await?;
+
+        if let Some(recipe_author_id) = recipe.author_id {
+            // Don't notify the owner if they are the one commenting
+            if recipe_author_id != user_id {
+                let recipient = user_repository::find_by_id(db, recipe_author_id).await?;
+                let lang = recipient.preferences["language"].as_str().unwrap_or("en");
+
+                let translation = recipe_translation_repository::find_translation(
+                    db, recipe_id, lang, "en"
+                ).await?;
+
+                let mut variables = HashMap::new();
+                variables.insert("actor".to_string(), comment.username.clone());
+                variables.insert("recipe_title".to_string(), translation.title);
+                variables.insert("comment_preview".to_string(), comment_preview.clone());
+
+                notification_service::trigger(state, NotificationTrigger {
+                    recipient_id: recipe_author_id,
+                    actor_id: Some(user_id),
+                    category: "recipe_comment".to_string(),
+                    target_id: Some(recipe_id),
+                    variables,
+                }).await?;
+            }
+        }
+    }
+    // 4. Logic: Notify Parent Commenter if it IS a reply
+    else if let Some(p_id) = comment.parent_id {
+        let parent_comment = recipe_repository::get_comment(db, p_id).await?;
+
+        // Don't notify the parent if they are replying to themselves
+        if parent_comment.user_id != user_id {
+            let recipient = user_repository::find_by_id(db, parent_comment.user_id).await?;
+            let lang = recipient.preferences["language"].as_str().unwrap_or("en");
+
+            // Fetch translation so the reply notification can also mention the recipe name
+            let translation = recipe_translation_repository::find_translation(
+                db, recipe_id, lang, "en"
+            ).await?;
+
+            let mut variables = HashMap::new();
+            variables.insert("actor".to_string(), comment.username.clone());
+            variables.insert("recipe_title".to_string(), translation.title);
+            variables.insert("comment_preview".to_string(), comment_preview);
+
+            notification_service::trigger(state, NotificationTrigger {
+                recipient_id: parent_comment.user_id,
+                actor_id: Some(user_id),
+                category: "comment_reply".to_string(),
+                target_id: Some(recipe_id),
+                variables,
+            }).await?;
+        }
+    }
+
+    Ok(comment)
 }
 pub async fn delete_comment(
     db: &DatabaseConnection,

@@ -235,7 +235,7 @@ watch(
             <textarea
                 v-model="newComment.content"
                 :placeholder="t('recipe.comments.placeholder')"
-                class="w-full min-h-[100px] border rounded-xl p-4 focus:ring-2 focus:ring-primary outline-none transition-all"
+                class="w-full min-h-25 border rounded-xl p-4 focus:ring-2 focus:ring-primary outline-none transition-all"
             />
             <div class="flex justify-end">
               <Button @click="postComment" :disabled="!newComment.content.trim()">

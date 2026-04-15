@@ -22,17 +22,32 @@ pub async fn get_for_user(
     let mut response_items = Vec::new();
 
     for model in notifications {
+        let mut variables = HashMap::new();
+
         let mut actor_name = None;
 
-        if let Some(a_id) = model.actor_id {
-            if let Ok(actor) = user_repository::find_by_id(db, a_id).await {
-                actor_name = Some(actor.username);
-            }
+        match model.category.as_str() {
+            "recipe_comment" | "comment_reply" | "recipe_favorite" => {
+                if let Some(a_id) = model.actor_id {
+                    if let Ok(actor) = user_repository::find_by_id(db, a_id).await {
+                        let name = actor.username;
+                        actor_name = Some(name.clone());
+                        variables.insert("actor".to_string(), name);
+                    }
+                }
+
+                if let Some(r_id) = model.target_id {
+                    if let Ok(translation) = crate::repositories::recipe_translation_repository::find_translation(
+                        db, r_id, "en", "en"
+                    ).await {
+                        variables.insert("recipe_title".to_string(), translation.title);
+                    }
+                }
+            },
+            _ => {}
         }
-
-        response_items.push(NotificationResponse::new(model, actor_name));
+        response_items.push(NotificationResponse::new(model, actor_name, variables));
     }
-
     Ok(NotificationListResponse {
         items: response_items,
         unread_count,
@@ -68,67 +83,72 @@ pub async fn create_template(
 /// This handles logic for: Preferences -> Translation Fallback -> Storage -> WS Broadcast.
 pub async fn trigger(state: &AppState, trigger: NotificationTrigger) -> Result<(), Error> {
     let db = &state.db;
-
     let user = user_repository::find_by_id(db, trigger.recipient_id).await?;
+    let lang = user.preferences["language"].as_str().unwrap_or("en").to_string();
 
-    let lang = user.preferences["language"]
-        .as_str()
-        .unwrap_or("en")
-        .to_string();
-
-    let is_enabled = user.preferences["notifications"][&trigger.category]
-        .as_bool()
-        .unwrap_or(true);
-
-    if !is_enabled {
+    if !user.preferences["notifications"][&trigger.category].as_bool().unwrap_or(true) {
         return Ok(());
     }
 
-    let (title_tpl, msg_tpl) = get_or_translate_template(state, &trigger.category, &lang).await?;
+    // 1. Get English base (un-injected)
+    let (title_tpl, msg_tpl) = get_or_translate_template(state, &trigger.category, "en").await?;
 
-    let final_title = inject_variables(title_tpl, &trigger.variables);
-    let final_message = inject_variables(msg_tpl, &trigger.variables);
+    // 2. Translate the templates while they still have {actor} and {recipe_title}
+    let (translated_title, translated_msg) = if lang == "en" {
+        (title_tpl, msg_tpl)
+    } else {
+        // 1. Armor with symbols that translators usually ignore
+        let p_title = title_tpl.replace("{actor}", "[#A#]").replace("{recipe_title}", "[#R#]");
+        let p_msg = msg_tpl.replace("{actor}", "[#A#]").replace("{recipe_title}", "[#R#]");
 
+        let t_title = call_libretranslate(state, &p_title, &lang).await?;
+        let t_message = call_libretranslate(state, &p_msg, &lang).await?;
+
+        // 2. Flexible Restoration
+        // We handle potential spaces added by the translator (e.g. "[# A #]")
+        let restore = |s: String| {
+            s.replace("[#A#]", "{actor}")
+                .replace("[# A #]", "{actor}")
+                .replace("[#R#]", "{recipe_title}")
+                .replace("[# R #]", "{recipe_title}")
+        };
+
+        (restore(t_title), restore(t_message))
+    };
+
+    // 3. Inject ONLY the comment_preview (so it stays raw and untranslated)
+    let raw_comment = trigger.variables.get("comment_preview").cloned().unwrap_or_default();
+    let final_message = translated_msg
+        .replace("{comment_preview}", &raw_comment)
+        .replace("{comment preview}", &raw_comment); // Handle LibreTranslate space quirk
+
+    // 4. Save to DB (The message still contains {actor} and {recipe_title})
     let saved_notif = notification_repository::create(
         db,
         trigger.recipient_id,
         trigger.actor_id,
         trigger.category,
-        final_title,
+        translated_title, // Keep placeholders here too
         final_message,
         trigger.target_id,
-    )
-        .await?;
+    ).await?;
 
-    let mut actor_name = None;
-    if let Some(a_id) = trigger.actor_id {
-        actor_name = trigger.variables.get("actor").cloned()
-            .or_else(|| {
-                None
-            });
-
-        if actor_name.is_none() {
-            if let Ok(actor) = user_repository::find_by_id(db, a_id).await {
-                actor_name = Some(actor.username);
-            }
-        }
-    }
-
+    // 5. Build Response with variables for the frontend
     let response = NotificationResponse {
         id: saved_notif.id,
         user_id: saved_notif.user_id,
         actor_id: saved_notif.actor_id,
-        actor_name,
+        actor_name: trigger.variables.get("actor").cloned(),
         category: saved_notif.category,
         title: saved_notif.title,
-        message: saved_notif.message,
+        message: saved_notif.message, // Contains "{actor} replied on {recipe_title}: my comment"
         target_id: saved_notif.target_id,
         is_read: saved_notif.is_read,
         created_at: saved_notif.created_at.into(),
+        variables: trigger.variables.clone(), // Send the map to Vue
     };
 
     let ws_payload = serde_json::to_string(&response).unwrap_or_default();
-
     state.notification_hub.broadcast_to_user(trigger.recipient_id, ws_payload).await;
 
     Ok(())
@@ -142,25 +162,27 @@ async fn get_or_translate_template(
 ) -> Result<(String, String), Error> {
     let db = &state.db;
 
-    // Try finding existing translation in the repository
-    if let Some(tpl) =
-        notification_template_repository::find_by_category_lang(db, category, lang).await?
-    {
+    if let Some(tpl) = notification_template_repository::find_by_category_lang(db, category, lang).await? {
         return Ok((tpl.title_template, tpl.message_template));
     }
 
-    // Fallback: Get English base
     let en_tpl = notification_template_repository::find_by_category_lang(db, category, "en")
         .await?
-        .ok_or_else(|| {
-            Error::NotFound(format!("Base English template for {} not found", category).into())
-        })?;
+        .ok_or_else(|| Error::NotFound(format!("Base English template for {} not found", category).into()))?;
 
-    // Call LibreTranslate
-    let translated_title = call_libretranslate(state, &en_tpl.title_template, lang).await?;
-    let translated_msg = call_libretranslate(state, &en_tpl.message_template, lang).await?;
+    // SWAP: Protect during the initial translation/caching process
+    let p_title = en_tpl.title_template.replace("{actor}", "[#A#]").replace("{recipe_title}", "[#R#]");
+    let p_msg = en_tpl.message_template.replace("{actor}", "[#A#]").replace("{recipe_title}", "[#R#]");
 
-    // Cache the new translation so we don't hit the API again
+    let t_title_raw = call_libretranslate(state, &p_title, lang).await?;
+    let t_msg_raw = call_libretranslate(state, &p_msg, lang).await?;
+
+    // Restore
+    let translated_title = t_title_raw.replace("[#A#]", "{actor}").replace("[# A #]", "{actor}")
+        .replace("[#R#]", "{recipe_title}").replace("[# R #]", "{recipe_title}");
+    let translated_msg = t_msg_raw.replace("[#A#]", "{actor}").replace("[# A #]", "{actor}")
+        .replace("[#R#]", "{recipe_title}").replace("[# R #]", "{recipe_title}");
+
     notification_template_repository::create(
         db,
         CreateNotificationTemplateInput {
@@ -169,8 +191,7 @@ async fn get_or_translate_template(
             title_template: translated_title.clone(),
             message_template: translated_msg.clone(),
         },
-    )
-    .await?;
+    ).await?;
 
     Ok((translated_title, translated_msg))
 }

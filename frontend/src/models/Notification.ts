@@ -12,6 +12,7 @@ export interface Notification {
     target_id?: string;
     is_read: boolean;
     created_at: string;
+    variables: Record<string, string>;
 }
 
 /**
@@ -22,6 +23,7 @@ export interface Notification {
 export enum NotificationCategory {
     RecipeFavorite = "recipe_favorite",
     RecipeComment = "recipe_comment",
+    CommentReply = "comment_reply",
     SystemAlert = "system_alert",
     AdminUpdate = "admin_update"
 }

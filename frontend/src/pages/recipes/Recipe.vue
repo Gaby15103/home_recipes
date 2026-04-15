@@ -52,7 +52,7 @@ async function removeRecipe() {
 
   try {
     await deleteRecipe(recipe.value.id);
-    router.push(ROUTES.ADMIN.RECIPE.LIST);
+    await router.push(ROUTES.ADMIN.RECIPE.LIST);
   } catch (err: any) {
     alert(err.message ?? "Failed to delete recipe");
   }
@@ -63,7 +63,7 @@ async function removeRecipe() {
   <div class="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
     <div v-if="loading" class="space-y-6">
-      <Skeleton class="h-[400px] w-full rounded-xl" />
+      <Skeleton class="h-100 w-full rounded-xl" />
       <div class="space-y-2">
         <Skeleton class="h-10 w-1/2" />
         <Skeleton class="h-4 w-full" />

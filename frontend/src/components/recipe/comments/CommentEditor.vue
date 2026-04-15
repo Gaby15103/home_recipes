@@ -235,7 +235,7 @@ function insertLink() {
       <div
           contenteditable
           ref="editableDiv"
-          class="w-full min-h-[120px] border rounded p-2 focus:outline-none focus:ring-1 focus:ring-primary dark:bg-gray-800 dark:text-gray-200"
+          class="w-full min-h-30 border rounded p-2 focus:outline-none focus:ring-1 focus:ring-primary dark:bg-gray-800 dark:text-gray-200"
           @input="onInput"
           @keydown="handleKeyDown"
       ></div>
