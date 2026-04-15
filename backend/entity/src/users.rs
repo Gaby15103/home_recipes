@@ -35,6 +35,8 @@ pub enum Relation {
     EmailVerificationTokens,
     #[sea_orm(has_many = "super::favorites::Entity")]
     Favorites,
+    #[sea_orm(has_many = "super::notifications::Entity")]
+    Notifications,
     #[sea_orm(has_many = "super::password_reset_tokens::Entity")]
     PasswordResetTokens,
     #[sea_orm(has_many = "super::recipe_analytics::Entity")]
@@ -62,6 +64,12 @@ impl Related<super::email_verification_tokens::Entity> for Entity {
 impl Related<super::favorites::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Favorites.def()
+    }
+}
+
+impl Related<super::notifications::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Notifications.def()
     }
 }
 

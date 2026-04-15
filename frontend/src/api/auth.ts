@@ -52,7 +52,7 @@ export function getCurrentUser() {
 }
 
 export function updateCurrentUser(user: Partial<User>) {
-    return api<{ user: User }>(UserRoutes.updateMe(), { method: "PUT", data: user });
+    return api<{ user: User }>(UserRoutes.update(user.id), { method: "PUT", data: user });
 }
 
 export function editUser(user: User, password: string | null = null) {

@@ -32,6 +32,9 @@ mod m20260219_023250_add_automatic_update_at_to_all_Table_with_update_at;
 mod m20260220_002434_create_ingredient_units_table;
 mod m20260223_202845_move_to_new_ingredients_table;
 mod m20260224_023906_add_more_unit;
+mod m20260414_022539_create_notification_table;
+mod m20260414_030931_add_default_notification_templates;
+mod m20260415_003748_add_comment_reply_notification_template;
 
 pub struct Migrator;
 
@@ -71,6 +74,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20260220_002434_create_ingredient_units_table::Migration),
             Box::new(m20260223_202845_move_to_new_ingredients_table::Migration),
             Box::new(m20260224_023906_add_more_unit::Migration),
+            Box::new(m20260414_022539_create_notification_table::Migration),
+            Box::new(m20260414_030931_add_default_notification_templates::Migration),
+            Box::new(m20260415_003748_add_comment_reply_notification_template::Migration),
         ]
     }
 }

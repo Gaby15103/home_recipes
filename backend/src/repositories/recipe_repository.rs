@@ -764,7 +764,7 @@ pub async fn toogle_favorite(
         .await
         .map_err(|e| Error::InternalServerError(json!({
             "message": "Failed to check favorite status",
-            "operation": "toogle_favorite",
+            "operation": "toggle_favorite",
             "entity": "favorites",
             "recipe_id": recipe_id.to_string(),
             "user_id": user_id.to_string(),
@@ -780,7 +780,7 @@ pub async fn toogle_favorite(
             .await
             .map_err(|e| Error::InternalServerError(json!({
                 "message": "Failed to remove favorite",
-                "operation": "toogle_favorite",
+                "operation": "toggle_favorite",
                 "entity": "favorites",
                 "recipe_id": recipe_id.to_string(),
                 "user_id": user_id.to_string(),
@@ -799,7 +799,7 @@ pub async fn toogle_favorite(
             .await
             .map_err(|e| Error::InternalServerError(json!({
             "message": "Failed to add favorite",
-            "operation": "toogle_favorite",
+            "operation": "toggle_favorite",
             "entity": "favorites",
             "recipe_id": recipe_id.to_string(),
             "user_id": user_id.to_string(),

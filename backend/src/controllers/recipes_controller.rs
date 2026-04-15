@@ -257,7 +257,7 @@ pub async fn favorite(
 ) -> Result<HttpResponse, Error> {
     let recipe_id = path.into_inner();
     let user_id = auth.user.id.clone();
-    let favorited = recipe_service::toogle_favorite(&state.db, recipe_id, user_id).await?;
+    let favorited = recipe_service::toggle_favorite(&state, recipe_id, user_id).await?;
     Ok(HttpResponse::Ok().json(favorited))
 }
 pub async fn rate(
@@ -309,7 +309,7 @@ pub async fn add_comment(
     let new_comment = body.into_inner();
     let recipe_id = path.into_inner();
     let user_id = auth.user.id.clone();
-    let comment = recipe_service::add_comment(&state.db, new_comment, recipe_id, user_id).await?;
+    let comment = recipe_service::add_comment(&state, new_comment, recipe_id, user_id).await?;
     Ok(HttpResponse::Ok().json(comment))
 }
 pub async fn delete_comment(

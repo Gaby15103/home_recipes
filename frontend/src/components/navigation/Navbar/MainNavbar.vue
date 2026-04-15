@@ -6,7 +6,7 @@ import {useI18n} from "vue-i18n"
 import {LayoutDashboard, LogOut, Menu, User, Heart, LucideUserRoundCog} from "lucide-vue-next"
 
 import {useAuthStore} from "@/stores/auth.ts"
-import router from "@/router"
+import { useRouter } from 'vue-router'
 import {ROUTES} from "@/router/routes.ts"
 
 import ModeToggle from "@/components/navigation/Navbar/ModeToggle.vue"
@@ -23,8 +23,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,} from "@/components/ui/sheet"
 import Utensils from "@/components/icon/Utensils.vue";
+import BellNotification from "@/components/navigation/Navbar/BellNotification.vue";
 
 // State
+const router = useRouter()
 const authStore = useAuthStore()
 const {user} = storeToRefs(authStore)
 const {t} = useI18n()
@@ -131,6 +133,9 @@ async function logout() {
         <div class="hidden md:flex items-center gap-2">
           <LanguageChanger/>
           <ModeToggle/>
+          <div v-if="user">
+            <BellNotification/>
+          </div>
         </div>
 
         <div class="hidden md:block">

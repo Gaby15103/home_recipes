@@ -1,11 +1,12 @@
 ﻿<script setup lang="ts">
-import { Icon } from '@iconify/vue'
+import {Icon} from '@iconify/vue'
 import {type BasicColorMode, useColorMode} from '@vueuse/core'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {Button} from '@/components/ui/button'
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu'
 import {useI18n} from "vue-i18n";
 import {updateProfile} from "@/api/user.ts";
 import {useAuthStore} from "@/stores/auth.ts";
+
 const { t, locale, availableLocales } = useI18n()
 const authStore = useAuthStore()
 
@@ -13,7 +14,6 @@ const mode = useColorMode()
 async function setTheme(newTheme: BasicColorMode | 'auto') {
   mode.value = newTheme
 
-  // 2. If user is logged in, persist to backend
   if (authStore.user) {
     try {
       const updatedUser = await updateProfile({
@@ -24,11 +24,9 @@ async function setTheme(newTheme: BasicColorMode | 'auto') {
         }
       })
 
-      // 3. Sync the store with the response from Rust
       authStore.setUser(updatedUser)
     } catch (err) {
       console.error('Failed to save theme preference:', err)
-      // Optional: notify user, but usually overkill for a theme toggle
     }
   }
 }

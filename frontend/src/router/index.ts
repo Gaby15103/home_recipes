@@ -34,6 +34,7 @@ import Security from "@/pages/users/Security.vue";
 import UserProfile from "@/pages/users/Profile.vue";
 import ProfileEdit from "@/pages/users/ProfileEdit.vue";
 import Favorite from "@/pages/users/Favorite.vue";
+import NotificationSettings from "@/pages/users/NotificationSettings.vue";
 
 const routes = [
 
@@ -48,7 +49,7 @@ const routes = [
     {path: "/recipe/:id", component: Show},
     {
         path: ROUTES.USER.SETTINGS,
-        meta: { requiresAuth: true},
+        meta: { requiresAuth: true },
         redirect: ROUTES.USER.SETTINGS,
         children: [
             {path: "/user/profile/:id", component: UserProfile},
@@ -57,6 +58,7 @@ const routes = [
             {path: ROUTES.USER.MY_RECIPES, component: ManageMyRecipe },
             {path: ROUTES.USER.SETTINGS, component: UserSettingsView },
             {path: ROUTES.USER.SECURITY, component: Security },
+            {path: ROUTES.USER.NOTIFICATION, component: NotificationSettings },
         ]
     },
 
@@ -225,23 +227,31 @@ const router = createRouter({
     },
 });
 
-router.beforeEach(async (to, from) => {
+router.beforeEach(async (to) => {
     const authStore = useAuthStore();
 
     if (to.meta.requiresAuth) {
+
         if (!authStore.user && !authStore.loading) {
             try {
                 await authStore.loadUser();
             } catch {
-                return ROUTES.LOGIN;
             }
         }
 
+        if (!authStore.user) {
+            return {
+                path: ROUTES.LOGIN,
+                query: { redirect: to.fullPath }
+            };
+        }
+
+        // 4. Check for Role Authorization
         if (to.meta.roles) {
             const allowed = (to.meta.roles as string[]).some(role =>
                 authStore.hasRole(role)
             );
-            if (!allowed) return from.path;
+            if (!allowed) return ROUTES.HOME;
         }
     }
 

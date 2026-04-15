@@ -9,3 +9,4 @@ pub mod languages_controller;
 pub mod unit_controller;
 pub mod ocr_controller;
 pub mod system_controller;
+pub mod notification_controller;

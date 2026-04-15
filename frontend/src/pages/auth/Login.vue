@@ -3,24 +3,19 @@ import {ref} from "vue"
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
 import {Alert, AlertTitle} from "@/components/ui/alert"
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field'
+import {FieldError, FieldLabel,} from '@/components/ui/field'
 import {loginSchema} from "@/validators/auth.ts"
-import {useForm, Field as VeeField} from 'vee-validate'
+import {Field as VeeField, useForm} from 'vee-validate'
 import {useAuthStore} from "@/stores/auth.ts"
 import {useRouter} from "vue-router"
 import {toTypedSchema} from "@vee-validate/zod";
 import {ROUTES} from "@/router/routes.ts";
 import {login} from "@/api";
+import {useI18n} from "vue-i18n"
 
 const router = useRouter()
 const error = ref("")
 const authStore = useAuthStore()
-import { useI18n } from "vue-i18n"
 const { t } = useI18n()
 
 const {handleSubmit} = useForm({

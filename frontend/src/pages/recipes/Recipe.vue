@@ -23,9 +23,13 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 
 async function fetchRecipe() {
+  const id = route.params.id as string;
+  if (!id) return;
+
   loading.value = true;
   try {
-    recipe.value = await getRecipeById(route.params.id as string);
+    recipe.value = await getRecipeById(id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (err: any) {
     error.value = err.message ?? "Failed to fetch recipe";
   } finally {
@@ -33,7 +37,7 @@ async function fetchRecipe() {
   }
 }
 
-watch(locale, () => fetchRecipe());
+watch([locale, () => route.params.id], () => fetchRecipe())
 onMounted(fetchRecipe);
 
 function goToEdit() {
@@ -48,7 +52,7 @@ async function removeRecipe() {
 
   try {
     await deleteRecipe(recipe.value.id);
-    router.push(ROUTES.ADMIN.RECIPE.LIST);
+    await router.push(ROUTES.ADMIN.RECIPE.LIST);
   } catch (err: any) {
     alert(err.message ?? "Failed to delete recipe");
   }
@@ -59,7 +63,7 @@ async function removeRecipe() {
   <div class="max-w-6xl mx-auto px-4 py-8 space-y-8">
 
     <div v-if="loading" class="space-y-6">
-      <Skeleton class="h-[400px] w-full rounded-xl" />
+      <Skeleton class="h-100 w-full rounded-xl" />
       <div class="space-y-2">
         <Skeleton class="h-10 w-1/2" />
         <Skeleton class="h-4 w-full" />

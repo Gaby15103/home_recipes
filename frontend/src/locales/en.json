@@ -2,16 +2,16 @@
   "Title": "Home Recipes",
   "home": "Home",
   "Recipes": "Recipes",
-  "Login": "Connection",
+  "Login": "Login",
   "Register": "Register",
-  "Logout": "Disconnect",
+  "Logout": "Logout",
   "Profile": "Profile",
-  "Favorite": "Favorite",
+  "Favorite": "Favorites",
   "Admin Dashboard": "Admin Dashboard",
-  "Loading": "loading...",
+  "Loading": "Loading...",
   "theme": {
     "toggle": "Change theme",
-    "light": "Clear",
+    "light": "Light",
     "dark": "Dark",
     "system": "System"
   },
@@ -125,6 +125,7 @@
   "settings": {
     "hub": {
       "welcome": "Welcome back",
+      "desc": "Manage your global preferences and visual experience.",
       "member_since": "Member since",
       "profile": {
         "title": "Public Profile",
@@ -276,7 +277,7 @@
       "details": "Details",
       "recipeSection": "Recipe",
       "tags": "Tags",
-      "loading": "Converting image  to recipe.",
+      "loading": "Converting image to recipe.",
       "fields": {
         "title": "Title",
         "description": "Description",
@@ -333,7 +334,7 @@
       "no_image_selected": "No image selected"
     },
     "units": {
-      "placeholder": "Unite"
+      "placeholder": "Unit"
     },
     "table": {
       "title": "Title",

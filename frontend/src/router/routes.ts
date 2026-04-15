@@ -15,7 +15,8 @@
         PROFILE: (id: string) =>`/user/profile/${id}`,
         Favorite: (id: string) =>`/user/favorite/${id}`,
         PROFILE_EDIT: "/user/settings/profile",
-        SECURITY:"/user/security",
+        SECURITY:"/user/settings/security",
+        NOTIFICATION:"/user/settings/notification",
     },
 
     // Admin
