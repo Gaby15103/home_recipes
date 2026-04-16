@@ -9,6 +9,7 @@ import { useAuthStore } from "@/stores/auth.ts";
 import {ref} from "vue";
 import {Input} from "@/components/ui/input";
 import LanguageChanger from "@/components/navigation/Navbar/LanguageChanger.vue";
+import NavUserComponents from "@/components/navigation/Navbar/NavUserComponents.vue";
 
 const authStore = useAuthStore();
 
@@ -45,27 +46,11 @@ const notificationsCount = ref(2) // mock for now
         <Input
             v-model="search"
             placeholder="Search recipes..."
-            class="pl-8 h-9 w-[220px]"
+            class="pl-8 h-9 w-55"
         />
       </div>
 
-      <Button variant="ghost" size="icon" class="relative">
-        <Bell class="h-5 w-5" />
-
-        <span
-            v-if="notificationsCount > 0"
-            class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center
-                 rounded-full bg-red-500 px-1 text-[10px] font-medium text-white"
-        >
-          {{ notificationsCount }}
-        </span>
-      </Button>
-      <LanguageChanger/>
-
-      <!-- User menu (placeholder for now) -->
-      <Button variant="ghost" class="flex items-center gap-2">
-        <UserInfo class="h-5 w-5" :user="authStore.user"/>
-      </Button>
+      <NavUserComponents/>
 
     </div>
   </header>

@@ -153,7 +153,7 @@ pub async fn get_last(
     db: &DatabaseConnection,
     lang_code: &str,
     limit: i64,
-    _include_translations: bool, // Param kept for signature matching, though usually not needed for a "latest" list
+    _include_translations: bool,
 ) -> Result<Vec<RecipeViewDto>, Error> {
     // 1. Fetch latest public recipes from repository
     let recipes = recipe_repository::find_latest_public(db, limit).await?;
@@ -168,6 +168,35 @@ pub async fn get_last(
             recipe.original_language_code.deref(),
         )
         .await?;
+
+        let dto = RecipeViewDto::from((recipe, translation));
+        dtos.push(dto);
+    }
+
+    Ok(dtos)
+}
+
+
+pub async fn get_recent(
+    db: &DatabaseConnection,
+    lang_code: &str,
+    limit: i64,
+    _include_translations: bool,
+    user_id: Uuid,
+) -> Result<Vec<RecipeViewDto>, Error> {
+    // 1. Fetch latest public recipes from repository
+    let recipes = recipe_repository::find_latest_work(db, limit, user_id).await?;
+
+    let mut dtos = Vec::new();
+
+    for recipe in recipes {
+        let translation = recipe_translation_repository::find_translation(
+            db,
+            recipe.id,
+            lang_code,
+            recipe.original_language_code.deref(),
+        )
+            .await?;
 
         let dto = RecipeViewDto::from((recipe, translation));
         dtos.push(dto);

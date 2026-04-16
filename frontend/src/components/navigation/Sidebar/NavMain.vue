@@ -49,10 +49,11 @@ function isMenuItemActive(item: NavItem) {
           <SidebarMenuButton
               v-if="!item.subNavItems"
               as-child
-              :is-active="urlIsActive(item.href)"
+              :is-active="urlIsActive(item.href!)"
+              :tooltip="item.title"
           >
             <NavLink :to="item.href!">
-              <component v-if="item.icon" :is="item.icon" />
+              <component v-if="item.icon" :is="item.icon" class="shrink-0" />
               <span>{{ item.title }}</span>
             </NavLink>
           </SidebarMenuButton>

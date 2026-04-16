@@ -21,3 +21,4 @@ pub mod recipe_rating_dto;
 pub mod unit_dto;
 pub(crate) mod recipe_ocr;
 pub mod notification_dto;
+pub mod studio_dto;

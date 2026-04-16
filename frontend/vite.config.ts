@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
+import svgLoader from 'vite-svg-loader';
 
 export default defineConfig(({ mode }) => {
   // Load env from the parent directory (..) as per your envDir setting
@@ -11,7 +12,7 @@ export default defineConfig(({ mode }) => {
   const backendTarget = env.VITE_BACKEND_URL || 'http://localhost:8088'
 
   return {
-    plugins: [vue(), tailwindcss()],
+    plugins: [vue(), tailwindcss(), svgLoader()],
     envDir: path.resolve(__dirname, '..'),
     resolve: {
       alias: {

@@ -8,3 +8,4 @@ pub(crate) mod language_service;
 pub(crate) mod unit_service;
 pub(crate) mod ocr_service;
 pub(crate) mod notification_service;
+pub(crate) mod studio_service;

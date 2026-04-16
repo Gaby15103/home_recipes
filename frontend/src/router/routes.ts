@@ -18,6 +18,10 @@
         SECURITY:"/user/settings/security",
         NOTIFICATION:"/user/settings/notification",
     },
+    STUDIO: {
+        BASE: "/studio",
+        MY_RECIPES: "/studio/my-recipe",
+    },
 
     // Admin
     ADMIN: {

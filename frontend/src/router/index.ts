@@ -36,6 +36,10 @@ import ProfileEdit from "@/pages/users/ProfileEdit.vue";
 import Favorite from "@/pages/users/Favorite.vue";
 import NotificationSettings from "@/pages/users/NotificationSettings.vue";
 
+// Studio Pages
+import StudioDashboard from "@/pages/studio/Dashboard.vue"
+import RecipeList from "@/pages/studio/RecipeList.vue"
+
 const routes = [
 
     {path: ROUTES.HOME, component: Home},
@@ -61,7 +65,22 @@ const routes = [
             {path: ROUTES.USER.NOTIFICATION, component: NotificationSettings },
         ]
     },
-
+    {
+        path: ROUTES.STUDIO.BASE,
+        component: () => StudioDashboard,
+        meta: {
+            layout: 'StudioLayout', // This tells App.vue which frame to use
+            requiresAuth: true
+        },
+        children: [
+            {
+                path: ROUTES.STUDIO.MY_RECIPES,
+                name: 'StudioRecipes',
+                component: () => RecipeList,
+                meta: { requiresAuth: true, roles: ["ADMIN", "MODERATOR"], layout: 'StudioLayout' }
+            },
+        ]
+    },
     {
         path: ROUTES.ADMIN.BASE,
         meta: {requiresAuth: true, roles: ["ADMIN", "MODERATOR"], layout: "AdminLayout"},

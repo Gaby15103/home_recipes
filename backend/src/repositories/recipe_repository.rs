@@ -327,6 +327,70 @@ pub async fn find_latest_public(
             "stage": "database_query"
         })))
 }
+pub async fn find_latest_work(
+    db: &DatabaseConnection,
+    limit: i64,
+    user_id: Uuid,
+) -> Result<Vec<recipes::Model>, Error> {
+    recipes::Entity::find()
+        .filter(recipes::Column::AuthorId.eq(user_id))
+        .order_by_desc(recipes::Column::CreatedAt)
+        .limit(limit as u64)
+        .all(db)
+        .await
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to fetch latest works",
+            "operation": "find_latest_works",
+            "entity": "recipes",
+            "limit": limit,
+            "error": e.to_string(),
+            "stage": "database_query"
+        })))
+}
+
+pub async fn get_dashboard_stats(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+) -> Result<(i64, i64, i64), Error> {
+
+    let total = recipes::Entity::find()
+        .filter(recipes::Column::AuthorId.eq(user_id))
+        .count(db)
+        .await
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to count total recipes",
+            "error": e.to_string()
+        })))?;
+
+    let public = recipes::Entity::find()
+        .filter(recipes::Column::AuthorId.eq(user_id))
+        .filter(recipes::Column::IsPrivate.eq(false))
+        .count(db)
+        .await
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to count public recipes",
+            "error": e.to_string()
+        })))?;
+
+
+    let total_views = recipes::Entity::find()
+        .select_only()
+        .column_as(recipe_analytics::Column::Id.count(), "total_views")
+        .inner_join(recipe_analytics::Entity)
+        .filter(recipes::Column::AuthorId.eq(user_id))
+        .into_tuple::<i64>()
+        .one(db)
+        .await
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to aggregate recipe views",
+            "operation": "get_dashboard_stats",
+            "user_id": user_id.to_string(),
+            "error": e.to_string()
+        })))?
+        .unwrap_or(0);
+
+    Ok((total as i64, public as i64, total_views))
+}
 
 pub async fn find_by_query_by_page(
     db: &DatabaseConnection,

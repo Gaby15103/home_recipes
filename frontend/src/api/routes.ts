@@ -95,3 +95,7 @@ export const NotificationRoutes = {
 
     createTemplate: () => `${API_ROOT}/notifications/templates`,
 };
+export const StudioRoutes = {
+    stats: `${API_ROOT}/studio/stats`,
+    recent: `${API_ROOT}/studio/recent-activity`,
+};

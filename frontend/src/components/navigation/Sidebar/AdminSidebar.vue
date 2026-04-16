@@ -9,13 +9,15 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem,
+  SidebarMenuItem, useSidebar,
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import {Book, Folder, Home, LayoutGrid} from 'lucide-vue-next';
 import AppLogo from '../../common/AppLogo.vue';
 import NavLink from "@/components/navigation/NavLink.vue";
 import { ROUTES } from "@/router/routes.ts";
+
+const { state } = useSidebar();
 
 const mainNavItems: NavItem[] = [
   {
@@ -65,7 +67,14 @@ const footerNavItems: NavItem[] = [
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
             <NavLink to="/admin/dashboard">
-              <AppLogo/>
+              <AppLogo>
+                <span
+                    v-if="state !== 'collapsed'"
+                    class="font-black tracking-tighter text-white transition-all duration-200 truncate"
+                >
+      ADMIN
+    </span>
+              </AppLogo>
             </NavLink>
           </SidebarMenuButton>
         </SidebarMenuItem>
