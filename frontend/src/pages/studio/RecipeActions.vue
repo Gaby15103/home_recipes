@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MoreVertical, Edit3, Eye, Trash2, Archive } from 'lucide-vue-next'
+import { MoreVertical, Edit3, Eye, Trash2 } from 'lucide-vue-next'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,8 +7,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu'
+import NavLink from "@/components/navigation/NavLink.vue";
+import {ROUTES} from "@/router/routes.ts";
 
-defineProps<{ id: string | number }>()
+defineProps<{ id: string }>()
 const emit = defineEmits(['edit', 'view', 'delete', 'archive'])
 </script>
 
@@ -21,15 +23,19 @@ const emit = defineEmits(['edit', 'view', 'delete', 'archive'])
     </DropdownMenuTrigger>
 
     <DropdownMenuContent align="end" class="w-52 bg-[#0f0f0f] border-neutral-800 text-neutral-400 rounded-2xl shadow-2xl p-2">
-      <DropdownMenuItem @click="emit('view', id)" class="rounded-xl px-3 py-2.5 gap-3 focus:bg-primary/10 focus:text-primary cursor-pointer">
-        <Eye class="h-4 w-4" />
-        <span class="text-xs font-bold uppercase tracking-tight">View Publicly</span>
-      </DropdownMenuItem>
+      <NavLink :to="ROUTES.RECIPE(id)" target="_blank">
+        <DropdownMenuItem @click="emit('view', id)" class="rounded-xl px-3 py-2.5 gap-3 focus:bg-primary/10 focus:text-primary cursor-pointer">
+          <Eye class="h-4 w-4" />
+          <span class="text-xs font-bold uppercase tracking-tight">View Publicly</span>
+        </DropdownMenuItem>
+      </NavLink>
 
-      <DropdownMenuItem @click="emit('edit', id)" class="rounded-xl px-3 py-2.5 gap-3 focus:bg-primary/10 focus:text-primary cursor-pointer">
-        <Edit3 class="h-4 w-4" />
-        <span class="text-xs font-bold uppercase tracking-tight">Edit Recipe</span>
-      </DropdownMenuItem>
+      <NavLink :to="ROUTES.STUDIO.EDIT(id)">
+        <DropdownMenuItem @click="emit('edit', id)" class="rounded-xl px-3 py-2.5 gap-3 focus:bg-primary/10 focus:text-primary cursor-pointer">
+          <Edit3 class="h-4 w-4" />
+          <span class="text-xs font-bold uppercase tracking-tight">Edit Recipe</span>
+        </DropdownMenuItem>
+      </NavLink>
 
       <DropdownMenuSeparator class="bg-neutral-800 my-1 mx-2" />
 

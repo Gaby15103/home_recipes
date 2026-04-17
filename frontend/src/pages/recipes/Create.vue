@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue"
+import {computed, onMounted, onUnmounted, ref} from "vue"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -26,6 +26,8 @@ import { createRecipeFromRegions, suggestRecipeFromFiles } from "@/api/ocr.ts"
 import router from "@/router"
 import { ROUTES } from "@/router/routes.ts"
 import { getUnits } from "@/api/unit.ts"
+import {useRoute} from "vue-router";
+import {useAuthStore} from "@/stores/auth.ts";
 
 const { t } = useI18n()
 
@@ -44,7 +46,10 @@ const recipe = ref<RecipeCreate>({
   ingredient_groups: [],
   step_groups: []
 })
+const authStore = useAuthStore();
+const route = useRoute()
 
+const isStudio = computed(() => route.path.startsWith('/studio'))
 const mainImagePreview = ref<string | null>(null)
 const currentLang = ref("")
 const available_language = ref<Language[]>([])
@@ -69,9 +74,15 @@ function onMainImageChange(e: Event) {
 
 async function submit() {
   submitting.value = true
+  if (isStudio)
+    recipe.value.author_id = authStore.user.id;
   try {
     const res = await createRecipe(recipe.value)
-    await router.push(ROUTES.ADMIN.RECIPE.VIEW(res.id))
+    if (isStudio.value) {
+      await router.push(ROUTES.RECIPE(res.id))
+    } else {
+      await router.push(ROUTES.ADMIN.RECIPE.VIEW(res.id))
+    }
   } catch (e: any) {
     console.error(e)
   } finally {
@@ -135,7 +146,11 @@ async function handleRegionalOcr(payload: { regions: any[], sourceLang: string }
     const ocrData = await createRecipeFromRegions(ocrFiles.value, payload.regions, payload.sourceLang)
     if (ocrData) {
       localStorage.setItem('pending-ocr-data', JSON.stringify(ocrData))
-      await router.push(ROUTES.ADMIN.RECIPE.OCR_REVIEW)
+      const reviewRoute = isStudio.value
+          ? ROUTES.STUDIO.OCR_REVIEW
+          : ROUTES.ADMIN.RECIPE.OCR_REVIEW;
+
+      await router.push(reviewRoute)
     }
   } catch (err) {
     error.value = "Regional processing failed."
@@ -159,10 +174,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="max-w-[1800px] mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-6 md:gap-10 items-start justify-center relative">
+  <div class="max-w-450 mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-6 md:gap-10 items-start justify-center relative">
 
-    <div v-if="loading" class="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-xl p-4">
-      <div class="flex flex-col items-center gap-6 p-8 md:p-12 bg-card border shadow-2xl rounded-[2rem] w-full max-w-sm">
+    <div v-if="loading" class="fixed inset-0 z-100 flex items-center justify-center bg-background/80 backdrop-blur-xl p-4">
+      <div class="flex flex-col items-center gap-6 p-8 md:p-12 bg-card border shadow-2xl rounded-4xl w-full max-w-sm">
         <div class="relative flex items-center justify-center">
           <Loader2 class="h-12 w-12 animate-spin text-primary absolute opacity-20" />
           <Sparkles class="h-6 w-6 text-primary animate-pulse" />
@@ -179,7 +194,7 @@ onUnmounted(() => {
       <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6 border-b pb-8 px-1">
         <div class="space-y-1">
           <p class="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-primary/60">Recipe Management</p>
-          <h1 class="text-3xl md:text-6xl font-black tracking-tighter leading-tight break-words">{{ t('Admin.recipe.createTitle') }}</h1>
+          <h1 class="text-3xl md:text-6xl font-black tracking-tighter leading-tight wrap-break-word">{{ t('Admin.recipe.createTitle') }}</h1>
         </div>
 
         <div class="flex flex-col gap-2 w-full md:w-auto">

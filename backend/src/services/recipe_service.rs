@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 use crate::domain::user::{AuthenticatedUser, Role};
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
-use crate::dto::recipe_dto::{
-    CreateRecipeInput, EditRecipeInput, RecipeEditorDto, RecipeFilter, RecipeFilterByPage,
-    RecipeResponse, RecipeViewDto,
-};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, RecipeEditorDto, RecipeFilter, RecipeFilterByPage, RecipeResponse, RecipeViewDto};
 use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::dto::recipe_version_dto::RecipeVersionDto;
 use crate::dto::user_dto::UserResponseDto;
@@ -39,7 +36,9 @@ pub async fn get_all(
                 recipe.original_language_code.deref(),
             )
             .await?;
-            let dto = RecipeViewDto::from((recipe, translation));
+            let (nb_ingredients, nb_steps) = recipe_repository::get_recipe_counts(db, recipe.id).await?.unwrap_or((0, 0));
+
+            let dto = RecipeViewDto::from((recipe, translation, Some(nb_ingredients), Some(nb_steps)));
             dtos.push(dto);
         }
     }
@@ -118,8 +117,9 @@ pub async fn get_by_author(
             recipe.original_language_code.deref(),
         )
         .await?;
+        let (nb_ingredients, nb_steps) = recipe_repository::get_recipe_counts(db, recipe.id).await?.unwrap_or((0, 0));
 
-        let dto = RecipeViewDto::from((recipe, translation));
+        let dto = RecipeViewDto::from((recipe, translation, Some(nb_ingredients), Some(nb_steps)));
         dtos.push(dto);
     }
 
@@ -169,7 +169,9 @@ pub async fn get_last(
         )
         .await?;
 
-        let dto = RecipeViewDto::from((recipe, translation));
+        let (nb_ingredients, nb_steps) = recipe_repository::get_recipe_counts(db, recipe.id).await?.unwrap_or((0, 0));
+
+        let dto = RecipeViewDto::from((recipe, translation, Some(nb_ingredients), Some(nb_steps)));
         dtos.push(dto);
     }
 
@@ -198,7 +200,36 @@ pub async fn get_recent(
         )
             .await?;
 
-        let dto = RecipeViewDto::from((recipe, translation));
+        let (nb_ingredients, nb_steps) = recipe_repository::get_recipe_counts(db, recipe.id).await?.unwrap_or((0, 0));
+
+        let dto = RecipeViewDto::from((recipe, translation, Some(nb_ingredients), Some(nb_steps)));
+        dtos.push(dto);
+    }
+
+    Ok(dtos)
+}
+pub async fn get_by_author_and_filter(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    filter: GetAllRecipesByPageQuery,
+    lang_code: &String
+) -> Result<Vec<RecipeViewDto>, Error> {
+    let recipes = recipe_repository::get_by_author_and_filter(db, user_id, filter, lang_code).await?;
+
+    let mut dtos = Vec::new();
+
+    for recipe in recipes {
+        let translation = recipe_translation_repository::find_translation(
+            db,
+            recipe.id,
+            lang_code,
+            recipe.original_language_code.deref(),
+        )
+            .await?;
+
+        let (nb_ingredients, nb_steps) = recipe_repository::get_recipe_counts(db, recipe.id).await?.unwrap_or((0, 0));
+
+        let dto = RecipeViewDto::from((recipe, translation, Some(nb_ingredients), Some(nb_steps)));
         dtos.push(dto);
     }
 
@@ -223,7 +254,9 @@ pub async fn get_all_by_page(
                 recipe.original_language_code.deref(),
             )
             .await?;
-            let dto = RecipeViewDto::from((recipe, translation));
+            let (nb_ingredients, nb_steps) = recipe_repository::get_recipe_counts(db, recipe.id).await?.unwrap_or((0, 0));
+
+            let dto = RecipeViewDto::from((recipe, translation, Some(nb_ingredients), Some(nb_steps)));
             dtos.push(dto);
         }
     }

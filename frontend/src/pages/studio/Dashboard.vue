@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Book, Eye, Lock, Globe, Loader2 } from 'lucide-vue-next'
+import { Book, Eye, Lock, Globe, Loader2, Plus } from 'lucide-vue-next'
 import {getStudioStats, type DashboardStats, getRecentRecipes} from '@/api/studio'
 import type { RecipeView } from "@/models/Recipe"
+import {ROUTES} from "@/router/routes.ts";
+import RecipeActions from "@/pages/studio/RecipeActions.vue";
 
 const stats = ref<DashboardStats | null>(null)
 const recentRecipes = ref<RecipeView[]>([])
@@ -28,13 +30,26 @@ onMounted(loadDashboard)
 </script>
 
 <template>
-  <div class="space-y-8 animate-in fade-in duration-500">
+  <div class="space-y-8 animate-in fade-in duration-500   max-w-7xl mx-auto">
     <div v-if="isLoading" class="flex items-center gap-3 text-neutral-500 py-10">
       <Loader2 class="h-4 w-4 animate-spin text-primary" />
       <span class="text-[10px] font-black uppercase tracking-widest">Fetching Station Data...</span>
     </div>
 
     <template v-else>
+      <div class="flex items-center justify-between mb-8">
+        <div>
+          <h1 class="text-xl font-black text-white tracking-tighter">Creator Station</h1>
+          <p class="text-[10px] text-neutral-500 uppercase font-bold tracking-[0.2em]">Management & Performance</p>
+        </div>
+        <router-link
+            :to="ROUTES.STUDIO.CREATE"
+            class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all active:scale-95 shadow-[0_0_20px_rgba(var(--primary),0.2)]"
+        >
+          <Plus class="h-3 w-3 stroke-3" />
+          New Production
+        </router-link>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
 
         <div class="p-5 rounded-2xl bg-[#0a0a0a] border border-neutral-800 transition-colors hover:border-neutral-700">
@@ -99,6 +114,7 @@ onMounted(loadDashboard)
                 </span>
               </div>
             </div>
+            <RecipeActions :id="recipe.id" />
           </div>
         </div>
       </section>

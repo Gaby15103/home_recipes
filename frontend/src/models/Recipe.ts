@@ -14,6 +14,8 @@ export interface RecipeView {
     tags: Tag[];
     ingredient_groups: IngredientGroupView[];
     step_groups: StepGroupView[];
+    nb_ingredients: number,
+    nb_steps: number
 }
 export interface RecipeEditor {
     id: string;

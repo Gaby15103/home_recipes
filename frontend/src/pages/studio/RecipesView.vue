@@ -1,88 +1,168 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Search, Filter as FilterIcon } from 'lucide-vue-next'
+import { ref, onMounted, watch } from 'vue'
+import { Search, Filter as FilterIcon, Plus, Loader2, RotateCcw } from 'lucide-vue-next'
 import RecipeList from "@/pages/studio/RecipeList.vue"
+import { getStudioRecipes } from '@/api/studio'
+import type { RecipeFilter, RecipeView } from "@/models/Recipe"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-// Define the interface to match your SeaORM / Rust Backend
-interface Recipe {
-  id: number
-  title: string
-  status: 'draft' | 'published' | 'private'
-  updated_at: string
-  views: number
+const recipes = ref<RecipeView[]>([])
+const isLoading = ref(true)
+const totalEntries = ref(0)
+const page = ref(1)
+const perPage = ref(10)
+
+const defaultFilters: RecipeFilter = {
+  search: null,
+  ingredient: [],
+  tags: [],
+  minPrep: null,
+  maxPrep: null,
+  minCook: null,
+  maxCook: null,
+  minSteps: null,
+  maxSteps: null,
+  dateFrom: null,
+  dateTo: null,
 }
 
-// Initialize with some mock data for the UI work
-const mockRecipes = ref<Recipe[]>([
-  {
-    id: 1,
-    title: "Grandma's Traditional Tourtière",
-    status: 'published',
-    updated_at: '2026-04-12',
-    views: 1240
-  },
-  {
-    id: 2,
-    title: "Quick Rust-Powered Ramen",
-    status: 'draft',
-    updated_at: '2026-04-14',
-    views: 0
-  },
-  {
-    id: 3,
-    title: "Victorian Gingerbread House",
-    status: 'private',
-    updated_at: '2026-02-20',
-    views: 45
-  }
-])
+const filters = ref<RecipeFilter>({ ...defaultFilters })
 
-const searchQueries = ref("")
+async function loadRecipes() {
+  try {
+    isLoading.value = true
+    const response = await getStudioRecipes(page.value, perPage.value, filters.value)
+    recipes.value = response
+    totalEntries.value = response?.length ?? 0
+  } catch (e) {
+    console.error("Failed to sync studio recipes:", e)
+    recipes.value = []
+    totalEntries.value = 0
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function resetFilters() {
+  filters.value = { ...defaultFilters }
+  page.value = 1
+  loadRecipes()
+}
+
+let timeout: any
+watch(filters, () => {
+  clearTimeout(timeout)
+  timeout = setTimeout(() => {
+    page.value = 1
+    loadRecipes()
+  }, 400)
+}, { deep: true })
+
+watch(page, loadRecipes)
+
+onMounted(loadRecipes)
 </script>
 
 <template>
-  <div class="space-y-6 animate-in fade-in duration-500">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-
-      <div class="relative w-full sm:w-72 group">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-600 group-focus-within:text-primary transition-colors" />
-        <input
-            v-model="searchQueries"
-            type="text"
-            placeholder="Search your collection..."
-            class="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl py-2 pl-10 pr-4 text-xs text-neutral-200 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all"
-        />
-      </div>
-
-      <div class="flex items-center gap-3 w-full sm:w-auto">
-        <div class="relative group">
-          <button class="p-2.5 bg-[#0a0a0a] border border-neutral-800 rounded-xl text-neutral-400 hover:text-primary hover:border-primary/50 transition-all">
-            <FilterIcon class="h-4 w-4" />
-          </button>
+  <div class="max-w-7xl mx-auto">
+    <div class="space-y-6">
+      <div class="flex items-center gap-4">
+        <div class="relative flex-1">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-600" />
+          <input
+              v-model="filters.search"
+              placeholder="Search your recipes..."
+              class="w-full bg-[#0a0a0a] border border-neutral-800 rounded-xl py-2 pl-10 pr-4 text-xs text-neutral-200 outline-none focus:border-primary transition-all"
+          />
         </div>
 
-        <button class="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-black px-4 py-2 rounded-xl text-xs font-black uppercase tracking-tight transition-transform active:scale-95">
-          New Recipe
-        </button>
+        <Sheet>
+          <SheetTrigger as-child>
+            <button class="p-2.5 bg-[#0a0a0a] border border-neutral-800 rounded-xl text-neutral-400 hover:text-primary transition-all relative">
+              <FilterIcon class="h-4 w-4" />
+              <span v-if="Object.values(filters).some(v => v !== null && v !== '' && (Array.isArray(v) ? v.length > 0 : true))"
+                    class="absolute top-1 right-1 h-1.5 w-1.5 bg-primary rounded-full"></span>
+            </button>
+          </SheetTrigger>
+          <SheetContent class="bg-[#0a0a0a] border-l border-neutral-800 text-neutral-200">
+            <SheetHeader>
+              <SheetTitle class="text-white font-black uppercase tracking-widest text-sm">Advanced Filters</SheetTitle>
+            </SheetHeader>
+
+            <div class="space-y-6 py-6">
+              <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase text-neutral-500">Prep Time (Mins)</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <input v-model.number="filters.minPrep" type="number" placeholder="Min" class="bg-neutral-900 border-neutral-800 rounded-lg p-2 text-xs" />
+                  <input v-model.number="filters.maxPrep" type="number" placeholder="Max" class="bg-neutral-900 border-neutral-800 rounded-lg p-2 text-xs" />
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase text-neutral-500">Cook Time (Mins)</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <input v-model.number="filters.minCook" type="number" placeholder="Min" class="bg-neutral-900 border-neutral-800 rounded-lg p-2 text-xs" />
+                  <input v-model.number="filters.maxCook" type="number" placeholder="Max" class="bg-neutral-900 border-neutral-800 rounded-lg p-2 text-xs" />
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase text-neutral-500">Date Range</label>
+                <div class="flex flex-col gap-2">
+                  <input v-model="filters.dateFrom" type="date" class="bg-neutral-900 border-neutral-800 rounded-lg p-2 text-xs" />
+                  <input v-model="filters.dateTo" type="date" class="bg-neutral-900 border-neutral-800 rounded-lg p-2 text-xs" />
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-neutral-800 flex flex-col gap-2">
+                <button @click="loadRecipes" class="w-full py-2 bg-primary text-black text-[10px] font-black uppercase rounded-lg">
+                  Apply Filters
+                </button>
+                <button @click="resetFilters" class="w-full py-2 flex items-center justify-center gap-2 text-[10px] font-black uppercase text-neutral-500 hover:text-white transition-colors">
+                  <RotateCcw class="h-3 w-3" />
+                  Reset All
+                </button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        <router-link to="/studio/recipes/create" class="p-2.5 bg-primary rounded-xl text-black hover:bg-primary/90 transition-all">
+          <Plus class="h-4 w-4 stroke-3" />
+        </router-link>
       </div>
-    </div>
 
-    <RecipeList :recipes="mockRecipes" />
+      <div v-if="isLoading && (recipes?.length === 0)" class="flex flex-col items-center justify-center py-20 text-neutral-600">
+        <Loader2 class="h-8 w-8 animate-spin mb-4" />
+        <p class="text-[10px] font-black uppercase tracking-widest">Synchronizing Collection...</p>
+      </div>
 
-    <div class="flex justify-between items-center px-2">
-      <p class="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
-        Showing {{ mockRecipes.length }} entries
-      </p>
-      <div class="flex gap-1">
-        <div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-neutral-800" :class="{'bg-primary': i === 1}" />
+      <div v-else>
+        <RecipeList :recipes="recipes" />
+
+        <div class="mt-6 flex items-center justify-between border-t border-neutral-800 pt-4">
+        <span class="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
+          Showing {{ recipes?.length ?? 0 }} of {{ totalEntries }}
+        </span>
+          <div class="flex items-center gap-2">
+            <button
+                @click="page--"
+                :disabled="page === 1"
+                class="px-3 py-1 bg-[#0a0a0a] border border-neutral-800 rounded-lg text-[10px] font-black uppercase text-neutral-400 disabled:opacity-30"
+            >
+              Prev
+            </button>
+            <span class="text-xs font-mono text-primary px-2">{{ page }}</span>
+            <button
+                @click="page++"
+                :disabled="(recipes?.length ?? 0) < perPage"
+                class="px-3 py-1 bg-[#0a0a0a] border border-neutral-800 rounded-lg text-[10px] font-black uppercase text-neutral-400 disabled:opacity-30"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Ensure the page feels like a desktop app */
-input::placeholder {
-  color: #525252;
-}
-</style>

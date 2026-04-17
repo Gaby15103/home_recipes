@@ -1,27 +1,11 @@
 <script setup lang="ts">
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import {SidebarInset, SidebarProvider, SidebarTrigger} from '@/components/ui/sidebar';
 import StudioSidebar from '@/components/navigation/Sidebar/StudioSidebar.vue';
-import NotificationPopover from "@/components/navigation/Navbar/BellNotification.vue";
-import {RouterLink, useRoute} from 'vue-router';
-import { computed } from 'vue';
-import {ROUTES} from "@/router/routes.ts";
-import {Button} from "@/components/ui/button";
-import Utensils from "@/components/icon/Utensils.vue";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import {Heart, LayoutDashboard, LogOut, LucideUserRoundCog, User} from "lucide-vue-next";
-import {logout} from "@/api";
+import {useRoute} from 'vue-router';
+import {computed} from 'vue';
 import {useAuthStore} from "@/stores/auth.ts";
 import {storeToRefs} from "pinia";
 import {useI18n} from "vue-i18n";
-import LanguageChanger from "@/components/navigation/Navbar/LanguageChanger.vue";
-import ModeToggle from "@/components/navigation/Navbar/ModeToggle.vue";
-import BellNotification from "@/components/navigation/Navbar/BellNotification.vue";
 import NavUserComponents from "@/components/navigation/Navbar/NavUserComponents.vue";
 
 const authStore = useAuthStore()
@@ -54,7 +38,7 @@ const pageTitle = computed(() => route.name?.toString().replace('Studio', '') ||
         </header>
 
         <main class="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <div class="max-w-7xl mx-auto">
+          <div class="mx-auto">
             <slot />
           </div>
         </main>

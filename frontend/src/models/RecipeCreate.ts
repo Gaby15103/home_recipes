@@ -73,8 +73,8 @@ export interface RecipeCreate {
     servings: number
     prep_time_minutes: number
     cook_time_minutes: number
-    author: null
-    author_id: null
+    author: string | null
+    author_id: string | null
     is_private: boolean
     tags: InputTag[]
     ingredient_groups: IngredientGroupCreate[]

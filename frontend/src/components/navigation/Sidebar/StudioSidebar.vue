@@ -30,19 +30,19 @@ const studioNav: NavItem[] = [
     href: ROUTES.STUDIO.MY_RECIPES,
     subNavItems: [
       { title: 'All Content', href: ROUTES.STUDIO.MY_RECIPES },
-      { title: 'New Recipe', href: '/studio/recipes/create' }
+      { title: 'New Recipe', href: ROUTES.STUDIO.CREATE }
     ]
   },
   {
     title: 'Analytics',
     icon: BarChart3,
-    href: '/studio/analytics'
+    href: ROUTES.STUDIO.ANALYTICS
   }
 ];
 </script>
 
 <template>
-  <Sidebar collapsible="icon" class="border-r border-neutral-800 !bg-[#0a0a0a]">
+  <Sidebar collapsible="icon" class="border-r border-neutral-800 bg-[#0a0a0a]!">
 
     <SidebarHeader
         class="h-16 border-b border-neutral-800/50 flex flex-col justify-center transition-all duration-300 group-data-[collapsible=icon]:px-0 px-6"

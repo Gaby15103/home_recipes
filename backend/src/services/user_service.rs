@@ -102,7 +102,7 @@ pub async fn get_favorites(
             recipe.original_language_code.deref(),
         )
         .await?;
-        let dto = RecipeViewDto::from((recipe, translation));
+        let dto = RecipeViewDto::from((recipe, translation, None,None));
         dtos.push(dto);
     }
 

@@ -37,6 +37,8 @@ pub struct RecipeViewDto {
     pub tags: Vec<TagDto>,
     pub ingredient_groups: Vec<IngredientGroupViewDto>,
     pub step_groups: Vec<StepGroupViewDto>,
+    pub nb_steps: Option<i32>,
+    pub nb_ingredients: Option<i32>,
 }
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[derive(Default)]
@@ -176,8 +178,8 @@ pub enum RecipeResponse {
     View(RecipeViewDto),
     Editor(RecipeEditorDto),
 }
-impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {
-    fn from((recipe, translation): (recipes::Model, recipe_translations::Model)) -> Self {
+impl From<(recipes::Model, recipe_translations::Model, Option<i32>,Option<i32>)> for RecipeViewDto {
+    fn from((recipe, translation, nb_ingredients,nb_steps): (recipes::Model, recipe_translations::Model, Option<i32>,Option<i32>)) -> Self {
         Self {
             id: recipe.id,
             title: translation.title,
@@ -192,6 +194,8 @@ impl From<(recipes::Model, recipe_translations::Model)> for RecipeViewDto {
             tags: vec![],
             ingredient_groups: vec![],
             step_groups: vec![],
+            nb_ingredients,
+            nb_steps
         }
     }
 }
@@ -225,8 +229,10 @@ impl RecipeViewDto {
             author: recipe.author,
             is_private: recipe.is_private,
             tags,
-            ingredient_groups,
-            step_groups,
+            ingredient_groups: ingredient_groups.clone(),
+            step_groups: step_groups.clone(),
+            nb_ingredients: Some(ingredient_groups.iter().map(|inner_vec| inner_vec.ingredients.len() as i32).sum()),
+            nb_steps: Some(step_groups.iter().map(|inner_vec| inner_vec.steps.len() as i32).sum()),
         }
     }
 }

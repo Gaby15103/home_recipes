@@ -1,6 +1,7 @@
 use crate::dto::studio_dto::DashboardStats;
 use sea_orm::DatabaseConnection;
 use uuid::Uuid;
+use crate::dto::recipe_dto::GetAllRecipesByPageQuery;
 use crate::errors::Error;
 use crate::repositories::recipe_repository;
 
@@ -17,3 +18,4 @@ pub async fn get_stats(
         total_views: views as i32,
     })
 }
+

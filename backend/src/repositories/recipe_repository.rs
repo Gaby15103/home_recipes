@@ -1,18 +1,13 @@
 use crate::dto::comment_dto::{CommentDto, CreateCommentDto};
 use crate::dto::ingredient_group_dto::IngredientGroupViewDto;
-use crate::dto::recipe_dto::{
-    CreateRecipeInput, EditRecipeInput, RecipeFilter, RecipeFilterByPage, RecipeViewDto,
-};
+use crate::dto::recipe_dto::{CreateRecipeInput, EditRecipeInput, GetAllRecipesByPageQuery, RecipeFilter, RecipeFilterByPage, RecipeViewDto};
 use crate::dto::recipe_rating_dto::RecipeRatingDto;
 use crate::dto::step_group_dto::StepGroupViewDto;
 use crate::dto::tag_dto::{InputTag, TagDto};
 use crate::errors::Error;
 use crate::repositories::{ingredient_group_repository, step_group_repository, tag_repository};
 use chrono::Utc;
-use entity::{
-    favorites, ingredient_groups, ingredient_translations, recipe_analytics, recipe_comments,
-    recipe_ratings, recipe_tags, recipe_translations, recipes, users,
-};
+use entity::{favorites, ingredient_groups, ingredient_translations, ingredients, recipe_analytics, recipe_comments, recipe_ratings, recipe_tags, recipe_translations, recipes, step_groups, steps, users};
 use futures_util::TryFutureExt;
 use migration::JoinType;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DeleteResult, FromQueryResult, PaginatorTrait, SelectExt, Set, TransactionError, TransactionTrait};
@@ -21,6 +16,7 @@ use sea_orm::{ExprTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde_json::json;
 use std::collections::HashMap;
 use std::ops::Deref;
+use sea_orm::sea_query::Expr;
 use uuid::Uuid;
 
 pub async fn find_all(db: &DatabaseConnection) -> Result<Vec<recipes::Model>, Error> {
@@ -139,6 +135,31 @@ pub async fn find_by_id(db: &DatabaseConnection, id: Uuid) -> Result<recipes::Mo
             "error": "Record does not exist",
             "stage": "validation"
         })))
+}
+#[derive(FromQueryResult)]
+struct Counts {
+    nb_ingredients: i64, // Use i64 because count() usually returns i64
+    nb_steps: i64,
+}
+
+pub async fn get_recipe_counts(
+    db: &DatabaseConnection,
+    recipe_id: Uuid
+) -> Result<Option<(i32, i32)>, Error> {
+    let step_count = ingredient_groups::Entity::find()
+        .filter(ingredient_groups::Column::RecipeId.eq(recipe_id))
+        .join(JoinType::InnerJoin, ingredient_groups::Relation::Ingredients.def())
+        .count(db)
+        .await?;
+
+    let ingredient_count = step_groups::Entity::find()
+        .filter(step_groups::Column::RecipeId.eq(recipe_id))
+        .join(JoinType::InnerJoin, step_groups::Relation::Steps.def())
+        .count(db)
+        .await?;
+
+    let counts = Some((step_count as i32, ingredient_count as i32));
+    Ok(counts)
 }
 
 pub async fn find_by_author(
@@ -391,7 +412,81 @@ pub async fn get_dashboard_stats(
 
     Ok((total as i64, public as i64, total_views))
 }
+pub async fn get_by_author_and_filter(
+    db: &DatabaseConnection,
+    user_id: Uuid,
+    query_params: GetAllRecipesByPageQuery,
+    lang_code: &String,
+) -> Result<Vec<recipes::Model>, Error> {
+    let mut query = recipes::Entity::find()
+        .filter(recipes::Column::AuthorId.eq(user_id));
 
+    let page = query_params.page.unwrap_or(1) as u64;
+    let per_page = query_params.per_page.unwrap_or(10) as u64;
+
+    if let Some(filter) = query_params.filters {
+
+        if let Some(s) = &filter.search {
+            if !s.trim().is_empty() {
+                let pattern = format!("%{}%", s);
+                query = query
+                    .join(JoinType::LeftJoin, recipes::Relation::RecipeTranslations.def())
+                    .filter(
+                        recipe_translations::Column::LanguageCode.eq(lang_code).and(
+                            recipe_translations::Column::Title.like(&pattern)
+                                .or(recipe_translations::Column::Description.like(&pattern)),
+                        ),
+                    );
+            }
+        }
+
+        if let Some(min) = filter.min_prep { query = query.filter(recipes::Column::PrepTimeMinutes.gte(min)); }
+        if let Some(max) = filter.max_prep { query = query.filter(recipes::Column::PrepTimeMinutes.lte(max)); }
+
+        if let Some(min) = filter.min_cook { query = query.filter(recipes::Column::CookTimeMinutes.gte(min)); }
+        if let Some(max) = filter.max_cook { query = query.filter(recipes::Column::CookTimeMinutes.lte(max)); }
+
+        if let Some(from) = filter.date_from { query = query.filter(recipes::Column::UpdatedAt.gte(from)); }
+        if let Some(to) = filter.date_to { query = query.filter(recipes::Column::UpdatedAt.lte(to)); }
+
+        if let Some(ingredients_list) = &filter.ingredient {
+            if !ingredients_list.is_empty() {
+                query = query
+                    .join(JoinType::InnerJoin, recipes::Relation::IngredientGroups.def())
+                    .join(JoinType::InnerJoin, ingredient_groups::Relation::Ingredients.def())
+                    .join(JoinType::InnerJoin, ingredient_translations::Relation::Ingredients.def())
+                    .filter(ingredient_translations::Column::LanguageCode.eq(lang_code));
+
+                let mut condition = sea_orm::Condition::any();
+                for ing in ingredients_list {
+                    if !ing.trim().is_empty() {
+                        condition = condition.add(ingredient_translations::Column::Data.like(format!("%{}%", ing)));
+                    }
+                }
+                query = query.filter(condition);
+            }
+        }
+    }
+
+    let paginator = query
+        .group_by(recipes::Column::Id)
+        .order_by_desc(recipes::Column::CreatedAt)
+        .paginate(db, per_page);
+
+    let results = paginator
+        .fetch_page(page - 1)
+        .await
+        .map_err(|e| Error::InternalServerError(json!({
+            "message": "Failed to fetch filtered recipes for author",
+            "operation": "get_by_author_and_filter",
+            "user_id": user_id.to_string(),
+            "page": page,
+            "error": e.to_string(),
+            "stage": "database_query"
+        })))?;
+
+    Ok(results)
+}
 pub async fn find_by_query_by_page(
     db: &DatabaseConnection,
     filter: RecipeFilterByPage,

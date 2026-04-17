@@ -39,6 +39,8 @@ import NotificationSettings from "@/pages/users/NotificationSettings.vue";
 // Studio Pages
 import StudioDashboard from "@/pages/studio/Dashboard.vue"
 import RecipeList from "@/pages/studio/RecipeList.vue"
+import AnalyticsView from "@/pages/studio/AnalyticsView.vue";
+import RecipesView from "@/pages/studio/RecipesView.vue";
 
 const routes = [
 
@@ -67,17 +69,47 @@ const routes = [
     },
     {
         path: ROUTES.STUDIO.BASE,
-        component: () => StudioDashboard,
+        redirect: ROUTES.STUDIO.BASE,
         meta: {
-            layout: 'StudioLayout', // This tells App.vue which frame to use
-            requiresAuth: true
+            layout: 'StudioLayout',
+            requiresAuth: true,
+            roles: ["ADMIN", "MODERATOR"]
         },
         children: [
             {
+                path: ROUTES.STUDIO.BASE,
+                name: 'dashboard',
+                component: StudioDashboard,
+            },
+            {
                 path: ROUTES.STUDIO.MY_RECIPES,
                 name: 'StudioRecipes',
-                component: () => RecipeList,
-                meta: { requiresAuth: true, roles: ["ADMIN", "MODERATOR"], layout: 'StudioLayout' }
+                component: RecipesView,
+
+            },
+            {
+                path: ROUTES.STUDIO.CREATE,
+                name: 'Studio Create',
+                component: Create,
+
+            },
+            {
+                path: ROUTES.STUDIO.OCR_REVIEW,
+                name: 'Studio OCR Create',
+                component: OcrRecipeEditor,
+
+            },
+            {
+                path: ROUTES.STUDIO.ANALYTICS,
+                name: 'Studio Analytics',
+                component: AnalyticsView,
+
+            },
+            {
+                path: "/studio/edit/:id",
+                name: 'Studio Edit',
+                component: Edit,
+
             },
         ]
     },
@@ -86,7 +118,6 @@ const routes = [
         meta: {requiresAuth: true, roles: ["ADMIN", "MODERATOR"], layout: "AdminLayout"},
         redirect: ROUTES.ADMIN.DASHBOARD,
         children: [
-            // Dashboard
             {
                 path: "dashboard",
                 component: AdminDashBoard,

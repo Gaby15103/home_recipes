@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted, ref, watch} from "vue"
+import {computed, onMounted, ref, watch} from "vue"
 import {useRoute, useRouter} from "vue-router"
 import {useI18n} from "vue-i18n"
 
@@ -32,6 +32,7 @@ const apiUrl = import.meta.env.VITE_STATIC_URL
 const route = useRoute()
 const router = useRouter()
 
+const isStudio = computed(() => route.path.startsWith('/studio'))
 const recipe = ref<RecipeEditor | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -123,7 +124,12 @@ async function submit() {
         stepImages.value,
         mainImageFile.value
     )
-    await router.push(ROUTES.ADMIN.RECIPE.VIEW(updated.id))
+
+    if (isStudio.value) {
+      await router.push(ROUTES.RECIPE(updated.id))
+    } else {
+      await router.push(ROUTES.ADMIN.RECIPE.VIEW(updated.id))
+    }
   } catch (e) {
     console.error(e)
   } finally {
@@ -133,10 +139,10 @@ async function submit() {
 </script>
 
 <template>
-  <div class="max-w-[1800px] mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-6 md:gap-10 items-start justify-center relative">
+  <div class="max-w-450 mx-auto p-4 md:p-8 flex flex-col lg:flex-row gap-6 md:gap-10 items-start justify-center relative">
 
-    <div v-if="loading" class="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-xl p-4">
-      <div class="flex flex-col items-center gap-6 p-8 md:p-12 bg-card border shadow-2xl rounded-[2rem] w-full max-w-sm text-center">
+    <div v-if="loading" class="fixed inset-0 z-100 flex items-center justify-center bg-background/80 backdrop-blur-xl p-4">
+      <div class="flex flex-col items-center gap-6 p-8 md:p-12 bg-card border shadow-2xl rounded-4xl w-full max-w-sm text-center">
         <Loader2 class="h-12 w-12 animate-spin text-primary/40" />
         <p class="font-black text-xl tracking-tighter">Fetching Recipe...</p>
       </div>
@@ -148,7 +154,7 @@ async function submit() {
       <div class="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-4 md:gap-6 border-b pb-6 md:pb-8 px-1">
         <div class="space-y-1 flex-1">
           <p class="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em] text-primary/60">Editor Mode</p>
-          <h1 class="text-3xl md:text-6xl font-black tracking-tighter leading-tight break-words">
+          <h1 class="text-3xl md:text-6xl font-black tracking-tighter leading-tight wrap-break-word">
             {{ t('Admin.recipe.editTitle') }}
           </h1>
         </div>
@@ -156,7 +162,7 @@ async function submit() {
         <div class="flex flex-col gap-2 w-full md:w-auto shrink-0">
           <Label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-1">Primary Language</Label>
           <Select v-model="recipe.primary_language">
-            <SelectTrigger class="h-10 md:h-12 w-full md:w-[200px] font-bold bg-card border-none shadow-sm rounded-xl">
+            <SelectTrigger class="h-10 md:h-12 w-full md:w-50 font-bold bg-card border-none shadow-sm rounded-xl">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -223,9 +229,9 @@ async function submit() {
                 <div class="flex items-center justify-between gap-4">
                   <div class="space-y-1">
                     <Label class="text-base md:text-xl font-black tracking-tight">Private Recipe</Label>
-                    <p class="text-[10px] md:text-sm text-muted-foreground max-w-[240px]">Visible only to admins and author.</p>
+                    <p class="text-[10px] md:text-sm text-muted-foreground max-w-60">Visible only to admins and author.</p>
                   </div>
-                  <Switch v-model:checked="recipe.is_private" class="scale-110 md:scale-150 shrink-0" />
+                  <Switch v-model="recipe.is_private" class="scale-110 md:scale-150 shrink-0" />
                 </div>
               </div>
             </div>

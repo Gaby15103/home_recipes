@@ -21,6 +21,10 @@
     STUDIO: {
         BASE: "/studio",
         MY_RECIPES: "/studio/my-recipe",
+        ANALYTICS: "/studio/analytics",
+        EDIT: (id: string)=> `/studio/edit/${id}`,
+        CREATE: `/studio/create`,
+        OCR_REVIEW: "/studio/ocr-review"
     },
 
     // Admin
