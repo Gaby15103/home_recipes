@@ -3,6 +3,7 @@ import {computed, onMounted, ref, watch} from "vue"
 import {useRoute, useRouter} from "vue-router"
 import {useI18n} from "vue-i18n"
 
+import {ImageIcon} from 'lucide-vue-next'
 import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
 import {Textarea} from "@/components/ui/textarea"
@@ -10,7 +11,7 @@ import {Switch} from "@/components/ui/switch"
 import {Label} from "@/components/ui/label"
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card"
 import {Separator} from "@/components/ui/separator"
-import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
 
 import IngredientsEditor from "@/components/recipe/editor/IngredientsEditor.vue"
 import StepsEditor from "@/components/recipe/editor/StepsEditor.vue"
@@ -24,7 +25,7 @@ import type {Language} from "@/models/Language.ts"
 import {getRecipeByIdEditor, updateRecipe} from "@/api/recipe.ts"
 import {getAllLanguage} from "@/api/Language.ts"
 import {ROUTES} from "@/router/routes.ts"
-import type { Tag as RecipeTag, InputTag } from "@/models/Tag.ts";
+import type {InputTag, Tag as RecipeTag} from "@/models/Tag.ts";
 import {getUnits} from "@/api/unit.ts";
 
 const { t } = useI18n()
@@ -126,7 +127,7 @@ async function submit() {
     )
 
     if (isStudio.value) {
-      await router.push(ROUTES.RECIPE(updated.id))
+      await router.push(ROUTES.STUDIO.MY_RECIPES)
     } else {
       await router.push(ROUTES.ADMIN.RECIPE.VIEW(updated.id))
     }
@@ -177,7 +178,7 @@ async function submit() {
       <JsonImporter v-model="recipe" />
 
       <div class="grid grid-cols-1 gap-6 md:gap-10">
-        <Card class="border-none shadow-xl bg-card/40 backdrop-blur-sm rounded-[1.5rem] md:rounded-[2rem] overflow-hidden">
+        <Card class="border-none shadow-xl bg-card/40 backdrop-blur-sm rounded-3xl md:rounded-4xl overflow-hidden">
           <CardHeader class="bg-muted/30 py-4 md:py-6 px-6 md:px-10 border-b border-white/5">
             <CardTitle class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
               {{ t('Admin.recipe.basicInfo') }}
@@ -205,7 +206,7 @@ async function submit() {
                 <div class="space-y-3">
                   <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">{{ t('Admin.recipe.fields.description') }}</label>
                   <Textarea v-model="getTranslation(lang.code).description"
-                            class="min-h-[120px] md:min-h-[180px] text-sm md:text-lg rounded-xl md:rounded-2xl bg-background/50 border-none p-5 md:p-8"
+                            class="min-h-30 md:min-h-45 text-sm md:text-lg rounded-xl md:rounded-2xl bg-background/50 border-none p-5 md:p-8"
                             :placeholder="t('Admin.recipe.placeholders.description')" />
                 </div>
               </div>
@@ -216,7 +217,7 @@ async function submit() {
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 md:gap-12">
               <div class="space-y-3">
                 <label class="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Recipe Cover</label>
-                <div class="relative group aspect-video md:aspect-[21/9] xl:aspect-video rounded-xl md:rounded-[2rem] border-2 border-dashed flex items-center justify-center overflow-hidden transition-all bg-muted/30 hover:bg-muted/50 cursor-pointer">
+                <div class="relative group aspect-video md:aspect-21/9 xl:aspect-video rounded-xl md:rounded-4xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all bg-muted/30 hover:bg-muted/50 cursor-pointer">
                   <img v-if="mainImagePreview" :src="mainImagePreview" class="object-cover w-full h-full" />
                   <div v-else class="flex flex-col items-center gap-2 text-muted-foreground opacity-40">
                     <ImageIcon class="w-8 h-8 md:w-12 md:h-12" />
@@ -225,7 +226,7 @@ async function submit() {
                   <input type="file" accept="image/*" @change="onMainImageChange" class="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
               </div>
-              <div class="flex flex-col justify-center gap-4 md:gap-6 px-6 md:px-10 py-6 md:py-10 bg-primary/[0.03] border border-primary/5 rounded-xl md:rounded-[2rem]">
+              <div class="flex flex-col justify-center gap-4 md:gap-6 px-6 md:px-10 py-6 md:py-10 bg-primary/3 border border-primary/5 rounded-xl md:rounded-4xl">
                 <div class="flex items-center justify-between gap-4">
                   <div class="space-y-1">
                     <Label class="text-base md:text-xl font-black tracking-tight">Private Recipe</Label>
@@ -239,7 +240,7 @@ async function submit() {
         </Card>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8">
-          <Card v-for="metric in ['servings', 'prep_time_minutes', 'cook_time_minutes']" :key="metric" class="border-none shadow-lg bg-card/40 rounded-xl md:rounded-[2rem]">
+          <Card v-for="metric in ['servings', 'prep_time_minutes', 'cook_time_minutes']" :key="metric" class="border-none shadow-lg bg-card/40 rounded-xl md:rounded-4xl">
             <CardContent class="p-6 md:p-10 space-y-2 md:space-y-4">
               <Label class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground block text-center italic">
                 {{ metric.replace(/_/g, ' ') }}
@@ -249,7 +250,7 @@ async function submit() {
           </Card>
         </div>
 
-        <Card class="border-none shadow-xl bg-card/40 rounded-xl md:rounded-[2rem]">
+        <Card class="border-none shadow-xl bg-card/40 rounded-xl md:rounded-4xl">
           <CardHeader class="py-4 px-10 border-b border-white/5">
             <CardTitle class="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Categorization</CardTitle>
           </CardHeader>

@@ -79,7 +79,7 @@ async function submit() {
   try {
     const res = await createRecipe(recipe.value)
     if (isStudio.value) {
-      await router.push(ROUTES.RECIPE(res.id))
+      await router.push(ROUTES.STUDIO.MY_RECIPES)
     } else {
       await router.push(ROUTES.ADMIN.RECIPE.VIEW(res.id))
     }
