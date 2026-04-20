@@ -99,4 +99,5 @@ export const StudioRoutes = {
     stats: `${API_ROOT}/studio/stats`,
     recent: `${API_ROOT}/studio/recent-activity`,
     getByFilter: `${API_ROOT}/studio/by-filter`,
+    getTelemetry: (id: string) => `${API_ROOT}/studio/recipes/${id}/analytics`
 };

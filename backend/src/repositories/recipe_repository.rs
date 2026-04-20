@@ -1406,3 +1406,52 @@ pub async fn edit_comment(
         })))
     }
 }
+
+pub async fn get_total_views(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+) -> Result<i64, Error> {
+    recipe_analytics::Entity::find()
+        .filter(recipe_analytics::Column::RecipeId.eq(recipe_id))
+        .count(db)
+        .await
+        .map(|c| c as i64)
+        .map_err(|e| Error::InternalServerError(json!({ "error": e.to_string() })))
+}
+
+pub async fn get_views_last_7_days(
+    db: &DatabaseConnection,
+    recipe_id: Uuid,
+) -> Result<Vec<i32>, Error> {
+    use sea_orm::sea_query::Expr;
+    use chrono::{Utc, Duration};
+
+    // Use ViewedAt to match your SQL schema
+    let seven_days_ago = Utc::now() - Duration::days(7);
+
+    let results = recipe_analytics::Entity::find()
+        .select_only()
+        .column_as(recipe_analytics::Column::Id.count(), "count")
+        .column_as(Expr::cust("CAST(viewed_at AS DATE)"), "date")
+        .filter(recipe_analytics::Column::RecipeId.eq(recipe_id))
+        .filter(recipe_analytics::Column::ViewedAt.gte(seven_days_ago))
+        .group_by(Expr::cust("CAST(viewed_at AS DATE)"))
+        .order_by_asc(Expr::cust("CAST(viewed_at AS DATE)"))
+        .into_tuple::<(i64, chrono::NaiveDate)>()
+        .all(db)
+        .await
+        .map_err(|e| Error::InternalServerError(json!({ "error": e.to_string() })))?;
+
+    let mut views = vec![0; 7];
+    let today = Utc::now().date_naive();
+
+    for (count, date) in results {
+        let diff = (today - date).num_days();
+        // Since we want the last 7 days including today (index 6):
+        if diff >= 0 && diff < 7 {
+            views[6 - diff as usize] = count as i32;
+        }
+    }
+
+    Ok(views)
+}

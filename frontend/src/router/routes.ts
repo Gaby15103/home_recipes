@@ -23,6 +23,7 @@
         MY_RECIPES: "/studio/my-recipe",
         ANALYTICS: "/studio/analytics",
         EDIT: (id: string)=> `/studio/edit/${id}`,
+        VIEW: (id: string ) =>  `/studio/recipe/${id}`,
         CREATE: `/studio/create`,
         OCR_REVIEW: "/studio/ocr-review"
     },

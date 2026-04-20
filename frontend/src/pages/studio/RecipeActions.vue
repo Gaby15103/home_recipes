@@ -30,6 +30,13 @@ const emit = defineEmits(['edit', 'view', 'delete', 'archive'])
         </DropdownMenuItem>
       </NavLink>
 
+      <NavLink :to="ROUTES.STUDIO.VIEW(id)">
+        <DropdownMenuItem @click="emit('view', id)" class="rounded-xl px-3 py-2.5 gap-3 focus:bg-primary/10 focus:text-primary cursor-pointer">
+          <Eye class="h-4 w-4" />
+          <span class="text-xs font-bold uppercase tracking-tight">View Recipe</span>
+        </DropdownMenuItem>
+      </NavLink>
+
       <NavLink :to="ROUTES.STUDIO.EDIT(id)">
         <DropdownMenuItem @click="emit('edit', id)" class="rounded-xl px-3 py-2.5 gap-3 focus:bg-primary/10 focus:text-primary cursor-pointer">
           <Edit3 class="h-4 w-4" />

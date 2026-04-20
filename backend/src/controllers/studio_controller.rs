@@ -15,7 +15,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         web::scope("/studio")
             .route("/stats", web::get().to(stats))
             .route("/recent-activity", web::get().to(recent_activity))
-            .route("/by-filter", web::get().to(by_filter)),
+            .route("/by-filter", web::get().to(by_filter))
+            .route("/recipes/{id}/analytics", web::get().to(get_recipe_analytics)),
     );
 }
 
@@ -58,4 +59,15 @@ pub async fn by_filter(
     let result = recipe_service::get_by_author_and_filter(&state.db, auth.user.id, query.into_inner(), &lang_code).await?;
 
     Ok(HttpResponse::Ok().json(result))
+}
+
+pub async fn get_recipe_analytics(
+    state: Data<AppState>,
+    auth: AuthenticatedUser,
+    path: web::Path<uuid::Uuid>,
+) -> Result<HttpResponse, Error> {
+    let recipe_id = path.into_inner();
+    let telemetry = studio_service::get_recipe_telemetry(&state.db, recipe_id, auth.user.id).await?;
+
+    Ok(HttpResponse::Ok().json(telemetry))
 }

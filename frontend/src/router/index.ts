@@ -41,6 +41,7 @@ import StudioDashboard from "@/pages/studio/Dashboard.vue"
 import RecipeList from "@/pages/studio/RecipeList.vue"
 import AnalyticsView from "@/pages/studio/AnalyticsView.vue";
 import RecipesView from "@/pages/studio/RecipesView.vue";
+import RecipeDetailView from "@/pages/studio/RecipeDetailView.vue";
 
 const routes = [
 
@@ -109,6 +110,12 @@ const routes = [
                 path: "/studio/edit/:id",
                 name: 'Studio Edit',
                 component: Edit,
+
+            },
+            {
+                path: "/studio/recipe/:id",
+                name: 'Studio REcipe View',
+                component: RecipeDetailView,
 
             },
         ]

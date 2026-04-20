@@ -1,8 +1,8 @@
 import {api} from "./client";
 
 // Aligning with your existing RecipeView and PaginatedRecipes
-import type {PaginatedRecipes, RecipeFilter, RecipeView} from "@/models/Recipe";
-import {RecipeRoutes, StudioRoutes} from "@/api/routes.ts";
+import type {RecipeFilter, RecipeView} from "@/models/Recipe";
+import {StudioRoutes} from "@/api/routes.ts";
 
 export interface DashboardStats {
     total_recipes: number;
@@ -54,4 +54,16 @@ export async function getStudioRecipes(
     }
 
     return api<RecipeView[]>(StudioRoutes.getByFilter, {method: "GET", params});
+}
+export interface RecipeAnalytics {
+    total_views: number;
+    views_7d: number[];
+    avg_session_duration: string;
+    print_count: number;
+    share_count: number;
+    last_modified: string;
+    health_score: number;
+}
+export function getRecipeAnalytics(id: string) {
+    return api<RecipeAnalytics>(StudioRoutes.getTelemetry(id), { method: "GET" });
 }
