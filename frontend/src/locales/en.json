@@ -182,6 +182,9 @@
     },
     "meta": {
       "time": "Prep & Cook Time",
+      "cook": "Cook Time",
+      "prep": "Prep Time",
+      "ratings": "Ratings",
       "complexity": "Complexity",
       "dates": "Time Period",
       "tags_placeholder": "Select tags...",

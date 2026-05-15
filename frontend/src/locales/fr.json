@@ -182,6 +182,9 @@
     },
     "meta": {
       "time": "Temps de prép. et cuisson",
+      "cook": "Temp de cuisson",
+      "prep": "Temp de préparation",
+      "ratings": "Score",
       "complexity": "Complexité",
       "dates": "Période",
       "tags_placeholder": "Sélectionner des étiquettes...",

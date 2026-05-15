@@ -1,5 +1,6 @@
 ﻿<script setup lang="ts">
-import { ref, onMounted, watch, nextTick, useTemplateRef } from "vue";
+import {ref, onMounted, watch, nextTick, useTemplateRef, onUnmounted} from "vue";
+import { Sun, Moon } from "lucide-vue-next"
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import axios from "axios";
@@ -27,6 +28,7 @@ import type { RecipeView, RecipeComment, RecipeRating } from "@/models/Recipe.ts
 import type { RecipeCommentCreate } from "@/models/RecipeCreate.ts";
 import type { Unit } from "@/models/Recipe.ts";
 import RecipeDisplay from "@/components/recipe/RecipeDisplay.vue";
+import {Switch} from "@/components/ui/switch";
 
 const { t, locale } = useI18n();
 const route = useRoute();
@@ -53,6 +55,10 @@ const newComment = ref<RecipeCommentCreate>({
   user_id: null,
   parent_id: null,
 });
+
+const isWakeLockActive = ref(false)
+const isSupported = ref('wakeLock' in navigator)
+let wakeLock: any = null
 
 // --- Actions ---
 
@@ -107,6 +113,37 @@ async function toggleFavorite() {
   }
 }
 
+const requestWakeLock = async () => {
+  if (!isSupported.value) return
+
+  try {
+    wakeLock = await (navigator as any).wakeLock.request('screen')
+
+    wakeLock.addEventListener('release', () => {
+      isWakeLockActive.value = false
+      wakeLock = null
+    })
+  } catch (err) {
+    console.error("WakeLock Error:", err)
+    isWakeLockActive.value = false
+  }
+}
+
+const releaseWakeLock = async () => {
+  if (wakeLock) {
+    await wakeLock.release()
+    wakeLock = null
+  }
+}
+
+watch(isWakeLockActive, async (newVal) => {
+  if (newVal) {
+    await requestWakeLock();
+  } else {
+    await releaseWakeLock();
+  }
+});
+
 async function postComment() {
   if (!recipe.value || !newComment.value.content.trim() || !authStore.user) return;
   newComment.value.user_id = authStore.user.id;
@@ -136,6 +173,9 @@ onMounted(async () => {
   await Promise.all([loadRecipe(), fetchUnits()]);
   await loadMeta();
 });
+onUnmounted(async () => {
+  await releaseWakeLock();
+});
 
 watch(locale, () => loadRecipe());
 
@@ -155,7 +195,7 @@ watch(
 <template>
   <div class="max-w-6xl mx-auto px-4 py-8 space-y-12">
     <div v-if="loading" class="animate-pulse space-y-8">
-      <Skeleton class="h-[400px] w-full rounded-xl" />
+      <Skeleton class="h-100 w-full rounded-xl" />
       <div class="space-y-2">
         <Skeleton class="h-10 w-1/2" />
         <Skeleton class="h-4 w-full" />
@@ -182,7 +222,7 @@ watch(
                 {{ i <= Math.round(rating.average) ? "★" : "☆" }}
               </span>
             </template>
-            <span class="text-sm text-muted-foreground ml-2">({{ rating.count }} {{ t("recipe.ratings") }})</span>
+            <span class="text-sm text-muted-foreground ml-2">({{ rating.count }} {{ t("recipe.meta.ratings") }})</span>
           </div>
         </template>
 
@@ -208,6 +248,7 @@ watch(
 
         <template #ingredient-toolbar>
           <div class="flex items-center gap-2 bg-muted p-1 rounded-lg">
+
             <span class="text-xs font-medium px-2 text-muted-foreground hidden sm:inline">
               {{ t("recipe.meta.servings") }}
             </span>
@@ -222,6 +263,32 @@ watch(
             >
               {{ m }}x
             </Button>
+          </div>
+          <div v-if="isSupported"
+               class="flex items-center justify-between p-4 rounded-2xl bg-card border border-white/5 shadow-xl transition-all"
+               :class="{ 'border-primary/30 ring-1 ring-primary/20': isWakeLockActive }">
+
+            <div class="flex items-center gap-4">
+              <div class="p-2.5 rounded-xl transition-colors"
+                   :class="isWakeLockActive ? 'bg-primary/20 text-primary' : 'bg-neutral-900 text-neutral-500'">
+                <Sun v-if="isWakeLockActive" class="h-5 w-5 animate-pulse" />
+                <Moon v-else class="h-5 w-5" />
+              </div>
+
+              <div>
+                <h4 class="text-[11px] font-black uppercase tracking-tighter text-white leading-none">
+                  Cooking Mode
+                </h4>
+                <p class="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mt-1">
+                  {{ isWakeLockActive ? 'Screen Locked On' : 'Standard Timeout' }}
+                </p>
+              </div>
+            </div>
+
+            <Switch
+                v-model:modelValue="isWakeLockActive"
+                class="data-[state=checked]:bg-primary"
+            />
           </div>
         </template>
       </RecipeDisplay>
