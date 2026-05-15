@@ -87,7 +87,7 @@ async function loadMeta() {
   try {
     const [ratingRes, favsRes, commentsRes] = await Promise.all([
       getRating(recipe.value.id),
-      getFavorites(authStore.user.id),
+      getFavorites(authStore.user!.id),
       getComments(recipe.value.id)
     ]);
     comments.value = commentsRes;
@@ -211,8 +211,8 @@ watch(
       <RecipeDisplay
           :recipe="recipe"
           :multiplier="multiplier"
-          :all-units="allUnits"
-          :unit-overrides="unitOverrides"
+          :allUnits="allUnits"
+          :unitOverrides="unitOverrides"
           @update:unit-override="handleUnitOverride"
       >
         <template #rating>

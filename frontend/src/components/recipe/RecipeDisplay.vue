@@ -4,14 +4,17 @@ import { useI18n } from "vue-i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
-import { Label } from '@/components/ui/label';
-import type { RecipeView } from "@/models/Recipe.ts";
+import type {RecipeView, Unit} from "@/models/Recipe.ts";
+import {convertUnits, formatQuantity} from "@/utils/unitFormatters.ts";
+import {Label} from "@/components/ui/label";
+import {Switch} from "@/components/ui/switch";
 
 const props = defineProps<{
   recipe: RecipeView;
   isAdmin?: boolean;
   multiplier: number;
+  allUnits: Unit[];
+  unitOverrides: Record<string, string>;
 }>();
 
 const { t } = useI18n();
@@ -27,12 +30,27 @@ function getBaseUnitSymbol(ingUnit: any): string {
   return ingUnit || "";
 }
 
-/**
- * Simply scales the quantity by the multiplier.
- */
-function getScaledQuantity(ing: any) {
-  const quantity = ing.quantity * props.multiplier;
-  return Number(quantity.toFixed(2)).toString();
+function getIngredientDisplay(ing: any) {
+  let quantity = parseFloat(ing.quantity) * props.multiplier;
+  let currentUnit = ing.unit;
+
+  // Check if user manually changed the unit (e.g., ml -> cup)
+  const overrideId = props.unitOverrides[ing.id];
+  if (overrideId) {
+    const targetUnit = props.allUnits.find(u => u.id === overrideId);
+    if (targetUnit) {
+      quantity = convertUnits(quantity, ing.unit, targetUnit);
+      currentUnit = targetUnit;
+    }
+  }
+
+  const isPiece = currentUnit.code === 'PIECE';
+
+  return {
+    value: formatQuantity(quantity, isPiece),
+    symbol: isPiece ? "" : currentUnit.symbol,
+    unitId: currentUnit.id
+  };
 }
 </script>
 
@@ -71,10 +89,15 @@ function getScaledQuantity(ing: any) {
     </Card>
 
     <Card class="shadow-md">
-      <CardHeader class="flex flex-wrap items-center justify-between space-y-0 pb-4">
-        <CardTitle class="text-2xl font-bold">{{ t("recipe.ingredients.title") }}</CardTitle>
-        <slot name="ingredient-toolbar" />
-        <slot name="wake-lock"/>
+      <CardHeader class="pb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <CardTitle class="text-2xl font-bold">{{ t("recipe.ingredients.title") }}</CardTitle>
+
+          <div class="flex flex-col xs:flex-row items-start xs:items-center gap-3">
+            <slot name="ingredient-toolbar" />
+            <slot name="wake-lock"/>
+          </div>
+        </div>
       </CardHeader>
       <CardContent class="space-y-8">
         <div v-for="group in recipe.ingredient_groups" :key="group.position">
@@ -89,7 +112,7 @@ function getScaledQuantity(ing: any) {
 
                 <label :for="ing.id" class="text-base leading-snug cursor-pointer">
                   <span class="inline-block min-w-20 font-bold text-primary mr-2">
-                    {{ getScaledQuantity(ing) }} {{ getBaseUnitSymbol(ing.unit) }}
+                    {{ getIngredientDisplay(ing).value }} {{ getIngredientDisplay(ing).symbol }}
                   </span>
 
                   <span class="text-gray-900 dark:text-gray-100">{{ ing.name }}</span>
@@ -106,18 +129,13 @@ function getScaledQuantity(ing: any) {
     </Card>
 
     <Card class="shadow-md">
-      <Card class="shadow-md">
-        <CardHeader class="pb-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <CardTitle class="text-2xl font-bold">{{ t("recipe.ingredients.title") }}</CardTitle>
-
-            <div class="flex flex-col xs:flex-row items-start xs:items-center gap-3">
-              <slot name="ingredient-toolbar" />
-              <slot name="wake-lock"/>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+      <CardHeader class="flex flex-row items-center justify-between">
+        <CardTitle class="text-2xl font-bold">{{ t("recipe.steps.title") }}</CardTitle>
+        <div class="flex items-center gap-2">
+          <Label class="text-xs hidden sm:block">{{ t("recipe.steps.showImages") }}</Label>
+          <Switch v-model="showStepImages" />
+        </div>
+      </CardHeader>
       <CardContent class="space-y-12">
         <div v-for="group in recipe.step_groups" :key="group.position">
           <h3 v-if="group.title" class="font-bold text-lg mb-6 text-primary/80 border-b pb-1">{{ group.title }}</h3>
