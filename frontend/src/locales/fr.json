@@ -180,6 +180,11 @@
     "errors": {
       "fetch": "Impossible de charger la recette"
     },
+    "wakeLock": {
+      "title": "Mode Cuisine",
+      "active": "Écran toujours activé",
+      "inactive": "Mise en veille standard"
+    },
     "meta": {
       "time": "Temps de prép. et cuisson",
       "cook": "Temp de cuisson",

@@ -74,6 +74,7 @@ function getScaledQuantity(ing: any) {
       <CardHeader class="flex flex-wrap items-center justify-between space-y-0 pb-4">
         <CardTitle class="text-2xl font-bold">{{ t("recipe.ingredients.title") }}</CardTitle>
         <slot name="ingredient-toolbar" />
+        <slot name="wake-lock"/>
       </CardHeader>
       <CardContent class="space-y-8">
         <div v-for="group in recipe.ingredient_groups" :key="group.position">
@@ -105,13 +106,18 @@ function getScaledQuantity(ing: any) {
     </Card>
 
     <Card class="shadow-md">
-      <CardHeader class="flex flex-row items-center justify-between">
-        <CardTitle class="text-2xl font-bold">{{ t("recipe.steps.title") }}</CardTitle>
-        <div class="flex items-center gap-2">
-          <Label class="text-xs hidden sm:block">{{ t("recipe.steps.showImages") }}</Label>
-          <Switch v-model="showStepImages" />
-        </div>
-      </CardHeader>
+      <Card class="shadow-md">
+        <CardHeader class="pb-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <CardTitle class="text-2xl font-bold">{{ t("recipe.ingredients.title") }}</CardTitle>
+
+            <div class="flex flex-col xs:flex-row items-start xs:items-center gap-3">
+              <slot name="ingredient-toolbar" />
+              <slot name="wake-lock"/>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
       <CardContent class="space-y-12">
         <div v-for="group in recipe.step_groups" :key="group.position">
           <h3 v-if="group.title" class="font-bold text-lg mb-6 text-primary/80 border-b pb-1">{{ group.title }}</h3>

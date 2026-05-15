@@ -264,30 +264,32 @@ watch(
               {{ m }}x
             </Button>
           </div>
+        </template>
+        <template #wake-lock>
           <div v-if="isSupported"
-               class="flex items-center justify-between p-4 rounded-2xl bg-card border border-white/5 shadow-xl transition-all"
-               :class="{ 'border-primary/30 ring-1 ring-primary/20': isWakeLockActive }">
+               class="flex items-center justify-between gap-4 p-3 sm:p-2 rounded-xl bg-muted/50 border border-border/50 transition-all w-full sm:w-auto"
+               :class="{ 'border-primary/30 bg-primary/5 ring-1 ring-primary/20': isWakeLockActive }">
 
-            <div class="flex items-center gap-4">
-              <div class="p-2.5 rounded-xl transition-colors"
-                   :class="isWakeLockActive ? 'bg-primary/20 text-primary' : 'bg-neutral-900 text-neutral-500'">
-                <Sun v-if="isWakeLockActive" class="h-5 w-5 animate-pulse" />
-                <Moon v-else class="h-5 w-5" />
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded-lg transition-colors"
+                   :class="isWakeLockActive ? 'bg-primary/20 text-primary' : 'bg-background text-muted-foreground border border-border'">
+                <Sun v-if="isWakeLockActive" class="h-4 w-4 animate-pulse" />
+                <Moon v-else class="h-4 w-4" />
               </div>
 
-              <div>
-                <h4 class="text-[11px] font-black uppercase tracking-tighter text-white leading-none">
-                  Cooking Mode
+              <div class="flex flex-col">
+                <h4 class="text-[10px] font-black uppercase tracking-tight text-foreground leading-none">
+                  {{ $t('recipe.wakeLock.title') }}
                 </h4>
-                <p class="text-[9px] font-bold uppercase tracking-widest text-neutral-500 mt-1">
-                  {{ isWakeLockActive ? 'Screen Locked On' : 'Standard Timeout' }}
+                <p class="text-[8px] font-bold uppercase tracking-widest text-muted-foreground mt-1 whitespace-nowrap">
+                  {{ isWakeLockActive ? $t('recipe.wakeLock.active') : $t('recipe.wakeLock.inactive') }}
                 </p>
               </div>
             </div>
 
             <Switch
                 v-model:modelValue="isWakeLockActive"
-                class="data-[state=checked]:bg-primary"
+                class="scale-90 data-[state=checked]:bg-primary"
             />
           </div>
         </template>

@@ -180,6 +180,11 @@
     "errors": {
       "fetch": "Failed to fetch recipe"
     },
+    "wakeLock": {
+      "title": "Cooking Mode",
+      "active": "Screen Locked On",
+      "inactive": "Standard Timeout"
+    },
     "meta": {
       "time": "Prep & Cook Time",
       "cook": "Cook Time",
