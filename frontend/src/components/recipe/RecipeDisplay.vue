@@ -71,7 +71,7 @@ function getScaledQuantity(ing: any) {
     </Card>
 
     <Card class="shadow-md">
-      <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-4">
+      <CardHeader class="flex flex-wrap items-center justify-between space-y-0 pb-4">
         <CardTitle class="text-2xl font-bold">{{ t("recipe.ingredients.title") }}</CardTitle>
         <slot name="ingredient-toolbar" />
       </CardHeader>
