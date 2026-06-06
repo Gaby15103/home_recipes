@@ -51,12 +51,12 @@ sudo pacman -S --needed cmake base-devel
 sudo pacman -S tesseract tesseract-data-fra tesseract-data-eng
 ```
 
-
-## Interesting to possibly implement
-https://schema.org/Recipe
-
 ### Restart frontend :
 ```bash
 docker compose -f docker-compose.prod.yaml build --no-cache frontend
 docker compose -f docker-compose.prod.yaml up -d frontend
 ```
+
+
+## Interesting to possibly implement
+https://schema.org/Recipe
